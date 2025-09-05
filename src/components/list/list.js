@@ -1,5 +1,6 @@
 // src/components/list/list.js
 import { html } from 'lit';
+import { repeat } from 'lit/directives/repeat.js';
 import { LocalizableElement } from '../base-localizable.js';
 import getSvg from '../../utils/getSvg.js';
 import { getMediaType, isImage, isVideo, isPdf, formatFileSize } from '../../utils/utils.js';
@@ -15,7 +16,6 @@ class MediaList extends LocalizableElement {
 
   static styles = getStyles(listStyles);
 
-
   constructor() {
     super();
     this.mediaData = [];
@@ -26,7 +26,7 @@ class MediaList extends LocalizableElement {
   async connectedCallback() {
     super.connectedCallback();
     
-    // Load SVG icons using Franklin approach
+    // Load SVG icons
     const ICONS = [
       '/src/icons/photo.svg',
       '/src/icons/video.svg',
@@ -52,25 +52,35 @@ class MediaList extends LocalizableElement {
     }
 
     return html`
-      <div class="media-list">
+      <main class="list-main">
         <div class="list-header">
-          <div></div>
-          <div>${this.t('media.fileName')}</div>
-          <div>Type</div>
-          <div>Document</div>
-          <div>Alt Text</div>
-          <div>Actions</div>
+          <div class="header-cell"></div>
+          <div class="header-cell">${this.t('media.fileName')}</div>
+          <div class="header-cell">Type</div>
+          <div class="header-cell">Document</div>
+          <div class="header-cell">Alt Text</div>
+          <div class="header-cell">Actions</div>
         </div>
-        ${this.mediaData.map(media => this.renderListItem(media))}
-      </div>
+        <div class="list-content">
+          <div class="list-grid">
+            ${repeat(this.mediaData, (media) => media.url, (media, i) => {
+              return this.renderListItem(media, i);
+            })}
+          </div>
+        </div>
+      </main>
     `;
   }
 
-  renderListItem(media) {
+  renderListItem(media, index) {
     const mediaType = getMediaType(media);
     
     return html`
-      <div class="list-item" @click=${() => this.handleMediaClick(media)}>
+      <div 
+        class="media-item" 
+        data-index="${index}"
+        @click=${() => this.handleMediaClick(media)}
+      >
         <div class="media-thumbnail">
           ${this.renderThumbnail(media, mediaType)}
         </div>

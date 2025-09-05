@@ -27,13 +27,12 @@
 }
 
 .media-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
-  gap: 20px;
+  position: relative;
   width: 100%;
 }
 
 .media-card {
+  position: absolute;
   display: grid;
   grid-template-rows: auto 1fr;
   background: var(--ml-surface-elevated);
@@ -45,8 +44,6 @@
   box-shadow: 0 1px 3px rgb(0 0 0 / 10%);
   padding: 0;
   box-sizing: border-box;
-  height: 400px;
-  width: 100%;
 }
 
 .media-card:hover {

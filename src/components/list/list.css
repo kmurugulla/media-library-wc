@@ -47,12 +47,25 @@
   height: 24px;
   color: var(--ml-text-muted);
 }
-  .media-list {
+  .list-main {
     display: flex;
     flex-direction: column;
     height: 100%;
-    overflow-y: auto;
     background: var(--ml-surface);
+    overflow: hidden; /* Prevent main container from scrolling */
+  }
+
+  .list-content {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+    width: 100%;
+    height: 100%;
+  }
+
+  .list-grid {
+    position: relative;
+    width: 100%;
   }
 
   .list-header {
@@ -72,7 +85,12 @@
     z-index: 10;
   }
 
-  .list-item {
+  .header-cell {
+    display: flex;
+    align-items: center;
+  }
+
+  .media-item {
     display: grid;
     grid-template-columns: 60px 1fr 80px 120px 120px auto;
     gap: var(--ml-space-md);
@@ -82,15 +100,14 @@
     transition: var(--ml-transition);
     align-items: center;
     background: var(--ml-surface);
+    box-sizing: border-box;
+    width: 100%;
   }
 
-  .list-item:hover {
+  .media-item:hover {
     background: var(--ml-surface-elevated);
   }
 
-  .list-item:last-child {
-    border-bottom: none;
-  }
 
   .media-thumbnail {
     width: 48px;
@@ -172,7 +189,7 @@
     transition: var(--ml-transition);
   }
 
-  .list-item:hover .media-actions {
+  .media-item:hover .media-actions {
     opacity: 1;
   }
 
@@ -198,7 +215,7 @@
 
   @media (max-width: 768px) {
     .list-header,
-    .list-item {
+    .media-item {
       grid-template-columns: 50px 1fr 60px 60px auto;
       gap: var(--ml-space-sm);
       padding: var(--ml-space-sm);
@@ -206,15 +223,15 @@
     
     .list-header div:nth-child(4),
     .list-header div:nth-child(5),
-    .list-item .media-doc,
-    .list-item .media-alt {
+    .media-item .media-doc,
+    .media-item .media-alt {
       display: none;
     }
   }
 
   @media (max-width: 480px) {
     .list-header,
-    .list-item {
+    .media-item {
       grid-template-columns: 40px 1fr auto;
       gap: var(--ml-space-xs);
       padding: var(--ml-space-xs);
@@ -228,9 +245,9 @@
     .list-header div:nth-child(3),
     .list-header div:nth-child(4),
     .list-header div:nth-child(5),
-    .list-item .media-type,
-    .list-item .media-doc,
-    .list-item .media-alt {
+    .media-item .media-type,
+    .media-item .media-doc,
+    .media-item .media-alt {
       display: none;
     }
   }
