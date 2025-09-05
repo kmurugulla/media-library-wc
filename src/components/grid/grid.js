@@ -200,7 +200,7 @@ class MediaGrid extends LocalizableElement {
   }
 
   renderMediaPreview(media, mediaType) {
-    if (isImage(media.url) && !media.hasError) {
+    if (isImage(media.url) && media.hasError !== true) {
       return html`
         <img 
           class="media-image" 
