@@ -27,18 +27,27 @@ class ModalManager extends LocalizableElement {
     super.connectedCallback();
     
     // Load SVG icons using Franklin approach
+    await this.loadIcons();
+    
+    window.addEventListener('open-modal', this.handleOpenModal);
+    window.addEventListener('close-modal', this.handleCloseModal);
+  }
+
+  async loadIcons() {
     const ICONS = [
       '/src/icons/close.svg',
       '/src/icons/photo.svg',
       '/src/icons/video.svg',
+      '/src/icons/pdf.svg',
       '/src/icons/external-link.svg',
       '/src/icons/copy.svg'
     ];
     
-    getSvg({ parent: this.shadowRoot, paths: ICONS });
-    
-    window.addEventListener('open-modal', this.handleOpenModal);
-    window.addEventListener('close-modal', this.handleCloseModal);
+    // Check if icons are already loaded to avoid duplicates
+    const existingIcons = this.shadowRoot.querySelectorAll('svg[id]');
+    if (existingIcons.length === 0) {
+      await getSvg({ parent: this.shadowRoot, paths: ICONS });
+    }
   }
 
   disconnectedCallback() {
@@ -238,7 +247,34 @@ class ModalManager extends LocalizableElement {
           class="media-preview" 
           src=${media.url} 
           alt=${media.alt || media.name}
+          @error=${(e) => this.handleImageError(e, media)}
         />
+      `;
+    }
+    
+    if (this.isPdf(media.url)) {
+      return html`
+        <div class="pdf-preview">
+          <div class="pdf-preview-header">
+            <svg class="pdf-icon">
+              <use href="#pdf"></use>
+            </svg>
+            <h3>PDF Document</h3>
+            <p>${media.name}</p>
+          </div>
+          <div class="pdf-actions">
+            <button 
+              class="pdf-action-btn" 
+              @click=${(e) => this.handlePdfAction(e, media.url, media.name)}
+              title="Click to view PDF, Ctrl/Cmd+Click to download"
+            >
+              <svg class="action-icon">
+                <use href="#external-link"></use>
+              </svg>
+              Open PDF
+            </button>
+          </div>
+        </div>
       `;
     }
     
@@ -249,6 +285,17 @@ class ModalManager extends LocalizableElement {
         </svg>
       </div>
     `;
+  }
+
+  handleImageError(e, media) {
+    // Mark the media item as having an error
+    media.hasError = true;
+    
+    // Hide the image and trigger a re-render
+    e.target.style.display = 'none';
+    
+    // Request an update to re-render with the error state
+    this.requestUpdate();
   }
 
 
@@ -270,15 +317,55 @@ class ModalManager extends LocalizableElement {
     const type = media.type || '';
     if (type.startsWith('img >')) return 'photo';
     if (type.startsWith('video >')) return 'video';
-    if (type.startsWith('document >')) return 'external-link';
+    if (type.startsWith('document >')) return 'pdf';
     if (type.startsWith('link >')) return 'external-link';
+    
+    // Check by file extension
+    if (this.isPdf(media.url)) return 'pdf';
+    if (this.isImage(media.url)) return 'photo';
+    if (this.isVideo(media.url)) return 'video';
+    
     return 'photo';
   }
 
   isImage(url) {
     const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif'];
-    const ext = url?.split('.').pop()?.toLowerCase();
+    const ext = this.getFileExtension(url);
     return imageExtensions.includes(ext);
+  }
+
+  isVideo(url) {
+    const videoExtensions = ['mp4', 'webm', 'mov', 'avi'];
+    const ext = this.getFileExtension(url);
+    return videoExtensions.includes(ext);
+  }
+
+  isPdf(url) {
+    const ext = this.getFileExtension(url);
+    return ext === 'pdf';
+  }
+
+  getFileExtension(url) {
+    if (!url) return '';
+    
+    try {
+      // Remove query parameters and fragments using regex (more robust)
+      const cleanUrl = url.split(/[?#]/)[0];
+      
+      // Extract the file extension
+      const extension = cleanUrl.split('.').pop()?.toLowerCase() || '';
+      
+      // Validate the extension - ensure it's not empty and different from the entire URL
+      // Also check it doesn't contain invalid characters (like spaces, slashes, etc.)
+      if (!extension || extension === cleanUrl || /[^a-z0-9]/.test(extension)) {
+        return '';
+      }
+      
+      return extension;
+    } catch (error) {
+      console.warn('Error extracting file extension from URL:', url, error);
+      return '';
+    }
   }
 
   handleOverlayClick(e) {
@@ -322,6 +409,28 @@ class ModalManager extends LocalizableElement {
     if (!docPath) return;
     // For now, just open the document - in a real implementation, this would open an editor
     window.open(docPath, '_blank');
+  }
+
+  handlePdfAction(event, pdfUrl, fileName) {
+    if (!pdfUrl) return;
+    
+    // Check if the user wants to download (Ctrl/Cmd + click) or just view
+    const isDownload = event.ctrlKey || event.metaKey;
+    
+    if (isDownload) {
+      // Force download by creating a link with download attribute
+      const link = document.createElement('a');
+      link.href = pdfUrl;
+      link.download = fileName || 'document.pdf';
+      
+      // Append to body, click, and remove
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    } else {
+      // Open PDF in new tab for viewing
+      window.open(pdfUrl, '_blank');
+    }
   }
 
   handleSave(e) {

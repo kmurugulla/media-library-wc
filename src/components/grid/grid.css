@@ -22,7 +22,7 @@
   height: calc(100vh - 200px);
   overflow-y: auto;
   position: relative;
-  padding: 16px;
+  padding: 36px;
   background: var(--ml-surface);
 }
 
@@ -91,6 +91,27 @@
   color: var(--ml-text-muted);
   font-size: 2.5rem;
   opacity: 0.6;
+  gap: 0.5rem;
+}
+
+.media-placeholder.cors-error {
+  background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%);
+  color: #dc2626;
+  opacity: 1;
+}
+
+.cors-message {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  text-align: center;
+}
+
+.cors-message small {
+  display: block;
+  font-weight: 500;
 }
 
 /* Franklin-style SVG handling */
@@ -240,9 +261,16 @@
   border-color: rgba(255, 255, 255, 0.5);
 }
 
+/* Responsive breakpoints for card widths */
 @media (max-width: 1200px) {
   .media-preview {
     height: 200px;
+  }
+}
+
+@media (max-width: 992px) {
+  .media-preview {
+    height: 190px;
   }
 }
 
@@ -253,6 +281,16 @@
   
   .media-preview {
     height: 180px;
+  }
+}
+
+@media (max-width: 576px) {
+  .media-main {
+    padding: var(--ml-space-xs);
+  }
+  
+  .media-preview {
+    height: 170px;
   }
 }
 

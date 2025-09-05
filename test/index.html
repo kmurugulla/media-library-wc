@@ -31,14 +31,27 @@
         }
         .controls {
             display: flex;
-            gap: 10px;
+            gap: 20px;
             margin-bottom: 20px;
             flex-wrap: wrap;
+            justify-content: center;
+            align-items: flex-end;
         }
         .control-group {
             display: flex;
             flex-direction: column;
             gap: 5px;
+            min-width: 200px;
+        }
+        .control-group:first-child {
+            flex: 1;
+            max-width: 500px;
+            min-width: 300px;
+        }
+        .control-group:nth-child(2) {
+            flex: 2;
+            max-width: 600px;
+            min-width: 400px;
         }
         .control-group label {
             font-size: 0.875rem;
@@ -46,10 +59,12 @@
             color: #374151;
         }
         .control-group input, .control-group select {
-            padding: 8px 12px;
+            padding: 10px 14px;
             border: 1px solid #d1d5db;
             border-radius: 6px;
             font-size: 0.875rem;
+            width: 100%;
+            box-sizing: border-box;
         }
         .control-group input:focus, .control-group select:focus {
             outline: none;
@@ -86,6 +101,24 @@
         .notification.info {
             background: #3b82f6;
         }
+        
+        /* Responsive styles for controls */
+        @media (max-width: 768px) {
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 15px;
+            }
+            .control-group {
+                min-width: auto;
+                max-width: none;
+            }
+            .control-group:first-child {
+                flex: none;
+                max-width: none;
+                min-width: auto;
+            }
+        }
     </style>
 </head>
 <body>
@@ -94,16 +127,24 @@
         
         <div class="test-section">
             <h2>Basic Usage</h2>
-            <p>Test the media library with a sitemap URL. The component will scan the sitemap and extract media files from the pages.</p>
+            <p>Test the media library with a website URL or sitemap URL. The component will auto-detect the sitemap and extract media files from the pages.</p>
             
             <div class="controls">
                 <div class="control-group">
-                    <label for="source-url">Source URL (Sitemap):</label>
+                    <label for="source-url">Website URL:</label>
                     <input 
                         type="url" 
                         id="source-url" 
+                        placeholder="https://example.com"
+                        value="medium.com"
+                    >
+                </div>
+                <div class="control-group">
+                    <label for="sitemap-url">Sitemap URL (Optional):</label>
+                    <input 
+                        type="url" 
+                        id="sitemap-url" 
                         placeholder="https://example.com/sitemap.xml"
-                        value="/test/sitemap.xml"
                     >
                 </div>
                 <div class="control-group">
@@ -120,12 +161,28 @@
                         <option value="es">Spanish</option>
                     </select>
                 </div>
+                <div class="control-group">
+                    <label for="site-selector">Loaded Sites:</label>
+                    <select id="site-selector">
+                        <option value="">Select a site...</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <button onclick="clearOldData()" style="background: #dc2626; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer;">
+                        Clear Old Data
+                    </button>
+                </div>
+                <div class="control-group">
+                    <button onclick="testHtmlParsing()" style="background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer;">
+                        Test HTML Parsing
+                    </button>
+                </div>
             </div>
             
             <div class="media-library-container">
                 <media-library 
                     id="media-library"
-                    source="/test/sitemap.xml"
+                    source="medium.com"
                     storage="indexeddb"
                     locale="en">
                 </media-library>
@@ -221,21 +278,69 @@
         
         function setupControls() {
             const sourceInput = document.getElementById('source-url');
+            const sitemapInput = document.getElementById('sitemap-url');
             const storageSelect = document.getElementById('storage-type');
             const localeSelect = document.getElementById('locale');
+            const siteSelector = document.getElementById('site-selector');
             
             sourceInput.addEventListener('input', (e) => {
                 mediaLibrary.source = e.target.value;
             });
             
+            sitemapInput.addEventListener('input', (e) => {
+                mediaLibrary.sitemapUrl = e.target.value;
+            });
+            
             storageSelect.addEventListener('change', (e) => {
                 mediaLibrary.storage = e.target.value;
+                loadAvailableSites(); // Reload sites when storage type changes
             });
             
             localeSelect.addEventListener('change', (e) => {
                 mediaLibrary.locale = e.target.value;
                 mockMediaLibrary.locale = e.target.value;
             });
+            
+            siteSelector.addEventListener('change', async (e) => {
+                const selectedSite = e.target.value;
+                if (selectedSite) {
+                    await mediaLibrary.loadMediaData(selectedSite);
+                    showNotification(`Loaded data for site: ${selectedSite}`, 'success');
+                }
+            });
+            
+            // Load available sites on page load
+            loadAvailableSites();
+        }
+        
+        async function loadAvailableSites() {
+            try {
+                const storageType = document.getElementById('storage-type').value;
+                const { BrowserStorage } = await import('/src/utils/storage.js');
+                const storage = new BrowserStorage(storageType);
+                const sites = await storage.getAllSites();
+                
+                const siteSelector = document.getElementById('site-selector');
+                siteSelector.innerHTML = '<option value="">Select a site...</option>';
+                
+                sites.forEach(site => {
+                    const option = document.createElement('option');
+                    option.value = site.siteKey;
+                    option.textContent = `${site.siteKey} (${site.itemCount} items) - ${new Date(site.timestamp).toLocaleString()}`;
+                    siteSelector.appendChild(option);
+                });
+                
+                if (sites.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No sites found';
+                    option.disabled = true;
+                    siteSelector.appendChild(option);
+                }
+            } catch (error) {
+                console.error('Failed to load available sites:', error);
+                showNotification(`Failed to load sites: ${error.message}`, 'error');
+            }
         }
         
         function setupNotifications() {
@@ -310,6 +415,64 @@
         ];
         
         // Global functions
+        window.refreshSites = loadAvailableSites;
+        
+        window.clearOldData = async () => {
+            try {
+                const storageType = document.getElementById('storage-type').value;
+                const { BrowserStorage } = await import('/src/utils/storage.js');
+                const storage = new BrowserStorage(storageType);
+                
+                // Check if there's old data to migrate
+                const oldData = await storage.load('media-data');
+                if (oldData && oldData.length > 0) {
+                    const shouldMigrate = confirm(`Found ${oldData.length} items in old format. Would you like to migrate them to 'legacy-data' site before clearing?`);
+                    if (shouldMigrate) {
+                        await storage.save(oldData, 'legacy-data');
+                        showNotification(`Migrated ${oldData.length} items to 'legacy-data' site`, 'success');
+                    }
+                }
+                
+                // Clear all data
+                await storage.clear();
+                
+                // Refresh the sites list
+                await loadAvailableSites();
+                
+                showNotification('Old data cleared successfully', 'success');
+            } catch (error) {
+                console.error('Failed to clear old data:', error);
+                showNotification(`Failed to clear data: ${error.message}`, 'error');
+            }
+        };
+
+        window.testHtmlParsing = async () => {
+            try {
+                const { SitemapParser } = await import('/src/utils/sitemap-parser.js');
+                const parser = new SitemapParser();
+                
+                // Test with sample HTML containing various image types
+                const testHtml = `
+                    <html>
+                        <body>
+                            <img src="/images/logo.png" alt="Logo">
+                            <img src="https://example.com/hero.jpg" alt="Hero image">
+                            <img src="./assets/icon.svg" alt="Icon">
+                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" alt="Data URL">
+                            <img src="/images/banner.webp" alt="Banner">
+                            <img src="https://cdn.example.com/video-thumb.jpg" alt="Video thumbnail">
+                        </body>
+                    </html>
+                `;
+                
+                const imageCount = parser.testHtmlParsing(testHtml);
+                showNotification(`Test completed: Found ${imageCount} images in test HTML`, 'success');
+            } catch (error) {
+                console.error('Failed to test HTML parsing:', error);
+                showNotification(`Test failed: ${error.message}`, 'error');
+            }
+        };
+        
         window.loadMockData = async () => {
             try {
                 const storage = new (await import('/src/utils/storage.js')).BrowserStorage('local');

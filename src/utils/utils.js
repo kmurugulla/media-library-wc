@@ -16,7 +16,26 @@ export const MEDIA_EXTENSIONS = [
 ];
 
 function extractFileExtension(filePath) {
-  return filePath?.split('.').pop()?.toLowerCase();
+  if (!filePath) return '';
+  
+  try {
+    // Remove query parameters and fragments using regex (more robust)
+    const cleanUrl = filePath.split(/[?#]/)[0];
+    
+    // Extract the file extension
+    const extension = cleanUrl.split('.').pop()?.toLowerCase() || '';
+    
+    // Validate the extension - ensure it's not empty and different from the entire URL
+    // Also check it doesn't contain invalid characters (like spaces, slashes, etc.)
+    if (!extension || extension === cleanUrl || /[^a-z0-9]/.test(extension)) {
+      return '';
+    }
+    
+    return extension;
+  } catch (error) {
+    console.warn('Error extracting file extension from URL:', filePath, error);
+    return '';
+  }
 }
 
 function isSvgFile(media) {

@@ -27,15 +27,23 @@ class MediaList extends LocalizableElement {
     super.connectedCallback();
     
     // Load SVG icons
+    await this.loadIcons();
+  }
+
+  async loadIcons() {
     const ICONS = [
       '/src/icons/photo.svg',
       '/src/icons/video.svg',
+      '/src/icons/pdf.svg',
       '/src/icons/external-link.svg',
-      '/src/icons/eye.svg',
       '/src/icons/copy.svg'
     ];
     
-    getSvg({ parent: this.shadowRoot, paths: ICONS });
+    // Check if icons are already loaded to avoid duplicates
+    const existingIcons = this.shadowRoot.querySelectorAll('svg[id]');
+    if (existingIcons.length === 0) {
+      await getSvg({ parent: this.shadowRoot, paths: ICONS });
+    }
   }
 
   render() {
@@ -86,7 +94,7 @@ class MediaList extends LocalizableElement {
         </div>
         
         <div class="media-info">
-          <h4 class="media-name" title=${media.name}>${media.name}</h4>
+          <h4 class="media-name" title=${media.name}>${this.truncateText(media.name, 35)}</h4>
           <p class="media-url" title=${media.url}>${this.getShortUrl(media.url)}</p>
         </div>
         
@@ -105,15 +113,6 @@ class MediaList extends LocalizableElement {
         <div class="media-actions">
           <button 
             class="action-button"
-            @click=${(e) => this.handleAction(e, 'view', media)}
-            title=${this.t('media.viewDetails')}
-          >
-            <svg class="action-icon">
-              <use href="#eye"></use>
-            </svg>
-          </button>
-          <button 
-            class="action-button"
             @click=${(e) => this.handleAction(e, 'copy', media)}
             title=${this.t('media.copyUrl')}
           >
@@ -127,14 +126,28 @@ class MediaList extends LocalizableElement {
   }
 
   renderThumbnail(media, mediaType) {
-    if (isImage(media.url)) {
+    if (isImage(media.url) && media.hasError !== true) {
       return html`
         <img 
           src=${media.url} 
           alt=${media.alt || media.name}
           loading="lazy"
-          @error=${this.handleImageError}
+          @error=${(e) => this.handleImageError(e, media)}
         />
+      `;
+    }
+    
+    // Show CORS-aware placeholder for failed images
+    if (isImage(media.url) && media.hasError === true) {
+      return html`
+        <div class="placeholder cors-error">
+          <svg class="placeholder-icon">
+            <use href="#photo"></use>
+          </svg>
+          <div class="cors-message">
+            <small>CORS</small>
+          </div>
+        </div>
       `;
     }
     
@@ -151,10 +164,15 @@ class MediaList extends LocalizableElement {
     switch (mediaType) {
       case 'image': return 'photo';
       case 'video': return 'video';
-      case 'document': return 'external-link';
+      case 'document': return 'pdf';
       case 'link': return 'external-link';
       default: return 'photo';
     }
+  }
+
+  truncateText(text, maxLength = 30) {
+    if (!text || text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
   }
 
   getDisplayMediaType(mediaType) {
@@ -203,15 +221,15 @@ class MediaList extends LocalizableElement {
     }));
   }
 
-  handleImageError(e) {
+  handleImageError(e, media) {
+    // Mark the media item as having an error
+    media.hasError = true;
+    
+    // Hide the image and trigger a re-render
     e.target.style.display = 'none';
-    e.target.parentElement.innerHTML = `
-      <div class="placeholder">
-        <svg class="placeholder-icon">
-          <use href="#photo"></use>
-        </svg>
-      </div>
-    `;
+    
+    // Request an update to re-render with the error state
+    this.requestUpdate();
   }
 }
 

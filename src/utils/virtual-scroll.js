@@ -3,8 +3,8 @@
 
 // Virtual scroll constants
 export const SCROLL_CONSTANTS = {
-  // Grid constants - match original CSS grid behavior
-  GRID_ITEM_WIDTH: 350, // Original card width
+  // Grid constants - responsive card widths
+  GRID_ITEM_WIDTH: 410, // Card width for large screens (1200px+)
   GRID_ITEM_HEIGHT: 400, // Original card height
   GRID_CARD_SPACING: 20, // Gap between cards
   
@@ -21,6 +21,28 @@ export const SCROLL_CONSTANTS = {
  * Virtual scroll manager for handling scroll-based rendering
  */
 export class VirtualScrollManager {
+  /**
+   * Calculate responsive item width based on viewport
+   */
+  getResponsiveItemWidth() {
+    if (typeof window === 'undefined') return SCROLL_CONSTANTS.GRID_ITEM_WIDTH;
+    
+    const width = window.innerWidth;
+    
+    // Responsive breakpoints
+    if (width >= 1200) {
+      return 410; // Large screens
+    } else if (width >= 992) {
+      return 360; // Medium-large screens
+    } else if (width >= 768) {
+      return 310; // Medium screens
+    } else if (width >= 576) {
+      return 290; // Small screens
+    } else {
+      return 260; // Extra small screens
+    }
+  }
+
   constructor(options = {}) {
     this.container = null;
     this.scrollListenerAttached = false;
@@ -29,7 +51,7 @@ export class VirtualScrollManager {
     
     // Configuration
     this.itemHeight = options.itemHeight || SCROLL_CONSTANTS.GRID_ITEM_HEIGHT;
-    this.itemWidth = options.itemWidth || SCROLL_CONSTANTS.GRID_ITEM_WIDTH;
+    this.itemWidth = options.itemWidth || this.getResponsiveItemWidth();
     this.cardSpacing = options.cardSpacing || SCROLL_CONSTANTS.GRID_CARD_SPACING;
     this.bufferSize = options.bufferSize || SCROLL_CONSTANTS.BUFFER_SIZE;
     this.maxVisibleItems = options.maxVisibleItems || SCROLL_CONSTANTS.MAX_VISIBLE_ITEMS;
@@ -93,6 +115,12 @@ export class VirtualScrollManager {
     if (!this.container) return;
     const width = this.container.clientWidth;
     if (width === 0) return;
+
+    // Update item width based on viewport
+    const responsiveWidth = this.getResponsiveItemWidth();
+    if (responsiveWidth !== this.itemWidth) {
+      this.itemWidth = responsiveWidth;
+    }
 
     // Account for padding in the container
     const availableWidth = width - 32; // 16px padding on each side

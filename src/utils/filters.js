@@ -9,6 +9,7 @@ export const FILTER_CONFIG = {
   missingAlt: (item) => item.type?.startsWith('img >') && !item.type?.includes('svg') && item.alt === 'null',
   decorative: (item) => item.type?.startsWith('img >') && !item.type?.includes('svg') && item.alt === '',
   filled: (item) => item.type?.startsWith('img >') && !item.type?.includes('svg') && item.alt && item.alt !== '' && item.alt !== 'null',
+  unused: (item) => !item.doc || item.doc.trim() === '',
 
   documentImages: (item, selectedDocument) => FILTER_CONFIG.images(item) && item.doc === selectedDocument,
   documentIcons: (item, selectedDocument) => FILTER_CONFIG.icons(item) && item.doc === selectedDocument,

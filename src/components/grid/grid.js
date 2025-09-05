@@ -2,7 +2,6 @@
 import { html } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { LocalizableElement } from '../base-localizable.js';
-import getSvg from '../../utils/getSvg.js';
 import { getMediaType, isImage, isVideo, isPdf } from '../../utils/utils.js';
 import { getStyles } from '../../utils/get-styles.js';
 import { GridVirtualScrollManager } from '../../utils/virtual-scroll.js';
@@ -55,16 +54,6 @@ class MediaGrid extends LocalizableElement {
 
   async connectedCallback() {
     super.connectedCallback();
-    
-    // Load SVG icons using Franklin approach
-    const ICONS = [
-      '/src/icons/photo.svg',
-      '/src/icons/video.svg',
-      '/src/icons/external-link.svg',
-      '/src/icons/copy.svg'
-    ];
-    
-    getSvg({ parent: this.shadowRoot, paths: ICONS });
   }
 
   firstUpdated() {
@@ -100,6 +89,7 @@ class MediaGrid extends LocalizableElement {
     this.virtualScroll.cleanup();
   }
 
+
   // ============================================================================
   // SCROLL HANDLING
   // ============================================================================
@@ -117,13 +107,6 @@ class MediaGrid extends LocalizableElement {
       }
     });
   }
-
-
-
-
-
-
-
 
   render() {
     if (!this.mediaData || this.mediaData.length === 0) {
@@ -157,6 +140,7 @@ class MediaGrid extends LocalizableElement {
 
   renderMediaCard(media, index, position) {
     const mediaType = getMediaType(media);
+    const iconName = this.getMediaTypeIcon(mediaType);
     
     return html`
       <div 
@@ -176,7 +160,7 @@ class MediaGrid extends LocalizableElement {
         
         <div class="media-info">
           <div class="media-details">
-            <h4 class="media-name" title=${media.name}>${media.name}</h4>
+            <h4 class="media-name" title=${media.name}>${this.truncateText(media.name, 35)}</h4>
             <div class="media-meta">
               ${this.renderMediaMeta(media)}
             </div>
@@ -212,6 +196,21 @@ class MediaGrid extends LocalizableElement {
       `;
     }
     
+    // Show CORS-aware placeholder for failed images
+    if (isImage(media.url) && media.hasError === true) {
+      return html`
+        <div class="media-placeholder cors-error">
+          <svg class="placeholder-icon">
+            <use href="#photo"></use>
+          </svg>
+          <div class="cors-message">
+            <small>CORS blocked</small>
+            <small>${this.getDomainFromUrl(media.url)}</small>
+          </div>
+        </div>
+      `;
+    }
+    
     return html`
       <div class="media-placeholder">
         <svg class="placeholder-icon">
@@ -222,13 +221,27 @@ class MediaGrid extends LocalizableElement {
   }
 
   getMediaTypeIcon(mediaType) {
-    switch (mediaType) {
-      case 'image': return 'photo';
-      case 'video': return 'video';
-      case 'document': return 'external-link';
-      case 'link': return 'external-link';
-      default: return 'photo';
+    const iconMap = {
+      'image': 'photo',
+      'video': 'video', 
+      'document': 'pdf',
+      'link': 'external-link'
+    };
+    return iconMap[mediaType] || 'photo';
+  }
+
+  getDomainFromUrl(url) {
+    try {
+      const urlObj = new URL(url);
+      return urlObj.hostname;
+    } catch (error) {
+      return 'unknown';
     }
+  }
+
+  truncateText(text, maxLength = 30) {
+    if (!text || text.length <= maxLength) return text;
+    return text.substring(0, maxLength) + '...';
   }
 
   renderMediaMeta(media) {

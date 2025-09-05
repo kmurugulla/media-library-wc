@@ -24,7 +24,9 @@
     "scanProgress": "Scanning {{count}} pages...",
     "scanComplete": "Scan complete! Found {{count}} media files.",
     "scanning": "Scanning...",
-    "scanButton": "Scan Media"
+    "scanButton": "Scan Media",
+    "manualSitemap": "Manual Sitemap URL",
+    "sitemapPlaceholder": "Enter sitemap URL manually"
   },
   "filters": {
     "all": "All Media",
@@ -52,8 +54,7 @@
     "copyUrl": "Copy URL",
     "copyImage": "Copy Image",
     "download": "Download",
-    "editAltText": "Edit Alt Text",
-    "viewDetails": "View Details"
+    "editAltText": "Edit Alt Text"
   },
   "units": {
     "bytes": "bytes",

@@ -37,17 +37,29 @@ class MediaSidebar extends LocalizableElement {
             ${this.renderFilterItem('videos', counts.videos)}
             ${this.renderFilterItem('documents', counts.documents)}
             ${this.renderFilterItem('links', counts.links)}
-            ${this.renderFilterItem('icons', counts.icons)}
-            ${this.renderFilterItem('missingAlt', counts.missingAlt)}
+            ${this.renderFilterItem('icons', counts.icons, 'SVGs')}
             ${this.renderFilterItem('unused', counts.unused)}
           </ul>
         </div>
+
+        ${(counts.filled > 0 || counts.decorative > 0 || counts.missingAlt > 0) ? html`
+          <div class="filter-section">
+            <h3>Accessibility</h3>
+            <ul class="filter-list">
+              ${this.renderFilterItem('filled', counts.filled)}
+              ${this.renderFilterItem('decorative', counts.decorative)}
+              ${this.renderFilterItem('missingAlt', counts.missingAlt, 'No Alt Text')}
+            </ul>
+          </div>
+        ` : ''}
       </aside>
     `;
   }
 
-  renderFilterItem(filterType, count) {
+  renderFilterItem(filterType, count, customLabel = null) {
     if (!count || count === 0) return '';
+    
+    const label = customLabel || this.t(`filters.${filterType}`);
     
     return html`
       <li class="filter-item">
@@ -56,7 +68,7 @@ class MediaSidebar extends LocalizableElement {
           @click=${() => this.handleFilter(filterType)}
           aria-pressed=${this.activeFilter === filterType}
         >
-          <span>${this.t(`filters.${filterType}`)}</span>
+          <span>${label}</span>
           <span class="count">${this.formatNumber(count)}</span>
         </button>
       </li>

@@ -11,7 +11,9 @@ class MediaTopbar extends LocalizableElement {
     currentView: { type: String },
     locale: { type: String },
     isScanning: { type: Boolean },
-    scanProgress: { type: Object }
+    scanProgress: { type: Object },
+    lastScanDuration: { type: String },
+    scanStats: { type: Object }
   };
 
   static styles = getStyles(topbarStyles);
@@ -24,6 +26,8 @@ class MediaTopbar extends LocalizableElement {
     this.locale = 'en';
     this.isScanning = false;
     this.scanProgress = null;
+    this.lastScanDuration = null;
+    this.scanStats = null;
   }
 
   async connectedCallback() {
@@ -68,6 +72,23 @@ class MediaTopbar extends LocalizableElement {
           ` : ''}
         </div>
 
+        ${this.scanStats ? html`
+          <div class="scan-stats">
+            <div class="stat-item">
+              <span class="stat-label">Pages:</span>
+              <span class="stat-value">${this.scanStats.pagesScanned}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Media:</span>
+              <span class="stat-value">${this.scanStats.mediaFound}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Time:</span>
+              <span class="stat-value">${this.scanStats.duration}s</span>
+            </div>
+          </div>
+        ` : ''}
+
         <button 
           class="view-toggle-button"
           @click=${this.toggleView}
@@ -79,16 +100,23 @@ class MediaTopbar extends LocalizableElement {
           </svg>
         </button>
 
-        <button 
-          class="scan-button"
-          @click=${this.handleScan}
-          ?disabled=${this.isScanning}
-        >
-          <svg class="scan-icon">
-            <use href="#refresh"></use>
-          </svg>
-          ${this.isScanning ? this.t('mediaLibrary.scanning') : this.t('mediaLibrary.scanButton')}
-        </button>
+        <div class="scan-container">
+          <button 
+            class="scan-button"
+            @click=${this.handleScan}
+            ?disabled=${this.isScanning}
+          >
+            <svg class="scan-icon">
+              <use href="#refresh"></use>
+            </svg>
+            ${this.isScanning ? this.t('mediaLibrary.scanning') : this.t('mediaLibrary.scanButton')}
+          </button>
+          ${this.lastScanDuration ? html`
+            <div class="scan-duration">
+              Last scan: ${this.lastScanDuration}s
+            </div>
+          ` : ''}
+        </div>
       </div>
 
       ${this.scanProgress ? html`
