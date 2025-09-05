@@ -1,0 +1,72 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "search": "Search",
+    "filter": "Filter",
+    "clear": "Clear",
+    "all": "All"
+  },
+  "COMMON": {
+    "FILTER": "Filter"
+  },
+  "mediaLibrary": {
+    "title": "Media Library",
+    "searchPlaceholder": "Search media...",
+    "noResults": "No media found",
+    "loadingMedia": "Loading media...",
+    "scanProgress": "Scanning {{count}} pages...",
+    "scanComplete": "Scan complete! Found {{count}} media files.",
+    "scanning": "Scanning...",
+    "scanButton": "Scan Media"
+  },
+  "filters": {
+    "all": "All Media",
+    "images": "Images",
+    "videos": "Videos",
+    "documents": "Documents",
+    "links": "Links",
+    "icons": "SVGs",
+    "missingAlt": "Missing Alt Text",
+    "decorative": "Decorative",
+    "filled": "With Alt Text",
+    "unused": "Unused"
+  },
+  "views": {
+    "grid": "Grid View",
+    "list": "List View"
+  },
+  "media": {
+    "altText": "Alt Text",
+    "fileName": "File Name",
+    "fileSize": "File Size",
+    "lastModified": "Last Modified",
+    "usedIn": "Used in {{count}} documents",
+    "notUsed": "Not used",
+    "copyUrl": "Copy URL",
+    "copyImage": "Copy Image",
+    "download": "Download",
+    "editAltText": "Edit Alt Text",
+    "viewDetails": "View Details"
+  },
+  "units": {
+    "bytes": "bytes",
+    "KB": "KB",
+    "MB": "MB",
+    "GB": "GB"
+  },
+  "errors": {
+    "loadFailed": "Failed to load media data",
+    "scanFailed": "Failed to scan media",
+    "saveFailed": "Failed to save changes",
+    "networkError": "Network error occurred",
+    "invalidSource": "Invalid source URL",
+    "parseError": "Failed to parse data"
+  }
+}

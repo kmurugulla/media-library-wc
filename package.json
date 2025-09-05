@@ -1,0 +1,57 @@
+{
+  "name": "media-library",
+  "version": "1.0.0",
+  "description": "A browser-based media library web component for scanning and managing website media files",
+  "type": "module",
+  "main": "dist/media-library.umd.js",
+  "module": "dist/media-library.es.js",
+  "types": "dist/media-library.d.ts",
+  "files": [
+    "dist",
+    "locales"
+  ],
+  "exports": {
+    ".": {
+      "import": "./dist/media-library.es.js",
+      "require": "./dist/media-library.umd.js",
+      "types": "./dist/media-library.d.ts"
+    },
+    "./styles": "./dist/style.css",
+    "./locales/*": "./locales/*.json"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "vite --open /test/index.html",
+    "lint": "eslint src",
+    "type-check": "tsc --noEmit"
+  },
+  "keywords": [
+    "web-component",
+    "media-library",
+    "sitemap",
+    "media-management",
+    "lit",
+    "browser-only"
+  ],
+  "author": "Media Library Team",
+  "license": "MIT",
+  "dependencies": {
+    "lit": "^3.0.0"
+  },
+  "devDependencies": {
+    "vite": "^4.5.0",
+    "vite-plugin-lit-css": "^1.0.0",
+    "eslint": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-org/media-library.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-org/media-library/issues"
+  },
+  "homepage": "https://github.com/your-org/media-library#readme"
+}
