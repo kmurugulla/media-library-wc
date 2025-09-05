@@ -21,12 +21,16 @@
     "searchPlaceholder": "Search media...",
     "noResults": "No media found",
     "loadingMedia": "Loading media...",
-    "scanProgress": "Scanning {{count}} pages...",
+    "scanProgress": "Scanning {{current}} of {{total}} pages...",
+    "scanStarting": "Starting scan...",
     "scanComplete": "Scan complete! Found {{count}} media files.",
     "scanning": "Scanning...",
     "scanButton": "Scan Media",
     "manualSitemap": "Manual Sitemap URL",
-    "sitemapPlaceholder": "Enter sitemap URL manually"
+    "sitemapPlaceholder": "Enter sitemap URL manually",
+    "analysisEnabled": "Analysis ON",
+    "analysisDisabled": "Analysis OFF",
+    "analysisTooltip": "Toggle image analysis (orientation, categorization, EXIF data) - ON by default for better categorization"
   },
   "filters": {
     "all": "All Media",

@@ -27,7 +27,8 @@ class MediaLibrary extends LocalizableElement {
     _isScanning: { state: true },
     _scanProgress: { state: true },
     _lastScanDuration: { state: true },
-    _scanStats: { state: true }
+    _scanStats: { state: true },
+    _imageAnalysisEnabled: { state: true }
   };
 
   static styles = css`
@@ -228,6 +229,7 @@ class MediaLibrary extends LocalizableElement {
     this._currentView = 'grid';
     this._isScanning = false;
     this._scanProgress = null;
+    this._imageAnalysisEnabled = true; // Default to ON
     
     this.storageManager = null;
     this.sitemapParser = null;
@@ -256,8 +258,18 @@ class MediaLibrary extends LocalizableElement {
     // Initialize storage
     this.storageManager = new BrowserStorage(this.storage);
     
-    // Initialize sitemap parser
-    this.sitemapParser = new SitemapParser();
+    // Initialize sitemap parser with image analysis configuration
+    this.sitemapParser = new SitemapParser({
+      enableImageAnalysis: this._imageAnalysisEnabled,
+      analysisConfig: {
+        extractEXIF: true,
+        extractDimensions: true,
+        categorizeFromFilename: true,
+        detectFaces: true,   // Enable face detection
+        classifyImages: true,
+        analyzeColors: false
+      }
+    });
     
     // Load existing data
     await this.loadMediaData();
@@ -320,6 +332,7 @@ class MediaLibrary extends LocalizableElement {
       this._isScanning = true;
       this._error = null;
       this._scanStartTime = Date.now();
+      this._scanProgress = { current: 0, total: 0, found: 0 }; // Initialize with starting state
       
       // Use manual sitemap URL if provided, otherwise auto-detect
       let sitemapUrl = this.source;
@@ -346,9 +359,13 @@ class MediaLibrary extends LocalizableElement {
       const siteKey = this.generateSiteKey(this.source);
       const previousMetadata = await this.storageManager.loadScanMetadata(siteKey);
 
+      // Update progress to show total pages found
+      this._scanProgress = { current: 0, total: urls.length, found: 0 };
+      this.requestUpdate();
+
       // Scan pages with progress updates and incremental scanning
       const mediaData = await this.sitemapParser.scanPages(urls, (completed, total, found) => {
-        this._scanProgress = { pages: completed, total, found };
+        this._scanProgress = { current: completed, total, found };
         this.requestUpdate();
       }, previousMetadata);
 
@@ -411,6 +428,26 @@ class MediaLibrary extends LocalizableElement {
       
       console.error('Scan failed:', error);
     }
+  }
+
+  handleToggleImageAnalysis(event) {
+    this._imageAnalysisEnabled = event.detail.enabled;
+    
+    // Update sitemap parser configuration
+    if (this.sitemapParser) {
+      this.sitemapParser.setImageAnalysis(this._imageAnalysisEnabled, {
+        extractEXIF: true,
+        extractDimensions: true,
+        categorizeFromFilename: true,
+        detectFaces: this._imageAnalysisEnabled,  // Enable advanced features when analysis is on
+        classifyImages: this._imageAnalysisEnabled,
+        analyzeColors: false  // Keep color analysis off by default (very expensive)
+      });
+    }
+    
+    // Show notification
+    const status = this._imageAnalysisEnabled ? 'enabled' : 'disabled';
+    this.showNotification(`Image analysis ${status}. ${this._imageAnalysisEnabled ? 'Next scan will include image analysis.' : 'Next scan will be faster without analysis.'}`);
   }
 
   get filteredMediaData() {
@@ -561,9 +598,11 @@ class MediaLibrary extends LocalizableElement {
             .scanProgress=${this._scanProgress}
             .lastScanDuration=${this._lastScanDuration}
             .scanStats=${this._scanStats}
+            .imageAnalysisEnabled=${this._imageAnalysisEnabled}
             @search=${this.handleSearch}
             @viewChange=${this.handleViewChange}
             @scan=${this.handleScan}
+            @toggleImageAnalysis=${this.handleToggleImageAnalysis}
           ></media-topbar>
         </div>
 
@@ -641,7 +680,13 @@ class MediaLibrary extends LocalizableElement {
         <div class="loading-state">
           <div class="loading-spinner"></div>
           <h3>${this.t('mediaLibrary.scanning')}</h3>
-          <p>${this.t('mediaLibrary.scanProgress', { count: this._scanProgress?.pages || 0 })}</p>
+          <p>${this._scanProgress?.current === 0 ? 
+            this.t('mediaLibrary.scanStarting') :
+            this.t('mediaLibrary.scanProgress', { 
+              current: this._scanProgress?.current || 0, 
+              total: this._scanProgress?.total || 0 
+            })
+          }</p>
         </div>
       `;
     }

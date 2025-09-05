@@ -38,13 +38,17 @@
   "author": "Media Library Team",
   "license": "MIT",
   "dependencies": {
+    "@tensorflow-models/coco-ssd": "^2.2.3",
+    "@tensorflow/tfjs": "^4.22.0",
+    "exif-js": "^2.3.0",
+    "face-api.js": "^0.22.2",
     "lit": "^3.0.0"
   },
   "devDependencies": {
-    "vite": "^4.5.0",
-    "vite-plugin-lit-css": "^1.0.0",
     "eslint": "^8.0.0",
-    "typescript": "^5.0.0"
+    "typescript": "^5.0.0",
+    "vite": "^4.5.0",
+    "vite-plugin-lit-css": "^1.0.0"
   },
   "repository": {
     "type": "git",

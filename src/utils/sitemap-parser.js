@@ -1,6 +1,8 @@
 // src/utils/sitemap-parser.js
+import { analyzeImage, updateAnalysisConfig, getAnalysisConfig } from './image-analysis.js';
+
 class SitemapParser {
-  constructor() {
+  constructor(options = {}) {
     this.throttleDelay = 50; // Reduced from 200ms to 50ms for faster processing
     this.maxConcurrency = 20; // Increased from 3 to 20 for better parallelism
     this.commonSitemapPaths = [
@@ -13,6 +15,18 @@ class SitemapParser {
       '/robots.txt' // We'll check robots.txt for sitemap references
     ];
     this.contentOrigin = null; // Will be set based on the website being scanned
+    
+    // Image analysis configuration
+    this.enableImageAnalysis = options.enableImageAnalysis || false;
+    this.analysisConfig = options.analysisConfig || {};
+    
+    // Configure image analysis if enabled
+    if (this.enableImageAnalysis) {
+      updateAnalysisConfig({
+        enabled: true,
+        ...this.analysisConfig
+      });
+    }
   }
 
   async autoDetectSitemap(websiteUrl) {
@@ -114,6 +128,39 @@ class SitemapParser {
     
     // Remove duplicates and return
     return [...new Set(variations)];
+  }
+
+  /**
+   * Enable or disable image analysis
+   * @param {boolean} enabled - Whether to enable image analysis
+   * @param {Object} config - Analysis configuration options
+   */
+  setImageAnalysis(enabled, config = {}) {
+    this.enableImageAnalysis = enabled;
+    this.analysisConfig = config;
+    
+    if (enabled) {
+      updateAnalysisConfig({
+        enabled: true,
+        ...config
+      });
+      console.log('Image analysis enabled with config:', config);
+    } else {
+      updateAnalysisConfig({ enabled: false });
+      console.log('Image analysis disabled');
+    }
+  }
+
+  /**
+   * Get current image analysis configuration
+   * @returns {Object} Current configuration
+   */
+  getImageAnalysisConfig() {
+    return {
+      enabled: this.enableImageAnalysis,
+      config: this.analysisConfig,
+      analysisConfig: getAnalysisConfig()
+    };
   }
 
   async findSitemapInRobots(baseUrl) {
@@ -380,7 +427,9 @@ class SitemapParser {
         }
       }
       
-      images.forEach((img, index) => {
+      for (let index = 0; index < images.length; index++) {
+        const img = images[index];
+        
         // Get the raw src attribute value, not the resolved URL
         const rawSrc = img.getAttribute('src');
         
@@ -426,6 +475,32 @@ class SitemapParser {
               firstUsedAt: timestamp,
               lastUsedAt: timestamp
             };
+
+            // Run image analysis if enabled
+            if (this.enableImageAnalysis) {
+              try {
+                console.log(`  → Running image analysis for: ${fixedUrl}`);
+                const analysis = await analyzeImage(fixedUrl, null, mediaItem.ctx);
+                
+                // Add analysis results to media item
+                mediaItem.orientation = analysis.orientation;
+                mediaItem.category = analysis.category;
+                mediaItem.width = analysis.width;
+                mediaItem.height = analysis.height;
+                mediaItem.exifCamera = analysis.exifCamera;
+                mediaItem.exifDate = analysis.exifDate;
+                mediaItem.hasFaces = analysis.hasFaces;
+                mediaItem.faceCount = analysis.faceCount;
+                mediaItem.dominantColor = analysis.dominantColor;
+                mediaItem.analysisConfidence = analysis.confidence;
+                
+                console.log(`  → Analysis complete: ${analysis.category} (${analysis.confidence})`);
+              } catch (error) {
+                console.warn(`  → Image analysis failed for ${fixedUrl}:`, error);
+                // Continue without analysis results
+              }
+            }
+
             console.log(`  → Added media item:`, mediaItem);
             mediaItems.push(mediaItem);
           } else {
@@ -434,7 +509,7 @@ class SitemapParser {
         } else {
           console.log(`  → Skipped (no src attribute)`);
         }
-      });
+      }
 
       // Parse videos
       const videos = doc.querySelectorAll('video');

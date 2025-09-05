@@ -400,6 +400,47 @@
     word-break: break-all;
   }
 
+  /* Analysis metadata styles */
+  .analysis-section {
+    background: #f8f9fa;
+    border-top: 2px solid #e5e7eb;
+  }
+
+  .analysis-section .metadata-label {
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .analysis-subrow {
+    background: #fafbfc;
+  }
+
+  .analysis-subrow .metadata-label {
+    padding-left: 12px;
+    font-weight: 500;
+    color: #4b5563;
+  }
+
+  .analysis-unavailable {
+    color: #9ca3af;
+    font-style: italic;
+  }
+
+  .color-preview {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .color-swatch {
+    width: 16px;
+    height: 16px;
+    border-radius: 2px;
+    border: 1px solid #e5e7eb;
+    display: inline-block;
+    flex-shrink: 0;
+  }
+
   .usage-sections {
     display: flex;
     flex-direction: column;

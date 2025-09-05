@@ -230,11 +230,114 @@ class ModalManager extends LocalizableElement {
                 <td class="metadata-label">Usage Count</td>
                 <td class="metadata-value">${media.usageCount || 0}</td>
               </tr>
+              
+              ${this.renderAnalysisMetadata(media)}
             </tbody>
           </table>
         </div>
       </div>
     `;
+  }
+
+  renderAnalysisMetadata(media) {
+    const hasAnalysisData = media.orientation || media.category || media.width || media.height || 
+                           media.exifCamera || media.exifDate || media.hasFaces || media.dominantColor;
+    
+    if (!hasAnalysisData) {
+      return html`
+        <tr class="metadata-row analysis-section">
+          <td class="metadata-label">Analysis</td>
+          <td class="metadata-value analysis-unavailable">No analysis data available</td>
+        </tr>
+      `;
+    }
+
+    return html`
+      <tr class="metadata-row analysis-section">
+        <td class="metadata-label">Analysis</td>
+        <td class="metadata-value">—</td>
+      </tr>
+      ${media.orientation ? html`
+        <tr class="metadata-row analysis-subrow">
+          <td class="metadata-label">Orientation</td>
+          <td class="metadata-value">${media.orientation}</td>
+        </tr>
+      ` : ''}
+      ${media.category ? html`
+        <tr class="metadata-row analysis-subrow">
+          <td class="metadata-label">Category</td>
+          <td class="metadata-value">${media.category}</td>
+        </tr>
+      ` : ''}
+      ${media.width && media.height ? html`
+        <tr class="metadata-row analysis-subrow">
+          <td class="metadata-label">Dimensions</td>
+          <td class="metadata-value">${media.width} × ${media.height}px</td>
+        </tr>
+      ` : ''}
+      ${this.renderCameraInfo(media)}
+      ${media.exifDate ? html`
+        <tr class="metadata-row analysis-subrow">
+          <td class="metadata-label">Date Taken</td>
+          <td class="metadata-value">${media.exifDate}</td>
+        </tr>
+      ` : ''}
+      ${this.renderFaceDetection(media)}
+      ${media.dominantColor && media.dominantColor !== 'undefined' ? html`
+        <tr class="metadata-row analysis-subrow">
+          <td class="metadata-label">Dominant Color</td>
+          <td class="metadata-value">
+            <div class="color-preview">
+              <span class="color-swatch" style="background-color: ${media.dominantColor}"></span>
+              ${media.dominantColor}
+            </div>
+          </td>
+        </tr>
+      ` : ''}
+      ${media.analysisConfidence ? html`
+        <tr class="metadata-row analysis-subrow">
+          <td class="metadata-label">Confidence</td>
+          <td class="metadata-value">${media.analysisConfidence}</td>
+        </tr>
+      ` : ''}
+    `;
+  }
+
+  renderCameraInfo(media) {
+    if (!media.exifCamera || media.exifCamera === 'undefined undefined' || media.exifCamera === 'undefined') {
+      return '';
+    }
+    
+    return html`
+      <tr class="metadata-row analysis-subrow">
+        <td class="metadata-label">Camera</td>
+        <td class="metadata-value">${media.exifCamera}</td>
+      </tr>
+    `;
+  }
+
+  renderFaceDetection(media) {
+    // If we have explicit face detection data, use it
+    if (media.hasFaces !== undefined && media.hasFaces !== 'undefined') {
+      return html`
+        <tr class="metadata-row analysis-subrow">
+          <td class="metadata-label">Faces Detected</td>
+          <td class="metadata-value">${media.hasFaces ? `Yes (${media.faceCount || 1})` : 'No'}</td>
+        </tr>
+      `;
+    }
+    
+    // If face detection failed but we have face count, show it
+    if (media.faceCount && media.faceCount !== 'undefined' && media.faceCount > 0) {
+      return html`
+        <tr class="metadata-row analysis-subrow">
+          <td class="metadata-label">Faces Detected</td>
+          <td class="metadata-value">Yes (${media.faceCount})</td>
+        </tr>
+      `;
+    }
+    
+    return '';
   }
 
 
