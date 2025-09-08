@@ -1,17 +1,19 @@
 // src/components/media-library.js
-import { html, css } from 'lit';
+import { html } from 'lit';
 import { LocalizableElement } from './base-localizable.js';
 import { i18n } from '../utils/i18n.js';
 import { BrowserStorage } from '../utils/storage.js';
 import { SitemapParser } from '../utils/sitemap-parser.js';
 import { processMediaData, calculateFilteredMediaData } from '../utils/filters.js';
 import { copyMediaToClipboard } from '../utils/utils.js';
+import { getStyles } from '../utils/get-styles.js';
 import './topbar/topbar.js';
 import './sidebar/sidebar.js';
 import './grid/grid.js';
 import './list/list.js';
 import './modal-manager/modal-manager.js';
 import getSvg from '../utils/getSvg.js';
+import mediaLibraryStyles from './media-library.css?inline';
 
 class MediaLibrary extends LocalizableElement {
   static properties = {
@@ -31,190 +33,8 @@ class MediaLibrary extends LocalizableElement {
     _imageAnalysisEnabled: { state: true }
   };
 
-  static styles = css`
-    @layer base {
-      :host {
-        --ml-primary: #3b82f6;
-        --ml-primary-hover: #2563eb;
-        --ml-surface: #ffffff;
-        --ml-surface-elevated: #f8fafc;
-        --ml-border: #e2e8f0;
-        --ml-text: #1e293b;
-        --ml-text-muted: #64748b;
-        --ml-space-xs: 0.25rem;
-        --ml-space-sm: 0.5rem;
-        --ml-space-md: 1rem;
-        --ml-space-lg: 1.5rem;
-        --ml-space-xl: 2rem;
-        --ml-radius-sm: 0.25rem;
-        --ml-radius-md: 0.375rem;
-        --ml-radius-lg: 0.5rem;
-        --ml-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
-        --ml-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-        
-        display: block;
-        width: 100%;
-        max-width: 100%;
-        margin: 0;
-        height: 100vh;
-        overflow: hidden;
-        font-family: system-ui, -apple-system, sans-serif;
-      }
-      
-      /* Franklin-style SVG handling */
-      :host > svg {
-        display: none;
-      }
-      
-      /* Icon styles */
-      .error-icon {
-        display: block;
-        width: 48px;
-        height: 48px;
-        margin-bottom: var(--ml-space-md);
-        color: #ef4444;
-      }
-    }
+  static styles = getStyles(mediaLibraryStyles);
 
-    @layer components {
-      .media-library {
-        display: grid;
-        grid-template:
-          "sidebar topbar" auto
-          "sidebar main" 1fr
-          / 240px 1fr;
-        height: 100vh;
-        width: 100%;
-        max-width: 100%;
-        background: var(--ml-surface-elevated);
-        overflow: hidden;
-        position: relative;
-        gap: var(--ml-space-sm);
-        padding: 0;
-      }
-
-      .top-bar {
-        grid-area: topbar;
-        background: var(--ml-surface);
-        border: 1px solid var(--ml-border);
-        border-radius: var(--ml-radius-lg);
-        box-shadow: var(--ml-shadow-sm);
-        z-index: 1000;
-      }
-
-      .sidebar {
-        grid-area: sidebar;
-        background: var(--ml-surface);
-        border: 1px solid var(--ml-border);
-        border-radius: var(--ml-radius-lg);
-        box-shadow: var(--ml-shadow-sm);
-        overflow-y: auto;
-      }
-
-      .main-content {
-        grid-area: main;
-        background: var(--ml-surface);
-        border: 1px solid var(--ml-border);
-        border-radius: var(--ml-radius-lg);
-        box-shadow: var(--ml-shadow-sm);
-        overflow: hidden;
-        position: relative;
-      }
-
-      .error-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        padding: var(--ml-space-xl);
-        text-align: center;
-        color: var(--ml-text-muted);
-        max-width: 800px;
-        margin: 0 auto;
-      }
-
-      .error-state svg {
-        width: 48px;
-        height: 48px;
-        margin-bottom: var(--ml-space-md);
-        color: #ef4444;
-      }
-
-      .error-message {
-        background: #fef2f2;
-        border: 1px solid #fecaca;
-        border-radius: var(--ml-radius-md);
-        padding: var(--ml-space-lg);
-        margin: var(--ml-space-md) 0;
-        text-align: left;
-        white-space: pre-line;
-        font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
-        font-size: 0.875rem;
-        line-height: 1.5;
-        color: var(--ml-text);
-        max-width: 100%;
-        overflow-wrap: break-word;
-      }
-
-      .retry-button {
-        background: var(--ml-primary);
-        color: white;
-        border: none;
-        border-radius: var(--ml-radius-md);
-        padding: var(--ml-space-sm) var(--ml-space-lg);
-        font-size: 0.875rem;
-        font-weight: 500;
-        cursor: pointer;
-        transition: var(--ml-transition);
-        margin-top: var(--ml-space-md);
-      }
-
-      .retry-button:hover {
-        background: var(--ml-primary-hover);
-        transform: translateY(-1px);
-      }
-
-      .loading-state {
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        height: 100%;
-        padding: var(--ml-space-lg);
-        text-align: center;
-        color: var(--ml-text-muted);
-      }
-
-      .loading-spinner {
-        width: 32px;
-        height: 32px;
-        border: 3px solid var(--ml-border);
-        border-top: 3px solid var(--ml-primary);
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin-bottom: var(--ml-space-md);
-      }
-
-      @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-      }
-    }
-
-    @media (max-width: 768px) {
-      .media-library {
-        grid-template:
-          "topbar" auto
-          "main" 1fr
-          / 1fr;
-      }
-      
-      .sidebar {
-        display: none;
-      }
-    }
-  `;
 
   constructor() {
     super();
@@ -229,7 +49,7 @@ class MediaLibrary extends LocalizableElement {
     this._currentView = 'grid';
     this._isScanning = false;
     this._scanProgress = null;
-    this._imageAnalysisEnabled = true; // Default to ON
+    this._imageAnalysisEnabled = true;
     
     this.storageManager = null;
     this.sitemapParser = null;
@@ -239,7 +59,6 @@ class MediaLibrary extends LocalizableElement {
   async connectedCallback() {
     super.connectedCallback();
     
-    // Load SVG icons for all child components
     const ICONS = [
       '/src/icons/close.svg',
       '/src/icons/photo.svg',
@@ -251,14 +70,10 @@ class MediaLibrary extends LocalizableElement {
     
     await getSvg({ parent: this.shadowRoot, paths: ICONS });
     
-    // Initialize i18n
     await i18n.loadLocale(this.locale);
     i18n.setLocale(this.locale);
     
-    // Initialize storage
     this.storageManager = new BrowserStorage(this.storage);
-    
-    // Initialize sitemap parser with image analysis configuration
     this.sitemapParser = new SitemapParser({
       enableImageAnalysis: this._imageAnalysisEnabled,
       analysisConfig: {
@@ -268,12 +83,10 @@ class MediaLibrary extends LocalizableElement {
       }
     });
     
-    // Load existing data
     await this.loadMediaData();
   }
 
   updated(changedProperties) {
-    // Don't automatically set locale here as it causes update loops
     // Locale will be set during connectedCallback
   }
 
@@ -294,25 +107,20 @@ class MediaLibrary extends LocalizableElement {
         return;
       }
       
-      // Use provided site key or generate from current source
       const key = siteKey || (this.source ? this.generateSiteKey(this.source) : 'media-data');
       const data = await this.storageManager.load(key);
       if (data && data.length > 0) {
         this._mediaData = data;
         this._processedData = processMediaData(data);
       } else {
-        // Initialize with empty data if no data is found
         this._mediaData = [];
         this._processedData = processMediaData([]);
       }
     } catch (error) {
       console.error('Failed to load media data:', error);
       
-      // Initialize with empty data as fallback
       this._mediaData = [];
       this._processedData = processMediaData([]);
-      
-      // Only set error if it's a critical failure
       if (error.name !== 'NotFoundError' && !error.message.includes('object store')) {
         this._error = this.t('errors.loadFailed');
       }
@@ -329,9 +137,7 @@ class MediaLibrary extends LocalizableElement {
       this._isScanning = true;
       this._error = null;
       this._scanStartTime = Date.now();
-      this._scanProgress = { current: 0, total: 0, found: 0 }; // Initialize with starting state
-      
-      // Use manual sitemap URL if provided, otherwise auto-detect
+      this._scanProgress = { current: 0, total: 0, found: 0 };
       let sitemapUrl = this.source;
       if (this.sitemapUrl && this.sitemapUrl.trim()) {
         console.log('Using manual sitemap URL:', this.sitemapUrl);
@@ -342,7 +148,6 @@ class MediaLibrary extends LocalizableElement {
         console.log(`Auto-detected sitemap: ${sitemapUrl}`);
       }
       
-      // Parse sitemap
       const urls = await this.sitemapParser.parseSitemap(sitemapUrl);
       console.log(`Parsed sitemap: Found ${urls.length} URLs to scan`);
       console.log('First few URLs:', urls.slice(0, 3).map(u => u.loc));
@@ -352,28 +157,20 @@ class MediaLibrary extends LocalizableElement {
         return;
       }
 
-      // Load previous scan metadata for incremental scanning
       const siteKey = this.generateSiteKey(this.source);
       const previousMetadata = await this.storageManager.loadScanMetadata(siteKey);
 
-      // Update progress to show total pages found
       this._scanProgress = { current: 0, total: urls.length, found: 0 };
       this.requestUpdate();
-
-      // Scan pages with progress updates and incremental scanning
       const mediaData = await this.sitemapParser.scanPages(urls, (completed, total, found) => {
         this._scanProgress = { current: completed, total, found };
         this.requestUpdate();
       }, previousMetadata);
 
-      // Calculate scan duration
       const scanDuration = Date.now() - this._scanStartTime;
       const durationSeconds = (scanDuration / 1000).toFixed(1);
       
-      // Save to storage with site key
       await this.storageManager.save(mediaData, siteKey);
-      
-      // Save scan metadata for incremental scanning
       const pageLastModified = {};
       urls.forEach(url => {
         pageLastModified[url.loc] = url.lastmod;
@@ -386,24 +183,19 @@ class MediaLibrary extends LocalizableElement {
         scanDuration: scanDuration
       });
       
-      // Update component state
       this._mediaData = mediaData;
       this._processedData = processMediaData(mediaData);
       this._isScanning = false;
       this._scanProgress = null;
       this._lastScanDuration = durationSeconds;
       
-      // Update scan statistics
       this._scanStats = {
         pagesScanned: urls.length,
         mediaFound: mediaData.length,
         duration: durationSeconds
       };
       
-      // Show success message with duration
       this.showNotification(`Scan complete: ${mediaData.length} items found in ${durationSeconds}s`);
-      
-      // Refresh available sites list if in test environment
       if (typeof window.refreshSites === 'function') {
         window.refreshSites();
       }
@@ -412,7 +204,6 @@ class MediaLibrary extends LocalizableElement {
       this._isScanning = false;
       this._scanProgress = null;
       
-      // Provide more specific error messages
       if (error.message.includes('Failed to fetch')) {
         this._error = `Failed to fetch sitemap from: ${this.source}\n\nError: ${error.message}\n\nThis is likely due to:\n• CORS (Cross-Origin Resource Sharing) restrictions\n• The site blocking requests from your domain\n• Network connectivity issues\n• Invalid sitemap URL\n\nTry using a different sitemap URL or test with a local sitemap.`;
       } else if (error.message.includes('Failed to fetch sitemap')) {
@@ -430,7 +221,6 @@ class MediaLibrary extends LocalizableElement {
   handleToggleImageAnalysis(event) {
     this._imageAnalysisEnabled = event.detail.enabled;
     
-    // Update sitemap parser configuration
     if (this.sitemapParser) {
       this.sitemapParser.setImageAnalysis(this._imageAnalysisEnabled, {
         extractEXIF: true,
@@ -439,7 +229,6 @@ class MediaLibrary extends LocalizableElement {
       });
     }
     
-    // Show notification
     const status = this._imageAnalysisEnabled ? 'enabled' : 'disabled';
     this.showNotification(`Image analysis ${status}. ${this._imageAnalysisEnabled ? 'Next scan will include image analysis.' : 'Next scan will be faster without analysis.'}`);
   }
@@ -456,7 +245,6 @@ class MediaLibrary extends LocalizableElement {
   addUsageCountToMedia(mediaData) {
     if (!mediaData) return [];
     
-    // Group by URL to count ALL instances (not just unique documents)
     const usageCounts = {};
     
     mediaData.forEach(item => {
@@ -465,12 +253,10 @@ class MediaLibrary extends LocalizableElement {
           usageCounts[item.url] = 0;
         }
         
-        // Count ALL instances of this media URL
         usageCounts[item.url]++;
       }
     });
     
-    // Add usage count to each unique media item
     const uniqueMedia = {};
     mediaData.forEach(item => {
       if (item.url && !uniqueMedia[item.url]) {
@@ -520,7 +306,6 @@ class MediaLibrary extends LocalizableElement {
     const { media } = e.detail;
     if (!media) return;
 
-    // Pre-filter usage data for the modal
     const usageData = this._mediaData
       ?.filter((item) => item.url === media.url && item.doc && item.doc.trim())
       .map((item) => ({
@@ -532,7 +317,6 @@ class MediaLibrary extends LocalizableElement {
         lastUsedAt: item.lastUsedAt,
       })) || [];
 
-    // Open modal
     window.dispatchEvent(new CustomEvent('open-modal', {
       detail: {
         type: 'details',
@@ -632,12 +416,9 @@ class MediaLibrary extends LocalizableElement {
   isWebsiteUrl(url) {
     if (!url) return false;
     
-    // Check if it's already a sitemap URL
     if (url.includes('/sitemap') || url.endsWith('.xml')) {
       return false;
     }
-    
-    // Check if it looks like a website URL (has domain)
     const urlPattern = /^(https?:\/\/)?([\w\-]+\.)+[\w\-]+(\/.*)?$/i;
     return urlPattern.test(url);
   }
@@ -646,16 +427,13 @@ class MediaLibrary extends LocalizableElement {
     if (!source) return 'media-data';
     
     try {
-      // If it's a full URL, extract the domain
       if (source.startsWith('http://') || source.startsWith('https://')) {
         const url = new URL(source);
         return url.hostname.replace(/[^a-zA-Z0-9.-]/g, '_');
       }
       
-      // If it's just a domain, clean it up
       return source.replace(/[^a-zA-Z0-9.-]/g, '_');
     } catch (error) {
-      // Fallback to cleaned source
       return source.replace(/[^a-zA-Z0-9.-]/g, '_');
     }
   }

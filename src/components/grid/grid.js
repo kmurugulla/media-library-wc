@@ -12,7 +12,6 @@ class MediaGrid extends LocalizableElement {
     mediaData: { type: Array },
     searchQuery: { type: String },
     locale: { type: String },
-    // Virtual scroll properties
     visibleStart: { type: Number },
     visibleEnd: { type: Number },
     colCount: { type: Number }
@@ -27,24 +26,20 @@ class MediaGrid extends LocalizableElement {
     this.searchQuery = '';
     this.locale = 'en';
     
-    // Virtual scroll state
     this.visibleStart = 0;
     this.visibleEnd = 50;
     this.colCount = 4;
     
-    // Initialize virtual scroll manager
     this.virtualScroll = new GridVirtualScrollManager({
       onRangeChange: (range) => {
         this.visibleStart = range.start;
         this.visibleEnd = range.end;
-        // Use requestAnimationFrame to avoid DOM corruption during scroll events
         requestAnimationFrame(() => {
           this.requestUpdate();
         });
       },
       onColCountChange: (colCount) => {
         this.colCount = colCount;
-        // Use requestAnimationFrame to avoid DOM corruption during resize events
         requestAnimationFrame(() => {
           this.requestUpdate();
         });
@@ -64,17 +59,14 @@ class MediaGrid extends LocalizableElement {
   }
 
   willUpdate(changedProperties) {
-    // Reset virtual scroll state when mediaData changes
     if (changedProperties.has('mediaData') && this.mediaData) {
       this.virtualScroll.resetState(this.mediaData.length);
     }
   }
 
   updated(changedProperties) {
-    // Recalculate visible range after DOM update
     if (changedProperties.has('mediaData') && this.mediaData && this.mediaData.length > 0) {
       this.updateComplete.then(() => {
-        // Ensure scroll listener is set up
         if (!this.virtualScroll.scrollListenerAttached) {
           this.setupScrollListener();
         } else {
@@ -95,14 +87,11 @@ class MediaGrid extends LocalizableElement {
   // ============================================================================
 
   setupScrollListener() {
-    // Use requestAnimationFrame to ensure DOM is ready
     requestAnimationFrame(() => {
       const container = this.shadowRoot.querySelector('.media-main');
       if (container) {
-        // Override getTotalItems to provide current mediaData length
         this.virtualScroll.getTotalItems = () => this.mediaData?.length || 0;
         this.virtualScroll.setupScrollListener(container);
-        // Initialize column count
         this.virtualScroll.updateColCount();
       }
     });
@@ -196,7 +185,6 @@ class MediaGrid extends LocalizableElement {
       `;
     }
     
-    // Show CORS-aware placeholder for failed images
     if (isImage(media.url) && media.hasError === true) {
       return html`
         <div class="media-placeholder cors-error">
@@ -285,13 +273,10 @@ class MediaGrid extends LocalizableElement {
   }
 
   handleImageError(e, media) {
-    // Mark the media item as having an error instead of direct DOM manipulation
     media.hasError = true;
     
-    // Hide the image and trigger a re-render
     e.target.style.display = 'none';
     
-    // Request an update to re-render with the error state
     this.requestUpdate();
   }
 

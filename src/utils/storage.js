@@ -10,18 +10,15 @@ class BrowserStorage {
     if (this.type !== 'indexeddb') return;
     
     return new Promise((resolve, reject) => {
-      // Open database with a specific version to ensure onupgradeneeded fires
       const request = indexedDB.open(this.dbName, this.dbVersion);
       
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
         
-        // Create object store if it doesn't exist
         if (!db.objectStoreNames.contains('media')) {
           db.createObjectStore('media', { keyPath: 'id' });
         }
         
-        // Create scan metadata store if it doesn't exist
         if (!db.objectStoreNames.contains('last-modified-data')) {
           db.createObjectStore('last-modified-data', { keyPath: 'siteKey' });
         }
@@ -65,7 +62,6 @@ class BrowserStorage {
     try {
       const db = await this.ensureDatabase();
       
-      // Check if the object store exists
       if (!db.objectStoreNames.contains('media')) {
         console.warn('Media object store does not exist, cannot save data');
         return;
@@ -97,7 +93,6 @@ class BrowserStorage {
     try {
       const db = await this.ensureDatabase();
       
-      // Check if the object store exists
       if (!db.objectStoreNames.contains('media')) {
         console.warn('Media object store does not exist, returning empty array');
         return [];
@@ -115,11 +110,10 @@ class BrowserStorage {
         
         getRequest.onerror = () => {
           console.warn('Failed to get data from IndexedDB:', getRequest.error);
-          resolve([]); // Return empty array instead of rejecting
+          resolve([]);
         };
       });
     } catch (error) {
-      // If database setup fails, return empty array
       console.warn('Failed to load from IndexedDB:', error);
       return [];
     }
@@ -165,7 +159,6 @@ class BrowserStorage {
     try {
       const db = await this.ensureDatabase();
       
-      // Check which object stores exist
       const storesToClear = [];
       if (db.objectStoreNames.contains('media')) {
         storesToClear.push('media');
@@ -211,12 +204,10 @@ class BrowserStorage {
     if (this.type !== 'indexeddb') return;
     
     try {
-      // Close any existing connections
       if (this._db) {
         this._db.close();
       }
       
-      // Delete the database
       return new Promise((resolve, reject) => {
         const deleteRequest = indexedDB.deleteDatabase(this.dbName);
         
@@ -277,7 +268,7 @@ class BrowserStorage {
         
         getRequest.onerror = () => {
           console.warn('Failed to get last modified from IndexedDB:', getRequest.error);
-          resolve(null); // Return null instead of rejecting
+          resolve(null);
         };
       });
     } catch (error) {
@@ -298,7 +289,6 @@ class BrowserStorage {
     }
   }
 
-  // New methods for multi-site support
   async getAllSites() {
     switch (this.type) {
       case 'indexeddb':
@@ -413,7 +403,6 @@ class BrowserStorage {
     }
   }
 
-  // Scan metadata methods for incremental scanning
   async saveScanMetadata(siteKey, metadata) {
     switch (this.type) {
       case 'indexeddb':

@@ -28,7 +28,6 @@ class ModalManager extends LocalizableElement {
   async connectedCallback() {
     super.connectedCallback();
     
-    // Load SVG icons using Franklin approach
     await this.loadIcons();
     
     window.addEventListener('open-modal', this.handleOpenModal);
@@ -45,7 +44,6 @@ class ModalManager extends LocalizableElement {
       '/src/icons/copy.svg'
     ];
     
-    // Check if icons are already loaded to avoid duplicates
     const existingIcons = this.shadowRoot.querySelectorAll('svg[id]');
     if (existingIcons.length === 0) {
       await getSvg({ parent: this.shadowRoot, paths: ICONS });
@@ -59,7 +57,6 @@ class ModalManager extends LocalizableElement {
   }
 
   handleOpenModal = (e) => {
-    // Close any other open modals first
     window.dispatchEvent(new Event('close-modal'));
     
     this.modalData = e.detail;
@@ -179,13 +176,11 @@ class ModalManager extends LocalizableElement {
   formatGroupedTags(groups) {
     const sections = [];
 
-    // Position section
     if (groups.position.length > 0) {
       const positionText = groups.position.map(tag => this.getFriendlyTagDescription(tag)).join(', ');
       sections.push(`**Position:** ${positionText}`);
     }
 
-    // Loading section
     if (groups.loading.length > 0) {
       const issues = groups.loading.filter(tag => ['no-loading-strategy'].includes(tag));
       const recommendations = groups.loading.filter(tag => ['add-loading-attribute'].includes(tag));
@@ -202,7 +197,6 @@ class ModalManager extends LocalizableElement {
       }
     }
 
-    // Responsive section
     if (groups.responsive.length > 0) {
       const issues = groups.responsive.filter(tag => ['no-srcset', 'no-sizes', 'fixed-size'].includes(tag));
       const recommendations = groups.responsive.filter(tag => ['add-responsive-images'].includes(tag));
@@ -219,7 +213,6 @@ class ModalManager extends LocalizableElement {
       }
     }
 
-    // Format section
     if (groups.format.length > 0) {
       const issues = groups.format.filter(tag => ['legacy-format'].includes(tag));
       const recommendations = groups.format.filter(tag => ['convert-to-webp'].includes(tag));
@@ -236,7 +229,6 @@ class ModalManager extends LocalizableElement {
       }
     }
 
-    // Optimization section
     if (groups.optimization.length > 0) {
       const issues = groups.optimization.filter(tag => ['large-size', 'needs-optimization', 'critical-performance-issue'].includes(tag));
       const recommendations = groups.optimization.filter(tag => ['resize-image'].includes(tag));
@@ -253,7 +245,6 @@ class ModalManager extends LocalizableElement {
       }
     }
 
-    // Other section
     if (groups.other.length > 0) {
       sections.push(`**Other:** ${groups.other.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
     }
@@ -282,7 +273,6 @@ class ModalManager extends LocalizableElement {
           const formattedText = this.formatGroupedTags(groupedTags);
           return this.convertMarkdownToHtml(formattedText);
         } else {
-          // Show only critical performance tags with user-friendly descriptions
           const criticalTags = perfTags.filter(tag => 
             ['critical-performance-issue', 'add-responsive-images', 'convert-to-webp', 'add-loading-attribute', 'resize-image', 'lcp-candidate', 'above-fold', 'hero-section', 'below-fold'].includes(tag)
           );
@@ -293,7 +283,6 @@ class ModalManager extends LocalizableElement {
             const summary = `Performance: ${friendlyTags.join(', ')}`;
             return html`<span>${remainingCount > 0 ? `${summary} (+${remainingCount} more)` : summary}</span>`;
           } else {
-            // Check if there are any actionable tags
             const actionableTags = perfTags.filter(tag => 
               ['add-responsive-images', 'convert-to-webp', 'add-loading-attribute', 'resize-image'].includes(tag)
             );
@@ -585,7 +574,6 @@ class ModalManager extends LocalizableElement {
   }
 
   renderFaceDetection(media) {
-    // If we have explicit face detection data, use it
     if (media.hasFaces !== undefined && media.hasFaces !== 'undefined') {
       return html`
         <tr class="metadata-row analysis-subrow">
@@ -595,7 +583,6 @@ class ModalManager extends LocalizableElement {
       `;
     }
     
-    // If face detection failed but we have face count, show it
     if (media.faceCount && media.faceCount !== 'undefined' && media.faceCount > 0) {
       return html`
         <tr class="metadata-row analysis-subrow">
@@ -691,7 +678,6 @@ class ModalManager extends LocalizableElement {
     if (type.startsWith('document >')) return 'pdf';
     if (type.startsWith('link >')) return 'external-link';
     
-    // Check by file extension
     if (this.isPdf(media.url)) return 'pdf';
     if (this.isImage(media.url)) return 'photo';
     if (this.isVideo(media.url)) return 'video';
@@ -760,7 +746,6 @@ class ModalManager extends LocalizableElement {
     const { media } = this.modalData.data;
     navigator.clipboard.writeText(media.url);
     
-    // Show notification
     window.dispatchEvent(new CustomEvent('show-notification', {
       detail: {
         heading: this.t('common.success'),
@@ -785,21 +770,17 @@ class ModalManager extends LocalizableElement {
   handlePdfAction(event, pdfUrl, fileName) {
     if (!pdfUrl) return;
     
-    // Check if the user wants to download (Ctrl/Cmd + click) or just view
     const isDownload = event.ctrlKey || event.metaKey;
     
     if (isDownload) {
-      // Force download by creating a link with download attribute
       const link = document.createElement('a');
       link.href = pdfUrl;
       link.download = fileName || 'document.pdf';
       
-      // Append to body, click, and remove
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
     } else {
-      // Open PDF in new tab for viewing
       window.open(pdfUrl, '_blank');
     }
   }
@@ -809,7 +790,6 @@ class ModalManager extends LocalizableElement {
     const formData = new FormData(e.target);
     const altText = formData.get('altText');
     
-    // Dispatch save event
     window.dispatchEvent(new CustomEvent('save-alt-text', {
       detail: {
         media: this.modalData.data.media,

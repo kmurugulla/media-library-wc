@@ -26,7 +26,6 @@ class MediaList extends LocalizableElement {
   async connectedCallback() {
     super.connectedCallback();
     
-    // Load SVG icons
     await this.loadIcons();
   }
 
@@ -39,7 +38,6 @@ class MediaList extends LocalizableElement {
       '/src/icons/copy.svg'
     ];
     
-    // Check if icons are already loaded to avoid duplicates
     const existingIcons = this.shadowRoot.querySelectorAll('svg[id]');
     if (existingIcons.length === 0) {
       await getSvg({ parent: this.shadowRoot, paths: ICONS });
@@ -137,7 +135,6 @@ class MediaList extends LocalizableElement {
       `;
     }
     
-    // Show CORS-aware placeholder for failed images
     if (isImage(media.url) && media.hasError === true) {
       return html`
         <div class="placeholder cors-error">
@@ -222,13 +219,10 @@ class MediaList extends LocalizableElement {
   }
 
   handleImageError(e, media) {
-    // Mark the media item as having an error
     media.hasError = true;
     
-    // Hide the image and trigger a re-render
     e.target.style.display = 'none';
     
-    // Request an update to re-render with the error state
     this.requestUpdate();
   }
 }

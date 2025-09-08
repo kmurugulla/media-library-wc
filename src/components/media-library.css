@@ -1,0 +1,182 @@
+@layer base {
+  :host {
+    --ml-primary: #3b82f6;
+    --ml-primary-hover: #2563eb;
+    --ml-surface: #ffffff;
+    --ml-surface-elevated: #f8fafc;
+    --ml-border: #e2e8f0;
+    --ml-text: #1e293b;
+    --ml-text-muted: #64748b;
+    --ml-space-xs: 0.25rem;
+    --ml-space-sm: 0.5rem;
+    --ml-space-md: 1rem;
+    --ml-space-lg: 1.5rem;
+    --ml-space-xl: 2rem;
+    --ml-radius-sm: 0.25rem;
+    --ml-radius-md: 0.375rem;
+    --ml-radius-lg: 0.5rem;
+    --ml-shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    --ml-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    display: block;
+    width: 100%;
+    max-width: 100%;
+    margin: 0;
+    height: 100vh;
+    overflow: hidden;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  
+  /* Franklin-style SVG handling */
+  :host > svg {
+    display: none;
+  }
+  
+  /* Icon styles */
+  .error-icon {
+    display: block;
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--ml-space-md);
+    color: #ef4444;
+  }
+}
+
+@layer components {
+  .media-library {
+    display: grid;
+    grid-template:
+      "sidebar topbar" auto
+      "sidebar main" 1fr
+      / 240px 1fr;
+    height: 100vh;
+    width: 100%;
+    max-width: 100%;
+    background: var(--ml-surface-elevated);
+    overflow: hidden;
+    position: relative;
+    gap: var(--ml-space-sm);
+    padding: 0;
+  }
+
+  .top-bar {
+    grid-area: topbar;
+    background: var(--ml-surface);
+    border: 1px solid var(--ml-border);
+    border-radius: var(--ml-radius-lg);
+    box-shadow: var(--ml-shadow-sm);
+    z-index: 1000;
+  }
+
+  .sidebar {
+    grid-area: sidebar;
+    background: var(--ml-surface);
+    border: 1px solid var(--ml-border);
+    border-radius: var(--ml-radius-lg);
+    box-shadow: var(--ml-shadow-sm);
+    overflow-y: auto;
+  }
+
+  .main-content {
+    grid-area: main;
+    background: var(--ml-surface);
+    border: 1px solid var(--ml-border);
+    border-radius: var(--ml-radius-lg);
+    box-shadow: var(--ml-shadow-sm);
+    overflow: hidden;
+    position: relative;
+  }
+
+  .error-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: var(--ml-space-xl);
+    text-align: center;
+    color: var(--ml-text-muted);
+    max-width: 800px;
+    margin: 0 auto;
+  }
+
+  .error-state svg {
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--ml-space-md);
+    color: #ef4444;
+  }
+
+  .error-message {
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: var(--ml-radius-md);
+    padding: var(--ml-space-lg);
+    margin: var(--ml-space-md) 0;
+    text-align: left;
+    white-space: pre-line;
+    font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+    font-size: 0.875rem;
+    line-height: 1.5;
+    color: var(--ml-text);
+    max-width: 100%;
+    overflow-wrap: break-word;
+  }
+
+  .retry-button {
+    background: var(--ml-primary);
+    color: white;
+    border: none;
+    border-radius: var(--ml-radius-md);
+    padding: var(--ml-space-sm) var(--ml-space-lg);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: var(--ml-transition);
+    margin-top: var(--ml-space-md);
+  }
+
+  .retry-button:hover {
+    background: var(--ml-primary-hover);
+    transform: translateY(-1px);
+  }
+
+  .loading-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    padding: var(--ml-space-lg);
+    text-align: center;
+    color: var(--ml-text-muted);
+  }
+
+  .loading-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid var(--ml-border);
+    border-top: 3px solid var(--ml-primary);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: var(--ml-space-md);
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+}
+
+@media (max-width: 768px) {
+  .media-library {
+    grid-template:
+      "topbar" auto
+      "main" 1fr
+      / 1fr;
+  }
+  
+  .sidebar {
+    display: none;
+  }
+}

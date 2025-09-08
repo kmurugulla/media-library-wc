@@ -35,7 +35,6 @@ class MediaTopbar extends LocalizableElement {
   async connectedCallback() {
     super.connectedCallback();
     
-    // Load SVG icons using Franklin approach
     const ICONS = [
       '/src/icons/search.svg',
       '/src/icons/close.svg',

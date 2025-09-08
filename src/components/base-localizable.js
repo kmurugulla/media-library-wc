@@ -22,7 +22,6 @@ export class LocalizableElement extends LitElement {
   }
 
   handleLocaleChange = () => {
-    // Simply request an update when locale changes
     this.requestUpdate();
   };
 }

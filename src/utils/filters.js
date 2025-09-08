@@ -13,12 +13,9 @@ export const FILTER_CONFIG = {
   filled: (item) => item.type?.startsWith('img >') && !item.type?.includes('svg') && item.alt && item.alt !== '' && item.alt !== 'null',
   unused: (item) => !item.doc || item.doc.trim() === '',
 
-  // Orientation filters (only for images with analysis data)
   landscape: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.orientation === 'landscape',
   portrait: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.orientation === 'portrait',
   square: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.orientation === 'square',
-
-  // Performance filters (based on performance tags in context)
   lcpCandidate: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'lcp-candidate'),
   aboveFold: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'above-fold'),
   belowFold: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'below-fold'),
@@ -34,18 +31,14 @@ export const FILTER_CONFIG = {
   ogImage: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'og-image'),
   performanceIssue: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'performance-issue'),
 
-  // Category-based filters
   'hero-images': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'hero-images',
-  'team-people': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'team-people',
-  'navigation': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'navigation',
-  'articles': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'articles',
-  'products': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'products',
-  'decorative': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'decorative',
-  'social-media': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'social-media',
-  'documents': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'documents',
+  'people-photos': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'people-photos',
+  'product-images': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'product-images',
+  'social-graphics': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'social-graphics',
   'logos': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'logos',
   'screenshots': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'screenshots',
-  '404s': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === '404s',
+  'decorative': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'decorative',
+  '404-media': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === '404-media',
 
   documentImages: (item, selectedDocument) => FILTER_CONFIG.images(item) && item.doc === selectedDocument,
   documentIcons: (item, selectedDocument) => FILTER_CONFIG.icons(item) && item.doc === selectedDocument,
@@ -139,17 +132,13 @@ function filterByColonSyntax(mediaData, colonSyntax) {
         return folderPath.toLowerCase().includes(value);
       }
       case 'perf': {
-        // Performance tag filtering
         if (!item.ctx) return false;
         
-        // Look for perf: section in context
         const perfMatch = item.ctx.match(/perf:([^>]+)/);
         if (!perfMatch) return false;
         
         const perfTags = perfMatch[1].split(',').map(tag => tag.trim().toLowerCase());
         const searchValue = value.toLowerCase();
-        
-        // Support exact tag matching and partial matching
         return perfTags.some(tag => 
           tag === searchValue || 
           tag.includes(searchValue) ||
@@ -172,27 +161,22 @@ function filterBySearchQuery(mediaData, query) {
   const lowerQuery = query.toLowerCase().trim();
 
   return mediaData.filter((item) => {
-    // Search in name
     if (item.name && item.name.toLowerCase().includes(lowerQuery)) {
       return true;
     }
 
-    // Search in alt text
     if (item.alt && item.alt.toLowerCase().includes(lowerQuery)) {
       return true;
     }
 
-    // Search in document path
     if (item.doc && item.doc.toLowerCase().includes(lowerQuery)) {
       return true;
     }
 
-    // Search in context
     if (item.ctx && item.ctx.toLowerCase().includes(lowerQuery)) {
       return true;
     }
 
-    // Search in URL
     if (item.url && item.url.toLowerCase().includes(lowerQuery)) {
       return true;
     }
@@ -208,7 +192,6 @@ export function calculateFilteredMediaData(mediaData, selectedFilterType, search
 
   let filteredData = [...mediaData];
 
-  // Apply search query first
   if (searchQuery && searchQuery.trim()) {
     const colonSyntax = parseColonSyntax(searchQuery);
     if (colonSyntax) {
@@ -218,7 +201,6 @@ export function calculateFilteredMediaData(mediaData, selectedFilterType, search
     }
   }
 
-  // Apply filter type
   if (selectedFilterType && selectedFilterType !== 'all') {
     filteredData = applyFilter(filteredData, selectedFilterType, selectedDocument);
   }
@@ -236,7 +218,6 @@ export function processMediaData(mediaData) {
 
   const filterCounts = {};
 
-  // First, get unique media URLs to count unique items, not instances
   const uniqueMediaUrls = new Set();
   mediaData.forEach(item => {
     if (item.url) {
@@ -244,14 +225,10 @@ export function processMediaData(mediaData) {
     }
   });
 
-  // Calculate counts for each filter using unique media URLs
   Object.keys(FILTER_CONFIG).forEach(filterName => {
     if (filterName.startsWith('document')) {
-      // Skip document-specific filters for general counts
       return;
     }
-    
-    // Count unique media URLs that match the filter
     const matchingUrls = new Set();
     mediaData.forEach(item => {
       try {
@@ -266,7 +243,6 @@ export function processMediaData(mediaData) {
     filterCounts[filterName] = matchingUrls.size;
   });
 
-  // Calculate total count (excluding SVGs for "all" filter) - count unique URLs
   const uniqueNonSvgUrls = new Set();
   mediaData.forEach(item => {
     if (item.url && !isSvgFile(item)) {
@@ -325,7 +301,6 @@ function detectMediaTypeFromExtension(ext) {
 function hasPerformanceTag(item, tag) {
   if (!item.ctx) return false;
   
-  // Look for perf: section in context
   const perfMatch = item.ctx.match(/perf:([^>]+)/);
   if (!perfMatch) return false;
   

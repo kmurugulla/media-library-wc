@@ -1,7 +1,5 @@
-// test/generate-large-dataset.js
 "use strict";
 
-// Generate a large dataset for testing grid performance
 function generateLargeDataset(count = 1000) {
   const mediaTypes = ['img > jpg', 'img > png', 'img > webp', 'video > mp4', 'video > webm', 'link > pdf', 'link > doc'];
   const documents = ['/index.html', '/about.html', '/contact.html', '/products.html', '/services.html', '/blog.html'];
@@ -57,12 +55,10 @@ function generateHash() {
   return Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
 }
 
-// Export for use in browser
 if (typeof window !== 'undefined') {
   window.generateLargeDataset = generateLargeDataset;
 }
 
-// Export for Node.js
 if (typeof module !== 'undefined' && module.exports) {
   module.exports = { generateLargeDataset };
 }

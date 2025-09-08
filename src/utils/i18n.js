@@ -8,7 +8,6 @@ class I18nManager extends EventTarget {
     this.translations = new Map();
     this.fallbackLocale = 'en';
     
-    // Pre-load English translations
     this.translations.set('en', enTranslations);
   }
 
@@ -18,14 +17,11 @@ class I18nManager extends EventTarget {
     }
 
     try {
-      // For now, only English is supported
-      // In the future, you can add more locale imports here
       if (locale === 'en') {
         this.translations.set(locale, enTranslations);
         return enTranslations;
       }
       
-      // Fallback to English
       return this.translations.get(this.fallbackLocale) || {};
     } catch (error) {
       console.warn(`Failed to load locale ${locale}:`, error);
@@ -55,7 +51,6 @@ class I18nManager extends EventTarget {
       return key;
     }
 
-    // Replace parameters
     return this.replaceParams(translation, params);
   }
 

@@ -9,16 +9,14 @@
 
 import { detectCategory } from './category-detector.js';
 
-// Configuration for analysis features
 export const ANALYSIS_CONFIG = {
-  enabled: true,                     // Master switch - enable by default
-  extractEXIF: true,                // Extract EXIF data
-  extractDimensions: true,          // Image dimensions
-  categorizeFromFilename: true,     // Filename-based categorization
-  analyzeUsage: true,               // Analyze image usage patterns (LCP, OG, etc.)
+  enabled: true,
+  extractEXIF: true,
+  extractDimensions: true,
+  categorizeFromFilename: true,
+  analyzeUsage: true,
 };
 
-// Cache for analysis results
 const analysisCache = new Map();
 
 /**
@@ -34,15 +32,12 @@ export async function analyzeImage(imageUrl, existingAnalysis = null, context = 
   }
 
   try {
-    // Check if content changed (if we have existing analysis)
     if (existingAnalysis && !(await hasContentChanged(imageUrl, existingAnalysis))) {
       return existingAnalysis;
     }
     
-    // Run analysis pipeline
     const analysis = await runAnalysisPipeline(imageUrl, context);
     
-    // Cache the results
     const contentHash = await getImageContentHash(imageUrl);
     analysisCache.set(contentHash, analysis);
     
@@ -81,7 +76,6 @@ async function runAnalysisPipeline(imageUrl, context = '') {
     confidence: 'low'
   };
 
-  // Extract image dimensions
   if (ANALYSIS_CONFIG.extractDimensions) {
     const dimensions = await getImageDimensions(imageUrl);
     analysis.width = dimensions.width;
@@ -89,7 +83,6 @@ async function runAnalysisPipeline(imageUrl, context = '') {
     analysis.orientation = dimensions.width > dimensions.height ? 'landscape' : 'portrait';
   }
 
-  // Categorize using JSON-based pattern matching
   if (ANALYSIS_CONFIG.categorizeFromFilename) {
     const categoryResult = detectCategory(imageUrl, context, '', '', analysis.width, analysis.height);
     analysis.category = categoryResult.category;
@@ -97,7 +90,6 @@ async function runAnalysisPipeline(imageUrl, context = '') {
     analysis.categoryScore = categoryResult.score;
     analysis.categorySource = categoryResult.source;
     
-    // Update overall confidence based on category confidence
     if (categoryResult.confidence === 'high') {
       analysis.confidence = 'high';
     } else if (categoryResult.confidence === 'medium' && analysis.confidence === 'low') {
@@ -105,15 +97,12 @@ async function runAnalysisPipeline(imageUrl, context = '') {
     }
   }
 
-  // Extract EXIF data
   if (ANALYSIS_CONFIG.extractEXIF) {
     const exifData = await extractEXIFData(imageUrl);
     if (exifData) {
       if (exifData.error) {
-        // Store error information
         analysis.exifError = exifData;
       } else {
-        // Store successful EXIF data
         analysis.exifCamera = exifData.camera;
         analysis.exifDate = exifData.date;
         analysis.exifOrientation = exifData.orientation;
@@ -158,7 +147,6 @@ async function extractEXIFData(imageUrl) {
       return null;
     }
     
-    // Extract and format camera information
     let camera = null;
     const make = exifData.Make;
     const model = exifData.Model;
@@ -177,7 +165,6 @@ async function extractEXIFData(imageUrl) {
       orientation: exifData.Orientation || null
     };
   } catch (error) {
-    // More specific error handling for different types of failures
     if (error.message.includes('Failed to fetch dynamically imported module')) {
       console.warn('EXIF library failed to load - this may be a Vite optimization issue');
       return {
@@ -240,7 +227,6 @@ async function getImageDimensions(imageUrl) {
  * @deprecated Use detectCategory from category-detector.js instead
  */
 function categorizeFromFilename(imageUrl, context = '') {
-  // Fallback to basic detection if JSON patterns fail
   const categoryResult = detectCategory(imageUrl, context, '', '');
   return categoryResult.category;
 }
@@ -304,7 +290,6 @@ export function clearAnalysisCache() {
   analysisCache.clear();
 }
 
-// Expose cache clearing function to window for debugging
 if (typeof window !== 'undefined') {
   window.clearAnalysisCache = clearAnalysisCache;
 }

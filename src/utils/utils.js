@@ -19,14 +19,10 @@ function extractFileExtension(filePath) {
   if (!filePath) return '';
   
   try {
-    // Remove query parameters and fragments using regex (more robust)
     const cleanUrl = filePath.split(/[?#]/)[0];
     
-    // Extract the file extension
     const extension = cleanUrl.split('.').pop()?.toLowerCase() || '';
     
-    // Validate the extension - ensure it's not empty and different from the entire URL
-    // Also check it doesn't contain invalid characters (like spaces, slashes, etc.)
     if (!extension || extension === cleanUrl || /[^a-z0-9]/.test(extension)) {
       return '';
     }
@@ -126,14 +122,12 @@ export { isSvgFile, extractFileExtension };
  */
 export function sortMediaData(mediaData) {
   return [...mediaData].sort((a, b) => {
-    // Sort by recently used first, then alphabetical
     const lastUsedA = new Date(a.lastUsedAt || 0);
     const lastUsedB = new Date(b.lastUsedAt || 0);
     const timeDiff = lastUsedB - lastUsedA;
 
     if (timeDiff !== 0) return timeDiff;
 
-    // Fallback to alphabetical
     const nameA = (a.name || '').toLowerCase();
     const nameB = (b.name || '').toLowerCase();
     return nameA.localeCompare(nameB);
@@ -177,7 +171,6 @@ export function isExternalVideoUrl(url) {
 // ============================================================================
 
 export function createHash(str) {
-  // Use a more robust hash algorithm
   let hash = 0;
   if (str.length === 0) return hash.toString(36).padStart(10, '0');
 
@@ -186,7 +179,6 @@ export function createHash(str) {
     hash = ((hash * 33) + char) % 2147483647;
   }
 
-  // Convert to base36 and ensure minimum length of 10 characters
   const base36 = Math.abs(hash).toString(36);
   return base36.padStart(10, '0');
 }
@@ -222,12 +214,10 @@ export function extractMediaLocation(mediaUrl) {
 export function normalizeUrl(url) {
   if (!url) return '';
 
-  // Remove protocol and domain to get just the path
   try {
     const urlObj = new URL(url);
     return urlObj.pathname;
   } catch {
-    // If it's not a valid URL, return as is (might be a relative path)
     return url;
   }
 }
@@ -235,20 +225,16 @@ export function normalizeUrl(url) {
 export function urlsMatch(url1, url2) {
   if (!url1 || !url2) return false;
 
-  // Normalize both URLs to just their paths
   const path1 = normalizeUrl(url1);
   const path2 = normalizeUrl(url2);
 
-  // Direct match
   if (path1 === path2) return true;
 
-  // Handle cases where one might have leading slash and other doesn't
   const normalizedPath1 = path1.startsWith('/') ? path1 : `/${path1}`;
   const normalizedPath2 = path2.startsWith('/') ? path2 : `/${path2}`;
 
   if (normalizedPath1 === normalizedPath2) return true;
 
-  // Handle relative paths by comparing file names
   const fileName1 = path1.split('/').pop();
   const fileName2 = path2.split('/').pop();
 
@@ -366,11 +352,9 @@ export async function copyMediaToClipboard(media) {
 
   try {
     if (mediaType === 'image') {
-      // Copy actual image to clipboard
       await copyImageToClipboard(mediaUrl);
       return { heading: 'Copied', message: 'Image copied to clipboard.' };
     }
-    // For non-images, copy the URL as text
     await navigator.clipboard.writeText(mediaUrl);
     return { heading: 'Copied', message: 'Media URL copied to clipboard.' };
   } catch (error) {
@@ -379,7 +363,6 @@ export async function copyMediaToClipboard(media) {
   }
 }
 
-// URL path extraction utilities
 export function getFileName(url) {
   try {
     const urlObj = new URL(url);
@@ -403,15 +386,12 @@ export function extractRelativePath(fullPath) {
 export function getDisplayName(fullPath) {
   if (!fullPath) return '';
 
-  // Extract just the filename from the path
   const pathParts = fullPath.split('/').filter(Boolean);
   const fileName = pathParts[pathParts.length - 1];
 
-  // Remove file extension for cleaner display
   return fileName.replace(/\.[^/.]+$/, '');
 }
 
-// File type detection utilities
 export function isImage(url) {
   const ext = extractFileExtension(url);
   return ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif'].includes(ext);

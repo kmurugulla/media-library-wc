@@ -22,14 +22,11 @@ export default async function getSvg({ parent, paths }) {
   const svgs = await Promise.all(paths.map(async (path) => {
     const svg = await fetchIcon(path);
     if (svg && parent) {
-      // Set an ID based on the filename to make it easier to track
       const filename = path.split('/').pop().replace('.svg', '');
       svg.id = filename;
       
-      // Check if there's already an element with this ID inside the SVG
       const existingIdElement = svg.querySelector(`#${filename}`);
       if (existingIdElement) {
-        // Use the existing element's ID
         existingIdElement.id = filename;
       }
       

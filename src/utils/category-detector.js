@@ -8,7 +8,6 @@
 
 import categoryPatterns from '../data/category-patterns.json?raw';
 
-// Cache for parsed patterns
 let parsedPatterns = null;
 
 /**
@@ -104,7 +103,6 @@ function calculateCategoryScore(categoryName, categoryData, filename, context, a
   let score = 0;
   const keywords = categoryData.keywords;
 
-  // 1. Filename matching (high weight)
   if (keywords.filename) {
     const filenameMatches = keywords.filename.filter(keyword => 
       filename.includes(keyword.toLowerCase())
@@ -112,7 +110,6 @@ function calculateCategoryScore(categoryName, categoryData, filename, context, a
     score += filenameMatches * 3;
   }
 
-  // 2. Enhanced context matching (high weight)
   if (keywords.context) {
     const contextMatches = keywords.context.filter(keyword => 
       context.includes(keyword.toLowerCase())
@@ -120,7 +117,6 @@ function calculateCategoryScore(categoryName, categoryData, filename, context, a
     score += contextMatches * 2.5;
   }
 
-  // 3. Enhanced alt text matching (high weight for people detection)
   if (keywords.alt) {
     const altMatches = keywords.alt.filter(keyword => 
       altText.includes(keyword.toLowerCase())
@@ -128,7 +124,6 @@ function calculateCategoryScore(categoryName, categoryData, filename, context, a
     score += altMatches * 2;
   }
 
-  // 4. Position matching (medium weight)
   if (keywords.position) {
     const positionMatches = keywords.position.filter(keyword => 
       position.includes(keyword.toLowerCase())
@@ -136,25 +131,21 @@ function calculateCategoryScore(categoryName, categoryData, filename, context, a
     score += positionMatches * 2;
   }
 
-  // 5. Dimension analysis (new factor)
   if (width > 0 && height > 0) {
     const dimensionScore = analyzeImageDimensions(categoryName, width, height);
     score += dimensionScore * 1.5;
   }
 
-  // 6. Advanced people detection (high weight)
   if (categoryName === 'team-member') {
     const peopleScore = detectPeopleInAltText(altText) + detectPeopleInContext(context);
-    score += peopleScore * 4; // Very high weight for people detection
+    score += peopleScore * 4;
   }
 
-  // 7. Enhanced decorative detection (stricter criteria)
   if (categoryName === 'decorative-background') {
     const decorativeScore = analyzeDecorativeIndicators(filename, context, altText, position);
     score += decorativeScore;
   }
 
-  // 8. Content analysis for articles
   if (categoryName === 'article-content') {
     const contentScore = analyzeContentIndicators(context, altText);
     score += contentScore * 2;
@@ -180,30 +171,25 @@ function analyzeImageDimensions(categoryName, width, height) {
 
   switch (categoryName) {
     case 'team-member':
-      // Headshots are often square or portrait
       if (isSquare || isPortrait) return 2;
       if (isLandscape) return -1;
       break;
     
     case 'hero-banner':
-      // Hero images are often large and landscape
       if (isLarge && isLandscape) return 3;
       if (isSmall) return -2;
       break;
     
     case 'navigation-ui':
-      // UI elements are often small and square
       if (isSmall && isSquare) return 2;
       if (isLarge) return -1;
       break;
     
     case 'logo-brand':
-      // Logos are often square or small
       if (isSquare || isSmall) return 2;
       break;
     
     case 'decorative-background':
-      // Background images are often large
       if (isLarge) return 1;
       break;
   }
@@ -222,20 +208,17 @@ function detectPeopleInAltText(altText) {
   let score = 0;
   const text = altText.toLowerCase();
   
-  // People name patterns
   const namePatterns = [
-    /^[a-z]+ [a-z]+$/,  // "john smith"
-    /^(mr|ms|dr|prof)\. [a-z]+/,  // "mr. johnson"
-    /[a-z]+, (ceo|cto|manager|director|founder|president)/,  // "smith, ceo"
-    /(ceo|cto|manager|director|founder|president) [a-z]+/  // "ceo john smith"
+    /^[a-z]+ [a-z]+$/,
+    /^(mr|ms|dr|prof)\. [a-z]+/,
+    /[a-z]+, (ceo|cto|manager|director|founder|president)/,
+    /(ceo|cto|manager|director|founder|president) [a-z]+/
   ];
   
-  // Check for name patterns
   if (namePatterns.some(pattern => pattern.test(text))) {
     score += 3;
   }
   
-  // Professional titles and roles
   const professionalTerms = [
     'ceo', 'cto', 'manager', 'director', 'founder', 'president',
     'executive', 'leader', 'head', 'chief', 'vice president',
@@ -245,7 +228,6 @@ function detectPeopleInAltText(altText) {
   const professionalMatches = professionalTerms.filter(term => text.includes(term)).length;
   score += professionalMatches * 1.5;
   
-  // Descriptive terms for people
   const peopleDescriptions = [
     'smiling', 'portrait', 'headshot', 'executive', 'professional',
     'business', 'suit', 'smile', 'looking', 'standing', 'sitting'
@@ -254,7 +236,7 @@ function detectPeopleInAltText(altText) {
   const descriptionMatches = peopleDescriptions.filter(term => text.includes(term)).length;
   score += descriptionMatches * 1;
   
-  return Math.min(score, 5); // Cap at 5 points
+  return Math.min(score, 5);
 }
 
 /**
@@ -268,7 +250,6 @@ function detectPeopleInContext(context) {
   let score = 0;
   const text = context.toLowerCase();
   
-  // Team and business context
   const teamContext = [
     'award', 'winner', 'announcement', 'partner', 'executive',
     'leadership', 'team', 'staff', 'director', 'manager',
@@ -279,7 +260,6 @@ function detectPeopleInContext(context) {
   const contextMatches = teamContext.filter(term => text.includes(term)).length;
   score += contextMatches * 1.5;
   
-  // Article context that often contains people
   const articleContext = [
     'news', 'story', 'article', 'announcement', 'press',
     'release', 'awards', 'winners', 'executives', 'leaders'
@@ -288,7 +268,7 @@ function detectPeopleInContext(context) {
   const articleMatches = articleContext.filter(term => text.includes(term)).length;
   score += articleMatches * 1;
   
-  return Math.min(score, 4); // Cap at 4 points
+  return Math.min(score, 4);
 }
 
 /**
@@ -302,34 +282,28 @@ function detectPeopleInContext(context) {
 function analyzeDecorativeIndicators(filename, context, altText, position) {
   let score = 0;
   
-  // Only give points for decorative if multiple indicators are present
   const decorativeIndicators = 0;
   
-  // Check for decorative filename patterns
   if (filename.includes('bg-') || filename.includes('background-') || 
       filename.includes('pattern-') || filename.includes('texture-') ||
       filename.includes('decorative-') || filename.includes('ornament-')) {
     score += 2;
   }
   
-  // Check for decorative context
   if (context.includes('background') || context.includes('pattern') ||
       context.includes('texture') || context.includes('decorative')) {
     score += 1.5;
   }
   
-  // Check for decorative alt text
   if (altText === 'decorative' || altText === 'background' ||
       altText === 'pattern' || altText === 'texture') {
     score += 2;
   }
   
-  // Empty alt text only gets points if other decorative indicators are present
   if (altText === '' && score > 0) {
     score += 1;
   }
   
-  // Exclude people indicators
   const peopleIndicators = [
     'team-', 'staff-', 'member-', 'headshot-', 'portrait-', 'person-',
     'ceo', 'cto', 'manager', 'director', 'executive', 'award', 'winner'
@@ -340,10 +314,10 @@ function analyzeDecorativeIndicators(filename, context, altText, position) {
   );
   
   if (hasPeopleIndicators) {
-    score = Math.max(0, score - 3); // Penalize if people indicators are present
+    score = Math.max(0, score - 3);
   }
   
-  return Math.min(score, 3); // Cap at 3 points
+  return Math.min(score, 3);
 }
 
 /**
@@ -355,7 +329,6 @@ function analyzeDecorativeIndicators(filename, context, altText, position) {
 function analyzeContentIndicators(context, altText) {
   let score = 0;
   
-  // Article context indicators
   const articleIndicators = [
     'news', 'story', 'article', 'blog', 'post', 'editorial',
     'announcement', 'press', 'release', 'update', 'report'
@@ -366,12 +339,10 @@ function analyzeContentIndicators(context, altText) {
   ).length;
   score += contextMatches * 1;
   
-  // Long descriptive alt text
   if (altText && altText.length > 20) {
     score += 1;
   }
   
-  // Content-related alt text
   const contentAltTerms = [
     'illustration', 'diagram', 'chart', 'graph', 'infographic',
     'screenshot', 'interface', 'dashboard', 'application'
@@ -382,7 +353,7 @@ function analyzeContentIndicators(context, altText) {
   ).length;
   score += altMatches * 1.5;
   
-  return Math.min(score, 3); // Cap at 3 points
+  return Math.min(score, 3);
 }
 
 /**

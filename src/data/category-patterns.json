@@ -11,10 +11,10 @@
   "categories": {
     "hero-images": {
       "keywords": {
-        "filename": ["hero-", "banner-", "main-", "featured-", "header-", "jumbotron-", "splash-", "landing-"],
-        "context": ["hero-section", "banner", "main-banner", "featured", "header", "jumbotron", "splash", "landing", "above-fold", "lcp-candidate"],
-        "alt": ["launch", "announcement", "featured", "main", "welcome", "hero", "banner", "promotion"],
-        "position": ["above-fold", "lcp-candidate", "header"]
+        "filename": ["hero-", "banner-", "main-", "featured-", "header-", "jumbotron-", "splash-", "landing-", "article-", "blog-", "post-", "content-", "editorial-", "news-", "story-", "media-", "image-", "photo-"],
+        "context": ["hero-section", "banner", "main-banner", "featured", "header", "jumbotron", "splash", "landing", "above-fold", "lcp-candidate", "article", "content", "blog", "post", "editorial", "news", "story", "text-content", "announcement", "press", "release", "update", "report", "nvidia", "snowflake", "hpe", "tech", "companies", "hiring", "channel", "executive", "moves", "notable", "biggest", "summit", "intelligence", "agents"],
+        "alt": ["launch", "announcement", "featured", "main", "welcome", "hero", "banner", "promotion", "article", "blog", "post", "content", "editorial", "news", "story", "illustration", "diagram", "chart", "graph", "infographic", "screenshot", "interface", "dashboard", "application", "IoT", "Internet of Things", "digital", "technology", "AI", "artificial intelligence"],
+        "position": ["above-fold", "lcp-candidate", "header", "content", "article", "below-fold", "main-content"]
       },
       "confidence": {
         "high": 0.9,
@@ -22,7 +22,7 @@
         "low": 0.5
       }
     },
-    "team-people": {
+    "people-photos": {
       "keywords": {
         "filename": ["team-", "staff-", "member-", "leadership-", "employee-", "person-", "headshot-", "portrait-", "profile-", "about-", "people-", "executive-", "ceo-", "cto-", "director-", "manager-"],
         "context": ["team-section", "about-section", "staff", "leadership", "team", "member", "employee", "headshot", "portrait", "about", "people", "team-member", "award", "winner", "announcement", "partner", "executive", "ecosystem", "global", "partner awards", "winners", "executive moves", "hiring", "notable", "moves", "news", "story", "article", "announcement", "press", "release", "awards", "winners", "executives", "leaders"],
@@ -35,33 +35,7 @@
         "low": 0.5
       }
     },
-    "navigation": {
-      "keywords": {
-        "filename": ["nav-", "menu-", "icon-", "button-", "ui-", "interface-", "arrow-", "chevron-", "hamburger-"],
-        "context": ["nav", "header", "icon", "button", "ui", "interface", "menu", "navigation", "toolbar"],
-        "alt": ["menu", "navigation", "button", "icon", "arrow", "close", "open", "back", "next"],
-        "position": ["header", "nav", "toolbar"]
-      },
-      "confidence": {
-        "high": 0.85,
-        "medium": 0.7,
-        "low": 0.5
-      }
-    },
-    "articles": {
-      "keywords": {
-        "filename": ["article-", "blog-", "post-", "content-", "editorial-", "news-", "story-", "media-", "image-", "photo-"],
-        "context": ["article", "content", "blog", "post", "editorial", "news", "story", "text-content", "announcement", "press", "release", "update", "report", "nvidia", "snowflake", "hpe", "tech", "companies", "hiring", "channel", "executive", "moves", "notable", "biggest", "summit", "intelligence", "agents"],
-        "alt": ["article", "blog", "post", "content", "editorial", "news", "story", "illustration", "diagram", "chart", "graph", "infographic", "screenshot", "interface", "dashboard", "application", "IoT", "Internet of Things", "digital", "technology", "AI", "artificial intelligence"],
-        "position": ["content", "article", "below-fold", "main-content"]
-      },
-      "confidence": {
-        "high": 0.8,
-        "medium": 0.6,
-        "low": 0.4
-      }
-    },
-    "products": {
+    "product-images": {
       "keywords": {
         "filename": ["product-", "service-", "item-", "catalog-", "inventory-", "merchandise-", "feature-"],
         "context": ["product", "service", "catalog", "inventory", "merchandise", "feature", "shop", "store"],
@@ -87,7 +61,7 @@
         "low": 0.3
       }
     },
-    "social-media": {
+    "social-graphics": {
       "keywords": {
         "filename": ["og-", "social-", "share-", "facebook-", "twitter-", "meta-"],
         "context": ["og-image", "social-image", "share-image", "facebook", "twitter", "meta"],
@@ -96,19 +70,6 @@
       },
       "confidence": {
         "high": 0.9,
-        "medium": 0.7,
-        "low": 0.5
-      }
-    },
-    "documents": {
-      "keywords": {
-        "filename": ["document-", "pdf-", "file-", "report-", "guide-", "manual-", "whitepaper-"],
-        "context": ["document", "pdf", "file", "report", "guide", "manual", "whitepaper", "download"],
-        "alt": ["document", "pdf", "file", "report", "guide", "manual", "whitepaper", "download"],
-        "position": ["document", "download", "resource"]
-      },
-      "confidence": {
-        "high": 0.85,
         "medium": 0.7,
         "low": 0.5
       }
@@ -139,7 +100,7 @@
         "low": 0.5
       }
     },
-    "404s": {
+    "404-media": {
       "keywords": {
         "filename": [],
         "context": [],

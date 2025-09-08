@@ -60,15 +60,14 @@
     "socialImage": "Social Images",
     "ogImage": "OG Images",
     "performanceIssue": "Performance Issues",
-    "hero-images": "Hero/Banner",
-    "team-people": "Team/People",
-    "navigation": "Navigation/UI",
-    "articles": "Article/Content",
-    "products": "Product/Service",
-    "social-media": "Social/Sharing",
-    "logos": "Logo/Brand",
-    "screenshots": "Screenshot/Demo",
-    "404s": "404 Pages"
+    "hero-images": "Hero Images",
+    "people-photos": "People Photos",
+    "product-images": "Product Images",
+    "social-graphics": "Social Graphics",
+    "logos": "Logos",
+    "screenshots": "Screenshots",
+    "decorative": "Decorative",
+    "404-media": "404 Media"
   },
   "views": {
     "grid": "Grid View",

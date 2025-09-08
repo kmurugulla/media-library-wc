@@ -1,19 +1,12 @@
-// src/utils/virtual-scroll.js
-// Reusable virtual scrolling utilities for grid and list views
-
-// Virtual scroll constants
 export const SCROLL_CONSTANTS = {
-  // Grid constants - responsive card widths
-  GRID_ITEM_WIDTH: 410, // Card width for large screens (1200px+)
-  GRID_ITEM_HEIGHT: 400, // Original card height
-  GRID_CARD_SPACING: 20, // Gap between cards
+  GRID_ITEM_WIDTH: 410,
+  GRID_ITEM_HEIGHT: 400,
+  GRID_CARD_SPACING: 20,
   
-  // List constants
   LIST_ITEM_HEIGHT: 80,
   
-  // Virtual scroll constants
   BUFFER_SIZE: 5,
-  SCROLL_THROTTLE: 16, // 60fps
+  SCROLL_THROTTLE: 16,
   MAX_VISIBLE_ITEMS: 50,
 };
 
@@ -29,17 +22,16 @@ export class VirtualScrollManager {
     
     const width = window.innerWidth;
     
-    // Responsive breakpoints
     if (width >= 1200) {
-      return 410; // Large screens
+      return 410;
     } else if (width >= 992) {
-      return 360; // Medium-large screens
+      return 360;
     } else if (width >= 768) {
-      return 310; // Medium screens
+      return 310;
     } else if (width >= 576) {
-      return 290; // Small screens
+      return 290;
     } else {
-      return 260; // Extra small screens
+      return 260;
     }
   }
 
@@ -49,7 +41,6 @@ export class VirtualScrollManager {
     this.scrollTimeout = null;
     this.throttledScroll = null;
     
-    // Configuration
     this.itemHeight = options.itemHeight || SCROLL_CONSTANTS.GRID_ITEM_HEIGHT;
     this.itemWidth = options.itemWidth || this.getResponsiveItemWidth();
     this.cardSpacing = options.cardSpacing || SCROLL_CONSTANTS.GRID_CARD_SPACING;
@@ -57,13 +48,11 @@ export class VirtualScrollManager {
     this.maxVisibleItems = options.maxVisibleItems || SCROLL_CONSTANTS.MAX_VISIBLE_ITEMS;
     this.scrollThrottle = options.scrollThrottle || SCROLL_CONSTANTS.SCROLL_THROTTLE;
     
-    // State
     this.visibleStart = 0;
     this.visibleEnd = this.maxVisibleItems;
-    this.colCount = 1; // For grid layouts
+    this.colCount = 1;
     this.renderedItems = new Set();
     
-    // Callbacks
     this.onRangeChange = options.onRangeChange || (() => {});
     this.onColCountChange = options.onColCountChange || (() => {});
   }
@@ -81,7 +70,6 @@ export class VirtualScrollManager {
       this.container.addEventListener('scroll', this.throttledScroll);
       this.scrollListenerAttached = true;
       
-      // Initial calculation
       this.onScroll();
     }
   }
@@ -116,14 +104,12 @@ export class VirtualScrollManager {
     const width = this.container.clientWidth;
     if (width === 0) return;
 
-    // Update item width based on viewport
     const responsiveWidth = this.getResponsiveItemWidth();
     if (responsiveWidth !== this.itemWidth) {
       this.itemWidth = responsiveWidth;
     }
 
-    // Account for padding in the container
-    const availableWidth = width - 32; // 16px padding on each side
+    const availableWidth = width - 32;
     const newColCount = Math.max(1, Math.floor(availableWidth / (this.itemWidth + this.cardSpacing)));
     if (newColCount !== this.colCount) {
       this.colCount = newColCount;
@@ -141,12 +127,10 @@ export class VirtualScrollManager {
     return function throttled(...args) {
       const now = Date.now();
       
-      // If enough time has passed, call immediately
       if (now - lastCallTime >= delay) {
         lastCallTime = now;
         callback.apply(this, args);
       } else {
-        // Otherwise, schedule for later
         if (timeoutId) {
           clearTimeout(timeoutId);
         }
@@ -191,7 +175,6 @@ export class VirtualScrollManager {
     const containerHeight = container.clientHeight;
     const scrollBottom = scrollTop + containerHeight;
 
-    // For list layout (colCount = 1), calculate directly based on items
     if (colCount === 1) {
       const startItem = Math.floor(scrollTop / itemHeight);
       const endItem = Math.ceil(scrollBottom / itemHeight);
@@ -199,7 +182,6 @@ export class VirtualScrollManager {
       const bufferStart = Math.max(0, startItem - bufferSize);
       const bufferEnd = Math.min(totalItems, endItem + bufferSize);
       
-      // Ensure we always show at least some items
       const minEnd = Math.min(this.maxVisibleItems, totalItems);
       const finalEnd = Math.max(bufferEnd, minEnd);
       
@@ -207,19 +189,16 @@ export class VirtualScrollManager {
       return { start: bufferStart, end: finalEnd };
     }
 
-    // For grid layout, calculate based on rows
     const rowHeight = itemHeight;
     const startRow = Math.floor(scrollTop / rowHeight);
     const endRow = Math.ceil(scrollBottom / rowHeight);
 
-    // Calculate items based on rows and columns
     const bufferStartRow = Math.max(0, startRow - bufferSize);
     const bufferEndRow = Math.min(Math.ceil(totalItems / colCount), endRow + bufferSize);
 
     const start = bufferStartRow * colCount;
     const end = Math.min(totalItems, bufferEndRow * colCount);
 
-    // Ensure we always show at least some items
     const minEnd = Math.min(this.maxVisibleItems, totalItems);
     const finalEnd = Math.max(end, minEnd);
 
@@ -289,9 +268,7 @@ export class GridVirtualScrollManager extends VirtualScrollManager {
     const width = this.container.clientWidth;
     if (width === 0) return;
 
-    // Account for padding in the container (16px on each side)
     const availableWidth = width - 32;
-    // Use the actual item width + spacing for calculation
     const itemWithSpacing = this.itemWidth + this.cardSpacing;
     const newColCount = Math.max(1, Math.floor(availableWidth / itemWithSpacing));
     
@@ -360,6 +337,5 @@ export class ListVirtualScrollManager extends VirtualScrollManager {
    * Override updateColCount for list (always 1 column)
    */
   updateColCount() {
-    // List always has 1 column, no need to calculate
   }
 }

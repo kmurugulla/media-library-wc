@@ -26,7 +26,6 @@ export class StorageDebugger {
       return [];
     }
 
-    // Note: This is a simplified check - full database listing requires more complex implementation
     try {
       const db = await this.storage.ensureDatabase();
       console.log('Database opened successfully:', db.name, 'version:', db.version);
@@ -60,16 +59,13 @@ export class StorageDebugger {
     console.log('Testing storage operations...');
     
     try {
-      // Test save
       const testData = [{ id: 'test', name: 'test-file.jpg', url: 'test.jpg' }];
       await this.storage.save(testData);
       console.log('✓ Save operation successful');
 
-      // Test load
       const loadedData = await this.storage.load();
       console.log('✓ Load operation successful, data:', loadedData);
 
-      // Test clear
       await this.storage.clear();
       console.log('✓ Clear operation successful');
 
@@ -115,7 +111,6 @@ export class StorageDebugger {
   }
 }
 
-// Make it available globally for debugging
 if (typeof window !== 'undefined') {
   window.StorageDebugger = StorageDebugger;
   window.debugStorage = new StorageDebugger();
