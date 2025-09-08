@@ -12,6 +12,12 @@ export default defineConfig({
       hmr: true
     })
   ],
+  optimizeDeps: {
+    include: [
+      'exifr'
+    ],
+    exclude: ['lit']
+  },
   json: {
     namedExports: false,
     stringify: false

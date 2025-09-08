@@ -10,7 +10,8 @@ class ModalManager extends LocalizableElement {
     locale: { type: String },
     isOpen: { type: Boolean },
     modalData: { type: Object },
-    _activeTab: { state: true }
+    _activeTab: { state: true },
+    _expandedUsages: { state: true }
   };
 
   static styles = getStyles(modalManagerStyles);
@@ -21,6 +22,7 @@ class ModalManager extends LocalizableElement {
     this.isOpen = false;
     this.modalData = null;
     this._activeTab = 'usage';
+    this._expandedUsages = new Set();
   }
 
   async connectedCallback() {
@@ -74,10 +76,271 @@ class ModalManager extends LocalizableElement {
     const { tab } = e.target.dataset;
     this._activeTab = tab;
   };
+
+  handleTogglePerfTags = (usageId) => {
+    if (this._expandedUsages.has(usageId)) {
+      this._expandedUsages.delete(usageId);
+    } else {
+      this._expandedUsages.add(usageId);
+    }
+    this.requestUpdate();
+  };
   
   getUsageCount() {
     if (!this.modalData?.data?.usageData) return 0;
     return this.modalData.data.usageData.length;
+  }
+
+
+  /**
+   * Convert technical performance tags to user-friendly descriptions
+   * @param {string} tag - The technical tag
+   * @returns {string} User-friendly description
+   */
+  getFriendlyTagDescription(tag) {
+    const descriptions = {
+      'add-responsive-images': 'Add responsive images (srcset)',
+      'convert-to-webp': 'Convert to WebP format',
+      'add-loading-attribute': 'Add loading="lazy"',
+      'resize-image': 'Resize large image',
+      'critical-performance-issue': 'Critical performance issue',
+      'lcp-candidate': 'Largest Contentful Paint candidate',
+      'above-fold': 'Above the fold',
+      'below-fold': 'Below the fold',
+      'hero-section': 'Hero section',
+      'lazy-loading': 'Lazy loading enabled',
+      'eager-loading': 'Eager loading',
+      'high-priority': 'High priority',
+      'low-priority': 'Low priority',
+      'has-srcset': 'Has responsive images',
+      'no-srcset': 'No responsive images',
+      'modern-format': 'Modern format (WebP/AVIF)',
+      'legacy-format': 'Legacy format (JPG/PNG)',
+      'fully-optimized': 'Fully optimized'
+    };
+    
+    return descriptions[tag] || tag;
+  }
+
+  /**
+   * Get user-friendly alt text display consistent with filters
+   * @param {string} alt - The alt text value
+   * @returns {string} User-friendly display text
+   */
+  getAltTextDisplay(alt) {
+    if (!alt || alt === 'null') {
+      return 'Missing Alt';
+    }
+    if (alt === '') {
+      return 'Decorative';
+    }
+    return alt;
+  }
+
+  /**
+   * Group performance tags into logical categories
+   * @param {Array<string>} tags - Array of performance tags
+   * @returns {Object} Grouped tags by category
+   */
+  groupPerformanceTags(tags) {
+    const groups = {
+      position: [],
+      loading: [],
+      responsive: [],
+      format: [],
+      optimization: [],
+      other: []
+    };
+
+    tags.forEach(tag => {
+      if (['above-fold', 'below-fold', 'hero-section', 'lcp-candidate', 'critical-content'].includes(tag)) {
+        groups.position.push(tag);
+      } else if (['no-loading-strategy', 'lazy-loading', 'eager-loading', 'high-priority', 'low-priority', 'add-loading-attribute'].includes(tag)) {
+        groups.loading.push(tag);
+      } else if (['no-srcset', 'has-srcset', 'no-sizes', 'has-sizes', 'responsive', 'fixed-size', 'multiple-sizes', 'add-responsive-images'].includes(tag)) {
+        groups.responsive.push(tag);
+      } else if (['legacy-format', 'modern-format', 'webp-available', 'avif-supported', 'convert-to-webp'].includes(tag)) {
+        groups.format.push(tag);
+      } else if (['large-size', 'optimized-size', 'resize-image', 'needs-optimization', 'fully-optimized', 'critical-performance-issue'].includes(tag)) {
+        groups.optimization.push(tag);
+      } else {
+        groups.other.push(tag);
+      }
+    });
+
+    return groups;
+  }
+
+  /**
+   * Format grouped tags with hierarchical structure
+   * @param {Object} groups - Grouped tags object
+   * @returns {string} Formatted string with groups and sub-bullets
+   */
+  formatGroupedTags(groups) {
+    const sections = [];
+
+    // Position section
+    if (groups.position.length > 0) {
+      const positionText = groups.position.map(tag => this.getFriendlyTagDescription(tag)).join(', ');
+      sections.push(`**Position:** ${positionText}`);
+    }
+
+    // Loading section
+    if (groups.loading.length > 0) {
+      const issues = groups.loading.filter(tag => ['no-loading-strategy'].includes(tag));
+      const recommendations = groups.loading.filter(tag => ['add-loading-attribute'].includes(tag));
+      const status = groups.loading.filter(tag => ['lazy-loading', 'eager-loading', 'high-priority', 'low-priority'].includes(tag));
+      
+      if (issues.length > 0) {
+        sections.push(`**Loading Strategy:** ${issues.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
+        if (recommendations.length > 0) {
+          sections.push(`  ↳ **Recommendation:** ${recommendations.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
+        }
+      }
+      if (status.length > 0) {
+        sections.push(`**Loading Status:** ${status.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
+      }
+    }
+
+    // Responsive section
+    if (groups.responsive.length > 0) {
+      const issues = groups.responsive.filter(tag => ['no-srcset', 'no-sizes', 'fixed-size'].includes(tag));
+      const recommendations = groups.responsive.filter(tag => ['add-responsive-images'].includes(tag));
+      const status = groups.responsive.filter(tag => ['has-srcset', 'has-sizes', 'responsive', 'multiple-sizes'].includes(tag));
+      
+      if (issues.length > 0) {
+        sections.push(`**Responsive Images:** ${issues.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
+        if (recommendations.length > 0) {
+          sections.push(`  ↳ **Recommendation:** ${recommendations.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
+        }
+      }
+      if (status.length > 0) {
+        sections.push(`**Responsive Status:** ${status.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
+      }
+    }
+
+    // Format section
+    if (groups.format.length > 0) {
+      const issues = groups.format.filter(tag => ['legacy-format'].includes(tag));
+      const recommendations = groups.format.filter(tag => ['convert-to-webp'].includes(tag));
+      const status = groups.format.filter(tag => ['modern-format', 'webp-available', 'avif-supported'].includes(tag));
+      
+      if (issues.length > 0) {
+        sections.push(`**Image Format:** ${issues.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
+        if (recommendations.length > 0) {
+          sections.push(`  ↳ **Recommendation:** ${recommendations.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
+        }
+      }
+      if (status.length > 0) {
+        sections.push(`**Format Status:** ${status.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
+      }
+    }
+
+    // Optimization section
+    if (groups.optimization.length > 0) {
+      const issues = groups.optimization.filter(tag => ['large-size', 'needs-optimization', 'critical-performance-issue'].includes(tag));
+      const recommendations = groups.optimization.filter(tag => ['resize-image'].includes(tag));
+      const status = groups.optimization.filter(tag => ['optimized-size', 'fully-optimized'].includes(tag));
+      
+      if (issues.length > 0) {
+        sections.push(`**Optimization:** ${issues.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
+        if (recommendations.length > 0) {
+          sections.push(`  ↳ **Recommendation:** ${recommendations.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
+        }
+      }
+      if (status.length > 0) {
+        sections.push(`**Optimization Status:** ${status.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
+      }
+    }
+
+    // Other section
+    if (groups.other.length > 0) {
+      sections.push(`**Other:** ${groups.other.map(tag => this.getFriendlyTagDescription(tag)).join(', ')}`);
+    }
+
+    return sections.length > 0 ? sections.join('\n\n') : 'No performance data';
+  }
+
+  /**
+   * Format context as HTML with proper bold formatting
+   * @param {string} context - The context string to format
+   * @param {boolean} showAllPerfTags - Whether to show all performance tags
+   * @returns {TemplateResult} HTML template with formatting
+   */
+  formatContextAsHtml(context, showAllPerfTags = false) {
+    if (!context) return html`<span>No context</span>`;
+    
+    // Split by the main delimiter and format each part
+    const parts = context.split(' > ');
+    const formattedParts = parts.map(part => {
+      if (part.startsWith('perf:')) {
+        // Format performance tags with HTML
+        const perfTags = part.replace('perf:', '').split(',');
+        
+        if (showAllPerfTags) {
+          const groupedTags = this.groupPerformanceTags(perfTags);
+          const formattedText = this.formatGroupedTags(groupedTags);
+          return this.convertMarkdownToHtml(formattedText);
+        } else {
+          // Show only critical performance tags with user-friendly descriptions
+          const criticalTags = perfTags.filter(tag => 
+            ['critical-performance-issue', 'add-responsive-images', 'convert-to-webp', 'add-loading-attribute', 'resize-image', 'lcp-candidate', 'above-fold', 'hero-section', 'below-fold'].includes(tag)
+          );
+          
+          if (criticalTags.length > 0) {
+            const remainingCount = perfTags.length - criticalTags.length;
+            const friendlyTags = criticalTags.map(tag => this.getFriendlyTagDescription(tag));
+            const summary = `Performance: ${friendlyTags.join(', ')}`;
+            return html`<span>${remainingCount > 0 ? `${summary} (+${remainingCount} more)` : summary}</span>`;
+          } else {
+            // Check if there are any actionable tags
+            const actionableTags = perfTags.filter(tag => 
+              ['add-responsive-images', 'convert-to-webp', 'add-loading-attribute', 'resize-image'].includes(tag)
+            );
+            
+            if (actionableTags.length > 0) {
+              const friendlyTags = actionableTags.map(tag => this.getFriendlyTagDescription(tag));
+              const remainingCount = perfTags.length - actionableTags.length;
+              const summary = `Performance: ${friendlyTags.join(', ')}`;
+              return html`<span>${remainingCount > 0 ? `${summary} (+${remainingCount} more)` : summary}</span>`;
+            } else {
+              const remainingCount = perfTags.length;
+              return html`<span>${remainingCount > 0 ? `Performance: ${remainingCount} tags` : 'Performance: No issues'}</span>`;
+            }
+          }
+        }
+      } else if (part.startsWith('In div:')) {
+        return html`<span><strong>Container:</strong> ${part.replace('In div:', '').trim()}</span>`;
+      } else if (part.startsWith('text:')) {
+        return html`<span><strong>Text:</strong> ${part.replace('text:', '').trim()}</span>`;
+      } else {
+        return html`<span><strong>Type:</strong> ${part}</span>`;
+      }
+    });
+    
+    return html`<div>${formattedParts.map(part => html`<div>${part}</div>`)}</div>`;
+  }
+
+  /**
+   * Convert markdown-style bold text to HTML
+   * @param {string} text - Text with **bold** markers
+   * @returns {TemplateResult} HTML with bold formatting
+   */
+  convertMarkdownToHtml(text) {
+    const lines = text.split('\n');
+    return html`<div>${lines.map(line => {
+      if (line.trim() === '') return html`<br>`;
+      
+      // Split by ** markers and create proper HTML structure
+      const parts = line.split(/(\*\*.*?\*\*)/g);
+      return html`<div>${parts.map(part => {
+        if (part.startsWith('**') && part.endsWith('**')) {
+          const boldText = part.slice(2, -2);
+          return html`<strong>${boldText}</strong>`;
+        }
+        return part;
+      })}</div>`;
+    })}</div>`;
   }
 
   render() {
@@ -161,15 +424,27 @@ class ModalManager extends LocalizableElement {
               <table class="usage-table">
                 <thead>
                   <tr>
+                    <th>Alt Text</th>
                     <th>Context</th>
                     <th>Actions</th>
                   </tr>
                 </thead>
                 <tbody>
-                  ${usages.map((usage) => html`
+                  ${usages.map((usage, index) => {
+                    const usageId = `${doc}-${index}`;
+                    const isExpanded = this._expandedUsages.has(usageId);
+                    return html`
                     <tr class="usage-row">
+                      <td class="alt-cell">
+                        <div class="alt-text">${this.getAltTextDisplay(usage.alt)}</div>
+                      </td>
                       <td class="context-cell">
-                        <div class="context-text">${usage.ctx || 'No context'}</div>
+                        <div class="context-text">${this.formatContextAsHtml(usage.ctx, isExpanded)}</div>
+                        ${usage.ctx && usage.ctx.includes('perf:') ? html`
+                          <button class="perf-toggle-btn" @click=${() => this.handleTogglePerfTags(usageId)}>
+                            ${isExpanded ? 'Show Less' : 'Show All Performance Tags'}
+                          </button>
+                        ` : ''}
                       </td>
                       <td class="actions-cell">
                         <div class="actions-container">
@@ -182,7 +457,8 @@ class ModalManager extends LocalizableElement {
                         </div>
                       </td>
                     </tr>
-                  `)}
+                    `;
+                  })}
                 </tbody>
               </table>
             </div>
@@ -215,16 +491,8 @@ class ModalManager extends LocalizableElement {
                 <td class="metadata-value">${media.url}</td>
               </tr>
               <tr class="metadata-row">
-                <td class="metadata-label">Alt Text</td>
-                <td class="metadata-value">${media.alt || '—'}</td>
-              </tr>
-              <tr class="metadata-row">
                 <td class="metadata-label">Type</td>
                 <td class="metadata-value">${media.type}</td>
-              </tr>
-              <tr class="metadata-row">
-                <td class="metadata-label">Context</td>
-                <td class="metadata-value">${media.ctx || '—'}</td>
               </tr>
               <tr class="metadata-row">
                 <td class="metadata-label">Usage Count</td>

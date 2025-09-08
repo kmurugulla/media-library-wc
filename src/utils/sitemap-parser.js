@@ -1,5 +1,5 @@
 // src/utils/sitemap-parser.js
-import { analyzeImage, updateAnalysisConfig, getAnalysisConfig } from './image-analysis.js';
+import { analyzeImage, updateAnalysisConfig, getAnalysisConfig, clearAnalysisCache } from './image-analysis.js';
 
 class SitemapParser {
   constructor(options = {}) {
@@ -33,19 +33,15 @@ class SitemapParser {
     try {
       // Generate URL variations to try
       const urlVariations = this.generateUrlVariations(websiteUrl);
-      console.log(`Auto-detecting sitemap for: ${websiteUrl}`);
-      console.log(`Trying URL variations:`, urlVariations);
 
       // Try each URL variation
       for (const baseUrl of urlVariations) {
         try {
-          console.log(`\n--- Trying URL variation: ${baseUrl} ---`);
           this.contentOrigin = baseUrl; // Set content origin for proper URL resolution
 
           // First, try to find sitemap in robots.txt
           const sitemapFromRobots = await this.findSitemapInRobots(baseUrl);
           if (sitemapFromRobots) {
-            console.log(`✅ Found sitemap in robots.txt: ${sitemapFromRobots}`);
             return sitemapFromRobots;
           }
 
@@ -55,34 +51,26 @@ class SitemapParser {
             
             const sitemapUrl = `${baseUrl}${path}`;
             try {
-              console.log(`Trying sitemap path: ${sitemapUrl}`);
               const response = await fetch(sitemapUrl, { method: 'HEAD' });
               if (response.ok) {
-                console.log(`✅ Found sitemap at: ${sitemapUrl}`);
                 return sitemapUrl;
               }
             } catch (error) {
               // Continue to next path
-              console.log(`Failed to fetch ${sitemapUrl}:`, error.message);
             }
           }
 
-          console.log(`❌ No sitemap found for ${baseUrl}`);
         } catch (error) {
-          console.log(`❌ Error trying ${baseUrl}:`, error.message);
           // Continue to next URL variation
         }
       }
 
       // If no sitemap found in any variation, try to create a simple page list for the first working URL
-      console.log(`\nNo sitemap found in any URL variation, attempting to scan main pages...`);
       for (const baseUrl of urlVariations) {
         try {
-          console.log(`Trying fallback page list for: ${baseUrl}`);
           this.contentOrigin = baseUrl;
           return await this.createFallbackPageList(baseUrl);
         } catch (error) {
-          console.log(`Failed fallback for ${baseUrl}:`, error.message);
           // Continue to next URL variation
         }
       }
@@ -144,10 +132,8 @@ class SitemapParser {
         enabled: true,
         ...config
       });
-      console.log('Image analysis enabled with config:', config);
     } else {
       updateAnalysisConfig({ enabled: false });
-      console.log('Image analysis disabled');
     }
   }
 
@@ -166,7 +152,6 @@ class SitemapParser {
   async findSitemapInRobots(baseUrl) {
     try {
       const robotsUrl = `${baseUrl}/robots.txt`;
-      console.log(`Checking robots.txt: ${robotsUrl}`);
       
       const response = await fetch(robotsUrl);
       if (!response.ok) {
@@ -184,7 +169,6 @@ class SitemapParser {
       
       return null;
     } catch (error) {
-      console.log(`Failed to check robots.txt: ${error.message}`);
       return null;
     }
   }
@@ -245,11 +229,9 @@ class SitemapParser {
     try {
       // Handle fallback page list
       if (sitemapUrl && typeof sitemapUrl === 'object' && sitemapUrl.type === 'fallback') {
-        console.log(`Using fallback page list for: ${sitemapUrl.baseUrl}`);
         return sitemapUrl.pages;
       }
 
-      console.log(`Attempting to fetch sitemap from: ${sitemapUrl}`);
       const response = await fetch(sitemapUrl);
       if (!response.ok) {
         throw new Error(`Failed to fetch sitemap: ${response.status} ${response.statusText}`);
@@ -292,7 +274,6 @@ class SitemapParser {
     // Handle sitemap index (nested sitemaps)
     const sitemapElements = sitemapDoc.querySelectorAll('sitemap');
     if (sitemapElements.length > 0) {
-      console.log(`Found sitemap index with ${sitemapElements.length} nested sitemaps`);
       
       // Process first few sitemaps to avoid overwhelming the system
       const maxSitemaps = Math.min(sitemapElements.length, 5);
@@ -303,7 +284,6 @@ class SitemapParser {
         
         if (loc && loc.textContent) {
           try {
-            console.log(`Processing nested sitemap: ${loc.textContent.trim()}`);
             const nestedUrls = await this.parseSitemap(loc.textContent.trim());
             urls.push(...nestedUrls);
           } catch (error) {
@@ -329,7 +309,6 @@ class SitemapParser {
     skipped = urls.length - urlsToScan.length;
 
     if (skipped > 0) {
-      console.log(`Incremental scan: skipping ${skipped} unchanged pages`);
     }
 
     // Create callback function for the queue
@@ -366,21 +345,17 @@ class SitemapParser {
     const promises = urlsToScan.map(url => queue.push(url));
     await Promise.allSettled(promises);
 
-    console.log(`Scan completed: ${completed}/${urlsToScan.length} pages scanned, ${skipped} skipped, ${results.length} media items found, ${errors.length} errors`);
     return results;
   }
 
   async scanPage(url) {
     try {
-      console.log(`Scanning page: ${url.loc}`);
-      console.log(`  → DEBUG: Page URL being scanned: "${url.loc}"`);
       const response = await fetch(url.loc);
       if (!response.ok) {
         throw new Error(`Failed to fetch page: ${response.status}`);
       }
 
       const html = await response.text();
-      console.log(`Page ${url.loc}: HTML length = ${html.length} characters`);
       
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
@@ -388,24 +363,16 @@ class SitemapParser {
       // DEBUG: Check for base tag or other URL rewriting
       const baseTag = doc.querySelector('base');
       if (baseTag) {
-        console.log(`  → DEBUG: Found base tag with href: "${baseTag.href}"`);
-      } else {
-        console.log(`  → DEBUG: No base tag found`);
       }
       
       // DEBUG: Check if this is a development/staging environment
       const title = doc.querySelector('title');
       if (title) {
-        console.log(`  → DEBUG: Page title: "${title.textContent}"`);
       }
       
       // DEBUG: Look for any meta tags that might indicate environment
       const metaTags = doc.querySelectorAll('meta[name*="env"], meta[name*="environment"], meta[property*="env"]');
       if (metaTags.length > 0) {
-        console.log(`  → DEBUG: Found environment-related meta tags:`);
-        metaTags.forEach((meta, index) => {
-          console.log(`    ${index + 1}. ${meta.name || meta.property}: "${meta.content}"`);
-        });
       }
       
       const mediaItems = [];
@@ -413,18 +380,9 @@ class SitemapParser {
 
       // Parse images
       const images = doc.querySelectorAll('img');
-      console.log(`Page ${url.loc}: Found ${images.length} img tags`);
       
       // DEBUG: Log first few img src attributes to see what we're getting
       if (images.length > 0) {
-        console.log(`  → DEBUG: First few img src attributes:`);
-        for (let i = 0; i < Math.min(3, images.length); i++) {
-          const rawSrc = images[i].getAttribute('src');
-          const lazySrc = images[i].getAttribute('data-src') || 
-                         images[i].getAttribute('data-sling-src') ||
-                         images[i].getAttribute('data-lazy-src');
-          console.log(`    ${i + 1}. src="${rawSrc}", lazy="${lazySrc}"`);
-        }
       }
       
       for (let index = 0; index < images.length; index++) {
@@ -441,28 +399,21 @@ class SitemapParser {
                        img.getAttribute('data-responsive-src');
         
         const actualSrc = rawSrc || lazySrc;
-        console.log(`  Image ${index + 1}: src="${rawSrc}", lazy="${lazySrc}", alt="${img.alt}"`);
         
         if (actualSrc && actualSrc.trim() !== '') {
           const isMedia = this.isMediaFile(actualSrc);
           const extension = this.getFileExtension(actualSrc);
-          console.log(`    → Extension: ${extension}, IsMedia: ${isMedia}`);
           
           if (isMedia) {
             // DEBUG: Track URL transformation
-            console.log(`    → DEBUG: Original actualSrc: "${actualSrc}"`);
-            console.log(`    → DEBUG: Document URL (url.loc): "${url.loc}"`);
             
             const resolvedUrl = this.resolveUrl(actualSrc, url.loc);
-            console.log(`    → DEBUG: Resolved URL: "${resolvedUrl}"`);
             
             // Extract domain from document URL for localhost fixing
             const documentDomain = new URL(url.loc).hostname;
             const fixedUrl = this.fixLocalhostUrl(resolvedUrl, documentDomain);
-            console.log(`    → DEBUG: Final URL after localhost fix: "${fixedUrl}"`);
             
             const cleanFilename = this.getCleanFilename(actualSrc);
-            console.log(`    → DEBUG: Clean filename: "${cleanFilename}"`);
             
             const mediaItem = {
               url: fixedUrl,
@@ -479,12 +430,14 @@ class SitemapParser {
             // Run image analysis if enabled
             if (this.enableImageAnalysis) {
               try {
-                console.log(`  → Running image analysis for: ${fixedUrl}`);
                 const analysis = await analyzeImage(fixedUrl, null, mediaItem.ctx);
                 
                 // Add analysis results to media item
                 mediaItem.orientation = analysis.orientation;
                 mediaItem.category = analysis.category;
+                mediaItem.categoryConfidence = analysis.categoryConfidence;
+                mediaItem.categoryScore = analysis.categoryScore;
+                mediaItem.categorySource = analysis.categorySource;
                 mediaItem.width = analysis.width;
                 mediaItem.height = analysis.height;
                 mediaItem.exifCamera = analysis.exifCamera;
@@ -494,20 +447,27 @@ class SitemapParser {
                 mediaItem.dominantColor = analysis.dominantColor;
                 mediaItem.analysisConfidence = analysis.confidence;
                 
-                console.log(`  → Analysis complete: ${analysis.category} (${analysis.confidence})`);
+                // Add error information if EXIF extraction failed
+                if (analysis.exifError) {
+                  mediaItem.hasError = true;
+                  mediaItem.errorType = analysis.exifError.errorType;
+                  mediaItem.errorMessage = analysis.exifError.errorMessage;
+                  mediaItem.statusCode = analysis.exifError.statusCode;
+                  
+                  // Set category to '404s' if it's a 404 error
+                  if (analysis.exifError.errorType === '404') {
+                    mediaItem.category = '404s';
+                  }
+                }
+                
               } catch (error) {
                 console.warn(`  → Image analysis failed for ${fixedUrl}:`, error);
                 // Continue without analysis results
               }
             }
 
-            console.log(`  → Added media item:`, mediaItem);
             mediaItems.push(mediaItem);
-          } else {
-            console.log(`  → Skipped (not a media file): ${actualSrc}`);
           }
-        } else {
-          console.log(`  → Skipped (no src attribute)`);
         }
       }
 
@@ -566,7 +526,6 @@ class SitemapParser {
         }
       });
 
-      console.log(`Page ${url.loc}: Found ${mediaItems.length} media items total`);
       return mediaItems;
     } catch (error) {
       console.error(`Error scanning page ${url.loc}:`, error);
@@ -575,22 +534,18 @@ class SitemapParser {
   }
 
   resolveUrl(src, docPath) {
-    console.log(`    → resolveUrl() called with src: "${src}", docPath: "${docPath}"`);
     
     if (!src) {
-      console.log(`    → resolveUrl() returning null (no src)`);
       return null;
     }
 
     // Handle absolute URLs
     if (src.startsWith('http://') || src.startsWith('https://')) {
-      console.log(`    → resolveUrl() returning absolute URL as-is: "${src}"`);
       return src;
     }
 
     // Handle data URLs
     if (src.startsWith('data:')) {
-      console.log(`    → resolveUrl() returning data URL as-is: "${src}"`);
       return src;
     }
 
@@ -599,11 +554,9 @@ class SitemapParser {
       const docUrl = new URL(docPath);
       const resolvedUrl = new URL(src, docUrl);
       const result = resolvedUrl.toString();
-      console.log(`    → resolveUrl() resolved relative URL: "${src}" + "${docPath}" = "${result}"`);
       return result;
     } catch (error) {
       console.warn(`Failed to resolve URL: ${src} against ${docPath}`, error);
-      console.log(`    → resolveUrl() returning original src due to error: "${src}"`);
       return src; // Return original if resolution fails
     }
   }
@@ -628,6 +581,12 @@ class SitemapParser {
     const surroundingText = this.extractSurroundingContext(element);
     if (surroundingText) {
       context.push(`text: ${surroundingText}`);
+    }
+
+    // Add performance analysis tags
+    const performanceTags = this.analyzePerformanceContext(element, type);
+    if (performanceTags.length > 0) {
+      context.push(`perf:${performanceTags.join(',')}`);
     }
 
     return context.join(' > ');
@@ -658,6 +617,323 @@ class SitemapParser {
     });
 
     return context.slice(0, 3).join(' ').substring(0, maxLength);
+  }
+
+  /**
+   * Analyze performance context and generate performance tags
+   * @param {Element} element - The media element
+   * @param {string} type - The element type (img, video, etc.)
+   * @returns {Array<string>} Array of performance tags
+   */
+  analyzePerformanceContext(element, type) {
+    const tags = [];
+
+    // Only analyze images for now
+    if (type !== 'img') {
+      return tags;
+    }
+
+
+    // Position analysis
+    const positionTags = this.analyzePosition(element);
+    tags.push(...positionTags);
+
+    // Loading strategy analysis
+    const loadingTags = this.analyzeLoadingStrategy(element);
+    tags.push(...loadingTags);
+
+    // Responsive image analysis
+    const responsiveTags = this.analyzeResponsiveImages(element);
+    tags.push(...responsiveTags);
+
+    // Format analysis
+    const formatTags = this.analyzeFormat(element);
+    tags.push(...formatTags);
+
+    // Size analysis
+    const sizeTags = this.analyzeSize(element);
+    tags.push(...sizeTags);
+
+    // Social media analysis
+    const socialTags = this.analyzeSocialMedia(element);
+    tags.push(...socialTags);
+
+    // Overall optimization status
+    const optimizationTags = this.analyzeOptimizationStatus(tags);
+    tags.push(...optimizationTags);
+
+    return tags;
+  }
+
+  /**
+   * Analyze element position for performance tags
+   */
+  analyzePosition(element) {
+    const tags = [];
+    
+    // Check for above-fold indicators
+    const isAboveFold = this.isAboveFold(element);
+    if (isAboveFold) {
+      tags.push('above-fold');
+    } else {
+      tags.push('below-fold');
+    }
+
+    // Check for hero section indicators
+    const isHeroSection = this.isHeroSection(element);
+    if (isHeroSection) {
+      tags.push('hero-section');
+      tags.push('lcp-candidate');
+    }
+
+    // Check for critical content areas
+    const isCritical = this.isCriticalContent(element);
+    if (isCritical) {
+      tags.push('critical-content');
+    }
+
+    return tags;
+  }
+
+  /**
+   * Analyze loading strategy
+   */
+  analyzeLoadingStrategy(element) {
+    const tags = [];
+    
+    const loading = element.getAttribute('loading');
+    const fetchpriority = element.getAttribute('fetchpriority');
+    
+    if (loading === 'lazy') {
+      tags.push('lazy-loading');
+    } else if (loading === 'eager') {
+      tags.push('eager-loading');
+    } else {
+      tags.push('no-loading-strategy');
+    }
+
+    if (fetchpriority === 'high') {
+      tags.push('high-priority');
+    } else if (fetchpriority === 'low') {
+      tags.push('low-priority');
+    }
+
+    return tags;
+  }
+
+  /**
+   * Analyze responsive image support
+   */
+  analyzeResponsiveImages(element) {
+    const tags = [];
+    
+    const srcset = element.getAttribute('srcset');
+    const sizes = element.getAttribute('sizes');
+    
+    if (srcset) {
+      tags.push('has-srcset');
+      tags.push('responsive');
+      
+      // Count number of sizes in srcset
+      const sizeCount = srcset.split(',').length;
+      if (sizeCount > 1) {
+        tags.push('multiple-sizes');
+      }
+    } else {
+      tags.push('no-srcset');
+      tags.push('fixed-size');
+    }
+
+    if (sizes) {
+      tags.push('has-sizes');
+    } else {
+      tags.push('no-sizes');
+    }
+
+    return tags;
+  }
+
+  /**
+   * Analyze image format
+   */
+  analyzeFormat(element) {
+    const tags = [];
+    
+    const src = element.getAttribute('src') || element.getAttribute('data-src') || '';
+    const srcset = element.getAttribute('srcset') || '';
+    
+    // Check for modern formats
+    if (src.includes('.webp') || srcset.includes('.webp')) {
+      tags.push('webp-available');
+    }
+    
+    if (src.includes('.avif') || srcset.includes('.avif')) {
+      tags.push('avif-supported');
+    }
+    
+    // Check for legacy formats
+    if (src.match(/\.(jpg|jpeg|png|gif)$/i) && !srcset.includes('.webp') && !srcset.includes('.avif')) {
+      tags.push('legacy-format');
+    }
+    
+    if (src.includes('.webp') || src.includes('.avif')) {
+      tags.push('modern-format');
+    }
+
+    return tags;
+  }
+
+  /**
+   * Analyze image size optimization
+   */
+  analyzeSize(element) {
+    const tags = [];
+    
+    // This is a simplified analysis - in a real implementation,
+    // you might want to load the image to get actual dimensions
+    const src = element.getAttribute('src') || element.getAttribute('data-src') || '';
+    
+    // Check for common oversized image patterns
+    if (src.includes('1920') || src.includes('2048') || src.includes('2560')) {
+      tags.push('large-size');
+    }
+    
+    // Check for common optimized sizes
+    if (src.includes('800') || src.includes('600') || src.includes('400')) {
+      tags.push('optimized-size');
+    }
+
+    return tags;
+  }
+
+  /**
+   * Analyze social media usage
+   */
+  analyzeSocialMedia(element) {
+    const tags = [];
+    
+    // This would need to be enhanced to check against meta tags
+    // For now, we'll do basic filename analysis
+    const src = element.getAttribute('src') || element.getAttribute('data-src') || '';
+    const filename = src.toLowerCase();
+    
+    if (filename.includes('og-') || filename.includes('social-') || filename.includes('share-')) {
+      tags.push('social-image');
+    }
+    
+    if (filename.includes('og-image') || filename.includes('ogimage')) {
+      tags.push('og-image');
+    }
+    
+    if (filename.includes('twitter-') || filename.includes('twitterimage')) {
+      tags.push('twitter-image');
+    }
+
+    return tags;
+  }
+
+  /**
+   * Analyze overall optimization status
+   */
+  analyzeOptimizationStatus(existingTags) {
+    const tags = [];
+    
+    // Define specific optimization issues with actionable descriptions
+    const optimizationIssues = {
+      'no-srcset': 'add-responsive-images',
+      'legacy-format': 'convert-to-webp',
+      'no-loading-strategy': 'add-loading-attribute',
+      'large-size': 'resize-image'
+    };
+    
+    // Check for specific issues and add actionable tags
+    Object.entries(optimizationIssues).forEach(([issue, action]) => {
+      if (existingTags.includes(issue)) {
+        tags.push(action);
+      }
+    });
+    
+    // Check if fully optimized
+    const isFullyOptimized = existingTags.some(tag => 
+      ['has-srcset', 'modern-format', 'lazy-loading', 'optimized-size'].includes(tag)
+    );
+    
+    const hasAnyIssues = Object.keys(optimizationIssues).some(issue => 
+      existingTags.includes(issue)
+    );
+    
+    if (isFullyOptimized && !hasAnyIssues) {
+      tags.push('fully-optimized');
+    }
+    
+    // Critical performance issue for LCP candidates
+    if (existingTags.includes('lcp-candidate') && hasAnyIssues) {
+      tags.push('critical-performance-issue');
+    }
+
+    return tags;
+  }
+
+  /**
+   * Check if element is above the fold
+   */
+  isAboveFold(element) {
+    // Simplified above-fold detection based on CSS classes and context
+    const classes = element.className || '';
+    const parentClasses = element.parentElement?.className || '';
+    const grandparentClasses = element.parentElement?.parentElement?.className || '';
+    const allClasses = `${classes} ${parentClasses} ${grandparentClasses}`.toLowerCase();
+    
+    // Common above-fold indicators
+    const aboveFoldIndicators = [
+      'hero', 'banner', 'header', 'navigation', 'nav', 'top', 'above', 'fold',
+      'main', 'primary', 'featured', 'lead', 'intro', 'welcome',
+      'article', 'card', 'content' // Add article and content indicators
+    ];
+    
+    // Check for below-fold indicators (these override above-fold)
+    const belowFoldIndicators = [
+      'footer', 'sidebar', 'bottom', 'end', 'conclusion'
+    ];
+    
+    const isBelowFold = belowFoldIndicators.some(indicator => allClasses.includes(indicator));
+    if (isBelowFold) return false;
+    
+    // If it's in main content area (like articles), consider it above fold
+    const isMainContent = aboveFoldIndicators.some(indicator => allClasses.includes(indicator));
+    
+    // Default to above-fold for images in main content areas
+    return isMainContent;
+  }
+
+  /**
+   * Check if element is in a hero section
+   */
+  isHeroSection(element) {
+    const classes = element.className || '';
+    const parentClasses = element.parentElement?.className || '';
+    const allClasses = `${classes} ${parentClasses}`.toLowerCase();
+    
+    const heroIndicators = [
+      'hero', 'banner', 'jumbotron', 'masthead', 'header-image', 'main-image'
+    ];
+    
+    return heroIndicators.some(indicator => allClasses.includes(indicator));
+  }
+
+  /**
+   * Check if element is in critical content
+   */
+  isCriticalContent(element) {
+    const classes = element.className || '';
+    const parentClasses = element.parentElement?.className || '';
+    const allClasses = `${classes} ${parentClasses}`.toLowerCase();
+    
+    const criticalIndicators = [
+      'main', 'primary', 'content', 'article', 'post', 'featured', 'important'
+    ];
+    
+    return criticalIndicators.some(indicator => allClasses.includes(indicator));
   }
 
   isMediaFile(url) {
@@ -717,9 +993,8 @@ class SitemapParser {
   fixLocalhostUrl(url, originalDomain) {
     if (!url || !originalDomain) return url;
     
-    // Check if URL contains localhost
-    if (url.includes('localhost:3003')) {
-      console.log(`  → DEBUG: Detected localhost URL, attempting to fix: "${url}"`);
+    // Check if URL contains localhost (any port)
+    if (url.includes('localhost:')) {
       
       try {
         // Extract the path and query parameters from localhost URL
@@ -729,7 +1004,6 @@ class SitemapParser {
         // Construct new URL with original domain
         const fixedUrl = `https://${originalDomain}${pathAndQuery}`;
         
-        console.log(`  → DEBUG: Fixed localhost URL: "${url}" → "${fixedUrl}"`);
         return fixedUrl;
       } catch (error) {
         console.warn('Error fixing localhost URL:', url, error);
@@ -776,21 +1050,20 @@ class SitemapParser {
 
   // Test method to debug HTML parsing
   testHtmlParsing(htmlString, baseUrl = 'https://example.com') {
-    console.log('Testing HTML parsing with:', htmlString.substring(0, 200) + '...');
-    
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlString, 'text/html');
     
     const images = doc.querySelectorAll('img');
-    console.log(`Found ${images.length} img tags in test HTML`);
     
+    // Test context extraction for each image
     images.forEach((img, index) => {
-      console.log(`  Test Image ${index + 1}: src="${img.src}", alt="${img.alt}"`);
-      if (img.src) {
-        const isMedia = this.isMediaFile(img.src);
-        const extension = this.getFileExtension(img.src);
-        console.log(`    → Extension: ${extension}, IsMedia: ${isMedia}`);
-      }
+      // Test context extraction
+      const context = this.captureContext(img, 'img');
+      console.log(`Image ${index + 1} context:`, context);
+      
+      // Test performance analysis specifically
+      const performanceTags = this.analyzePerformanceContext(img, 'img');
+      console.log(`Image ${index + 1} performance tags:`, performanceTags);
     });
     
     return images.length;
@@ -837,3 +1110,8 @@ class Queue {
 }
 
 export { SitemapParser };
+
+// Expose cache clearing function to window for debugging
+if (typeof window !== 'undefined') {
+  window.clearAnalysisCache = clearAnalysisCache;
+}

@@ -25,7 +25,9 @@
     "preview": "vite preview",
     "test": "vite --open /test/index.html",
     "lint": "eslint src",
-    "type-check": "tsc --noEmit"
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf node_modules/.vite dist",
+    "dev:clean": "npm run clean && npm run dev"
   },
   "keywords": [
     "web-component",
@@ -38,10 +40,7 @@
   "author": "Media Library Team",
   "license": "MIT",
   "dependencies": {
-    "@tensorflow-models/coco-ssd": "^2.2.3",
-    "@tensorflow/tfjs": "^4.22.0",
-    "exif-js": "^2.3.0",
-    "face-api.js": "^0.22.2",
+    "exifr": "^7.1.3",
     "lit": "^3.0.0"
   },
   "devDependencies": {

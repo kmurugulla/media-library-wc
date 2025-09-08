@@ -1,4 +1,6 @@
 // src/utils/filters.js
+import { getAvailableCategories } from './category-detector.js';
+
 export const FILTER_CONFIG = {
   images: (item) => getMediaType(item) === 'image' && !isSvgFile(item),
   videos: (item) => getMediaType(item) === 'video',
@@ -10,6 +12,40 @@ export const FILTER_CONFIG = {
   decorative: (item) => item.type?.startsWith('img >') && !item.type?.includes('svg') && item.alt === '',
   filled: (item) => item.type?.startsWith('img >') && !item.type?.includes('svg') && item.alt && item.alt !== '' && item.alt !== 'null',
   unused: (item) => !item.doc || item.doc.trim() === '',
+
+  // Orientation filters (only for images with analysis data)
+  landscape: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.orientation === 'landscape',
+  portrait: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.orientation === 'portrait',
+  square: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.orientation === 'square',
+
+  // Performance filters (based on performance tags in context)
+  lcpCandidate: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'lcp-candidate'),
+  aboveFold: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'above-fold'),
+  belowFold: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'below-fold'),
+  needsOptimization: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'needs-optimization'),
+  fullyOptimized: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'fully-optimized'),
+  noSrcset: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'no-srcset'),
+  hasSrcset: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'has-srcset'),
+  legacyFormat: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'legacy-format'),
+  modernFormat: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'modern-format'),
+  noLazyLoading: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'no-loading-strategy'),
+  lazyLoading: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'lazy-loading'),
+  socialImage: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'social-image'),
+  ogImage: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'og-image'),
+  performanceIssue: (item) => getMediaType(item) === 'image' && !isSvgFile(item) && hasPerformanceTag(item, 'performance-issue'),
+
+  // Category-based filters
+  'hero-images': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'hero-images',
+  'team-people': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'team-people',
+  'navigation': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'navigation',
+  'articles': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'articles',
+  'products': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'products',
+  'decorative': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'decorative',
+  'social-media': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'social-media',
+  'documents': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'documents',
+  'logos': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'logos',
+  'screenshots': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === 'screenshots',
+  '404s': (item) => getMediaType(item) === 'image' && !isSvgFile(item) && item.category === '404s',
 
   documentImages: (item, selectedDocument) => FILTER_CONFIG.images(item) && item.doc === selectedDocument,
   documentIcons: (item, selectedDocument) => FILTER_CONFIG.icons(item) && item.doc === selectedDocument,
@@ -39,6 +75,15 @@ export function applyFilter(data, filterName, selectedDocument) {
 
 export function getAvailableFilters() {
   return Object.keys(FILTER_CONFIG);
+}
+
+/**
+ * Get category-based filters only
+ * @returns {Array} Array of category filter names
+ */
+export function getCategoryFilters() {
+  const categories = getAvailableCategories();
+  return categories.filter(category => category !== 'other');
 }
 
 /**
@@ -92,6 +137,24 @@ function filterByColonSyntax(mediaData, colonSyntax) {
         const parts = cleanPath.split('/');
         const folderPath = parts.slice(0, -1).join('/');
         return folderPath.toLowerCase().includes(value);
+      }
+      case 'perf': {
+        // Performance tag filtering
+        if (!item.ctx) return false;
+        
+        // Look for perf: section in context
+        const perfMatch = item.ctx.match(/perf:([^>]+)/);
+        if (!perfMatch) return false;
+        
+        const perfTags = perfMatch[1].split(',').map(tag => tag.trim().toLowerCase());
+        const searchValue = value.toLowerCase();
+        
+        // Support exact tag matching and partial matching
+        return perfTags.some(tag => 
+          tag === searchValue || 
+          tag.includes(searchValue) ||
+          searchValue.includes(tag)
+        );
       }
       default:
         return false;
@@ -173,30 +236,48 @@ export function processMediaData(mediaData) {
 
   const filterCounts = {};
 
-  // Calculate counts for each filter
+  // First, get unique media URLs to count unique items, not instances
+  const uniqueMediaUrls = new Set();
+  mediaData.forEach(item => {
+    if (item.url) {
+      uniqueMediaUrls.add(item.url);
+    }
+  });
+
+  // Calculate counts for each filter using unique media URLs
   Object.keys(FILTER_CONFIG).forEach(filterName => {
     if (filterName.startsWith('document')) {
       // Skip document-specific filters for general counts
       return;
     }
     
-    const count = mediaData.filter(item => {
+    // Count unique media URLs that match the filter
+    const matchingUrls = new Set();
+    mediaData.forEach(item => {
       try {
-        return FILTER_CONFIG[filterName](item);
+        if (FILTER_CONFIG[filterName](item) && item.url) {
+          matchingUrls.add(item.url);
+        }
       } catch {
-        return false;
+        // Skip items that cause errors
       }
-    }).length;
+    });
     
-    filterCounts[filterName] = count;
+    filterCounts[filterName] = matchingUrls.size;
   });
 
-  // Calculate total count (excluding SVGs for "all" filter)
-  filterCounts.all = mediaData.filter(item => !isSvgFile(item)).length;
+  // Calculate total count (excluding SVGs for "all" filter) - count unique URLs
+  const uniqueNonSvgUrls = new Set();
+  mediaData.forEach(item => {
+    if (item.url && !isSvgFile(item)) {
+      uniqueNonSvgUrls.add(item.url);
+    }
+  });
+  filterCounts.all = uniqueNonSvgUrls.size;
 
   return {
     filterCounts,
-    totalCount: mediaData.length
+    totalCount: uniqueMediaUrls.size
   };
 }
 
@@ -233,4 +314,21 @@ function detectMediaTypeFromExtension(ext) {
   if (documentExtensions.includes(ext)) return 'document';
   if (audioExtensions.includes(ext)) return 'audio';
   return 'unknown';
+}
+
+/**
+ * Check if a media item has a specific performance tag
+ * @param {Object} item - Media item
+ * @param {string} tag - Performance tag to check for
+ * @returns {boolean} Whether the item has the performance tag
+ */
+function hasPerformanceTag(item, tag) {
+  if (!item.ctx) return false;
+  
+  // Look for perf: section in context
+  const perfMatch = item.ctx.match(/perf:([^>]+)/);
+  if (!perfMatch) return false;
+  
+  const perfTags = perfMatch[1].split(',').map(t => t.trim().toLowerCase());
+  return perfTags.includes(tag.toLowerCase());
 }

@@ -264,10 +264,7 @@ class MediaLibrary extends LocalizableElement {
       analysisConfig: {
         extractEXIF: true,
         extractDimensions: true,
-        categorizeFromFilename: true,
-        detectFaces: true,   // Enable face detection
-        classifyImages: true,
-        analyzeColors: false
+        categorizeFromFilename: true
       }
     });
     
@@ -438,10 +435,7 @@ class MediaLibrary extends LocalizableElement {
       this.sitemapParser.setImageAnalysis(this._imageAnalysisEnabled, {
         extractEXIF: true,
         extractDimensions: true,
-        categorizeFromFilename: true,
-        detectFaces: this._imageAnalysisEnabled,  // Enable advanced features when analysis is on
-        classifyImages: this._imageAnalysisEnabled,
-        analyzeColors: false  // Keep color analysis off by default (very expensive)
+        categorizeFromFilename: true
       });
     }
     
@@ -462,27 +456,18 @@ class MediaLibrary extends LocalizableElement {
   addUsageCountToMedia(mediaData) {
     if (!mediaData) return [];
     
-    // Group by URL to count usage across different documents
+    // Group by URL to count ALL instances (not just unique documents)
     const usageCounts = {};
-    const uniqueDocs = {};
     
     mediaData.forEach(item => {
       if (item.url) {
         if (!usageCounts[item.url]) {
           usageCounts[item.url] = 0;
-          uniqueDocs[item.url] = new Set();
         }
         
-        // Count unique documents where this media is used
-        if (item.doc && item.doc.trim()) {
-          uniqueDocs[item.url].add(item.doc);
-        }
+        // Count ALL instances of this media URL
+        usageCounts[item.url]++;
       }
-    });
-    
-    // Set usage count to number of unique documents
-    Object.keys(usageCounts).forEach(url => {
-      usageCounts[url] = uniqueDocs[url].size || 1;
     });
     
     // Add usage count to each unique media item
@@ -542,6 +527,7 @@ class MediaLibrary extends LocalizableElement {
         doc: item.doc,
         alt: item.alt,
         type: item.type,
+        ctx: item.ctx,
         firstUsedAt: item.firstUsedAt,
         lastUsedAt: item.lastUsedAt,
       })) || [];

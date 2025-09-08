@@ -397,7 +397,29 @@
   
   .metadata-value {
     color: #6b7280;
-    word-break: break-all;
+    word-break: break-word;
+    white-space: pre-line;
+    line-height: 1.5;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-size: 0.875rem;
+  }
+
+  .perf-toggle-btn {
+    display: inline-block;
+    margin-top: 8px;
+    padding: 4px 8px;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+
+  .perf-toggle-btn:hover {
+    background: #e5e7eb;
+    border-color: #9ca3af;
   }
 
   /* Analysis metadata styles */
@@ -474,6 +496,7 @@
   
   .usage-table {
     width: 100%;
+    min-width: 800px;
     border-collapse: collapse;
     font-size: 13px;
   }
@@ -504,8 +527,14 @@
     border-bottom: none;
   }
   
+  .alt-cell {
+    width: 120px;
+    min-width: 120px;
+  }
+  
   .context-cell {
-    flex: 1;
+    flex: 2;
+    min-width: 300px;
   }
   
   .actions-cell {
@@ -523,14 +552,36 @@
   .context-text {
     color: #374151;
     background: #f9fafb;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    font-size: 11px;
+    line-height: 1.6;
+    max-height: 120px;
+    overflow-y: auto;
+    white-space: pre-line;
+    word-break: break-word;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    max-width: 600px;
+  }
+
+  .context-text strong {
+    font-weight: 600;
+    color: #1f2937;
+  }
+
+  .alt-text {
+    color: #6b7280;
+    font-size: 0.875rem;
     padding: 4px 8px;
+    background: #f9fafb;
     border-radius: 4px;
     border: 1px solid #e5e7eb;
-    font-size: 12px;
-    line-height: 1.4;
-    max-height: 60px;
-    overflow-y: auto;
-    white-space: pre-wrap;
+    word-break: break-word;
+    max-width: 100px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
   
   .action-button {

@@ -172,11 +172,6 @@
                         Clear Old Data
                     </button>
                 </div>
-                <div class="control-group">
-                    <button onclick="testHtmlParsing()" style="background: #10b981; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer;">
-                        Test HTML Parsing
-                    </button>
-                </div>
             </div>
             
             <div class="media-library-container">
@@ -446,32 +441,6 @@
             }
         };
 
-        window.testHtmlParsing = async () => {
-            try {
-                const { SitemapParser } = await import('/src/utils/sitemap-parser.js');
-                const parser = new SitemapParser();
-                
-                // Test with sample HTML containing various image types
-                const testHtml = `
-                    <html>
-                        <body>
-                            <img src="/images/logo.png" alt="Logo">
-                            <img src="https://example.com/hero.jpg" alt="Hero image">
-                            <img src="./assets/icon.svg" alt="Icon">
-                            <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNkYPhfDwAChwGA60e6kgAAAABJRU5ErkJggg==" alt="Data URL">
-                            <img src="/images/banner.webp" alt="Banner">
-                            <img src="https://cdn.example.com/video-thumb.jpg" alt="Video thumbnail">
-                        </body>
-                    </html>
-                `;
-                
-                const imageCount = parser.testHtmlParsing(testHtml);
-                showNotification(`Test completed: Found ${imageCount} images in test HTML`, 'success');
-            } catch (error) {
-                console.error('Failed to test HTML parsing:', error);
-                showNotification(`Test failed: ${error.message}`, 'error');
-            }
-        };
         
         window.loadMockData = async () => {
             try {
