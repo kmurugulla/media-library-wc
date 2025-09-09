@@ -1,11 +1,11 @@
 // src/utils/debug-storage.js
-import { BrowserStorage } from './storage.js';
+import BrowserStorage from './storage.js';
 
 /**
  * Debug utility for IndexedDB storage issues
  * This can be used in the browser console to diagnose storage problems
  */
-export class StorageDebugger {
+class StorageDebugger {
   constructor() {
     this.storage = new BrowserStorage('indexeddb');
   }
@@ -57,7 +57,7 @@ export class StorageDebugger {
    */
   async testStorage() {
     console.log('Testing storage operations...');
-    
+
     try {
       const testData = [{ id: 'test', name: 'test-file.jpg', url: 'test.jpg' }];
       await this.storage.save(testData);
@@ -95,21 +95,23 @@ export class StorageDebugger {
    */
   async runDiagnostics() {
     console.log('=== Storage Diagnostics ===');
-    
+
     console.log('1. IndexedDB Support:', this.isIndexedDBSupported());
-    
+
     console.log('2. Database Info:');
     await this.listDatabases();
-    
+
     console.log('3. Media Store Check:');
     await this.checkMediaStore();
-    
+
     console.log('4. Storage Operations Test:');
     await this.testStorage();
-    
+
     console.log('=== Diagnostics Complete ===');
   }
 }
+
+export default StorageDebugger;
 
 if (typeof window !== 'undefined') {
   window.StorageDebugger = StorageDebugger;

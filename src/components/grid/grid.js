@@ -1,8 +1,8 @@
 // src/components/grid/grid.js
 import { html } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
-import { LocalizableElement } from '../base-localizable.js';
-import { getMediaType, isImage, isVideo, isPdf } from '../../utils/utils.js';
+import LocalizableElement from '../base-localizable.js';
+import { getMediaType, isImage } from '../../utils/utils.js';
 import { getStyles } from '../../utils/get-styles.js';
 import { GridVirtualScrollManager } from '../../utils/virtual-scroll.js';
 import gridStyles from './grid.css?inline';
@@ -14,22 +14,21 @@ class MediaGrid extends LocalizableElement {
     locale: { type: String },
     visibleStart: { type: Number },
     visibleEnd: { type: Number },
-    colCount: { type: Number }
+    colCount: { type: Number },
   };
 
   static styles = getStyles(gridStyles);
-
 
   constructor() {
     super();
     this.mediaData = [];
     this.searchQuery = '';
     this.locale = 'en';
-    
+
     this.visibleStart = 0;
     this.visibleEnd = 50;
     this.colCount = 4;
-    
+
     this.virtualScroll = new GridVirtualScrollManager({
       onRangeChange: (range) => {
         this.visibleStart = range.start;
@@ -43,7 +42,7 @@ class MediaGrid extends LocalizableElement {
         requestAnimationFrame(() => {
           this.requestUpdate();
         });
-      }
+      },
     });
   }
 
@@ -59,18 +58,27 @@ class MediaGrid extends LocalizableElement {
   }
 
   willUpdate(changedProperties) {
-    if (changedProperties.has('mediaData') && this.mediaData) {
-      this.virtualScroll.resetState(this.mediaData.length);
+    if (changedProperties.has('mediaData')) {
+      if (this.mediaData && this.mediaData.length > 0) {
+        this.virtualScroll.resetState(this.mediaData.length);
+      } else {
+        this.visibleStart = 0;
+        this.visibleEnd = 0;
+      }
     }
   }
 
   updated(changedProperties) {
-    if (changedProperties.has('mediaData') && this.mediaData && this.mediaData.length > 0) {
+    if (changedProperties.has('mediaData')) {
       this.updateComplete.then(() => {
-        if (!this.virtualScroll.scrollListenerAttached) {
-          this.setupScrollListener();
-        } else {
-          this.virtualScroll.onScroll();
+        if (this.mediaData && this.mediaData.length > 0) {
+          if (!this.virtualScroll.scrollListenerAttached) {
+            this.setupScrollListener();
+          } else {
+            this.virtualScroll.updateTotalItems(this.mediaData.length);
+            this.virtualScroll.calculateVisibleRange();
+            this.virtualScroll.onVisibleRangeChange();
+          }
         }
       });
     }
@@ -81,18 +89,14 @@ class MediaGrid extends LocalizableElement {
     this.virtualScroll.cleanup();
   }
 
-
-  // ============================================================================
-  // SCROLL HANDLING
-  // ============================================================================
-
   setupScrollListener() {
     requestAnimationFrame(() => {
       const container = this.shadowRoot.querySelector('.media-main');
       if (container) {
-        this.virtualScroll.getTotalItems = () => this.mediaData?.length || 0;
-        this.virtualScroll.setupScrollListener(container);
+        this.virtualScroll.init(container, this.mediaData?.length || 0);
         this.virtualScroll.updateColCount();
+        this.virtualScroll.calculateVisibleRange();
+        this.virtualScroll.onVisibleRangeChange();
       }
     });
   }
@@ -117,11 +121,11 @@ class MediaGrid extends LocalizableElement {
       <main class="media-main">
         <div class="media-grid" style="height: ${totalHeight}px;">
           ${repeat(visibleItems, (media) => media.url, (media, i) => {
-            const index = this.visibleStart + i;
-            const position = this.virtualScroll.calculateItemPosition(index);
+    const index = this.visibleStart + i;
+    const position = this.virtualScroll.calculateItemPosition(index);
 
-            return this.renderMediaCard(media, index, position);
-          })}
+    return this.renderMediaCard(media, index, position);
+  })}
         </div>
       </main>
     `;
@@ -129,8 +133,8 @@ class MediaGrid extends LocalizableElement {
 
   renderMediaCard(media, index, position) {
     const mediaType = getMediaType(media);
-    const iconName = this.getMediaTypeIcon(mediaType);
-    
+    this.getMediaTypeIcon(mediaType);
+
     return html`
       <div 
         class="media-card" 
@@ -149,7 +153,7 @@ class MediaGrid extends LocalizableElement {
         
         <div class="media-info">
           <div class="media-details">
-            <h4 class="media-name" title=${media.name}>${this.truncateText(media.name, 35)}</h4>
+            <h4 class="media-name" title=${media.name} .innerHTML=${this.highlightSearchTerm(this.truncateText(media.name, 35), this.searchQuery)}></h4>
             <div class="media-meta">
               ${this.renderMediaMeta(media)}
             </div>
@@ -184,7 +188,7 @@ class MediaGrid extends LocalizableElement {
         />
       `;
     }
-    
+
     if (isImage(media.url) && media.hasError === true) {
       return html`
         <div class="media-placeholder cors-error">
@@ -198,7 +202,7 @@ class MediaGrid extends LocalizableElement {
         </div>
       `;
     }
-    
+
     return html`
       <div class="media-placeholder">
         <svg class="placeholder-icon">
@@ -210,10 +214,10 @@ class MediaGrid extends LocalizableElement {
 
   getMediaTypeIcon(mediaType) {
     const iconMap = {
-      'image': 'photo',
-      'video': 'video', 
-      'document': 'pdf',
-      'link': 'external-link'
+      image: 'photo',
+      video: 'video',
+      document: 'pdf',
+      link: 'external-link',
     };
     return iconMap[mediaType] || 'photo';
   }
@@ -229,29 +233,29 @@ class MediaGrid extends LocalizableElement {
 
   truncateText(text, maxLength = 30) {
     if (!text || text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
+    return `${text.substring(0, maxLength)}...`;
   }
 
   renderMediaMeta(media) {
     const metaElements = [];
-    
+
     if (media.doc) {
       const docName = media.doc.split('/').pop() || media.doc;
       metaElements.push(html`<span class="media-used-text">${docName}</span>`);
     }
-    
+
     if (media.alt && media.alt !== 'null') {
-      const altText = media.alt.length > 30 ? media.alt.substring(0, 30) + '...' : media.alt;
+      const altText = media.alt.length > 30 ? `${media.alt.substring(0, 30)}...` : media.alt;
       metaElements.push(html`<span class="media-used-text">Alt: ${altText}</span>`);
     }
-    
+
     if (metaElements.length === 0) {
       metaElements.push(html`<span class="media-used-text">${this.t('media.notUsed')}</span>`);
     }
-    
+
     return metaElements;
   }
-  
+
   getUsageCount(media) {
     return media.usageCount || 0;
   }
@@ -259,27 +263,43 @@ class MediaGrid extends LocalizableElement {
   handleMediaClick(media) {
     this.dispatchEvent(new CustomEvent('mediaClick', {
       detail: { media },
-      bubbles: true
+      bubbles: true,
     }));
   }
 
   handleAction(e, action, media) {
     e.stopPropagation();
-    
+
     this.dispatchEvent(new CustomEvent('mediaAction', {
       detail: { action, media },
-      bubbles: true
+      bubbles: true,
     }));
   }
 
   handleImageError(e, media) {
     media.hasError = true;
-    
+
     e.target.style.display = 'none';
-    
+
     this.requestUpdate();
   }
 
+  highlightSearchTerm(text, query) {
+    if (!query || !text) return text;
+
+    let searchTerm = query;
+    if (query.includes(':')) {
+      const parts = query.split(':');
+      if (parts.length > 1) {
+        searchTerm = parts[1].trim();
+      }
+    }
+
+    if (!searchTerm) return text;
+
+    const regex = new RegExp(`(${searchTerm})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
+  }
 }
 
 customElements.define('media-grid', MediaGrid);

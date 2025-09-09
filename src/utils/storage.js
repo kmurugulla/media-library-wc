@@ -7,28 +7,28 @@ class BrowserStorage {
   }
 
   async ensureDatabase() {
-    if (this.type !== 'indexeddb') return;
-    
+    if (this.type !== 'indexeddb') return null;
+
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.dbVersion);
-      
+
       request.onupgradeneeded = (event) => {
         const db = event.target.result;
-        
+
         if (!db.objectStoreNames.contains('media')) {
           db.createObjectStore('media', { keyPath: 'id' });
         }
-        
+
         if (!db.objectStoreNames.contains('last-modified-data')) {
           db.createObjectStore('last-modified-data', { keyPath: 'siteKey' });
         }
       };
-      
+
       request.onsuccess = (event) => {
         const db = event.target.result;
         resolve(db);
       };
-      
+
       request.onerror = () => {
         console.error('Failed to open IndexedDB:', request.error);
         reject(request.error);
@@ -61,25 +61,25 @@ class BrowserStorage {
   async saveToIndexedDB(data, siteKey = 'media-data') {
     try {
       const db = await this.ensureDatabase();
-      
+
       if (!db.objectStoreNames.contains('media')) {
         console.warn('Media object store does not exist, cannot save data');
-        return;
+        return Promise.resolve();
       }
-      
+
       return new Promise((resolve, reject) => {
         const transaction = db.transaction(['media'], 'readwrite');
         const store = transaction.objectStore('media');
-        
-        const saveRequest = store.put({ 
-          id: siteKey, 
-          data, 
+
+        const saveRequest = store.put({
+          id: siteKey,
+          data,
           timestamp: Date.now(),
-          siteKey: siteKey
+          siteKey,
         });
         saveRequest.onsuccess = () => resolve();
         saveRequest.onerror = () => {
-          console.error('Failed to save to IndexedDB:', saveRequest.error);
+          // Failed to save to IndexedDB
           reject(saveRequest.error);
         };
       });
@@ -92,22 +92,22 @@ class BrowserStorage {
   async loadFromIndexedDB(siteKey = 'media-data') {
     try {
       const db = await this.ensureDatabase();
-      
+
       if (!db.objectStoreNames.contains('media')) {
         console.warn('Media object store does not exist, returning empty array');
         return [];
       }
-      
-      return new Promise((resolve, reject) => {
+
+      return new Promise((resolve) => {
         const transaction = db.transaction(['media'], 'readonly');
         const store = transaction.objectStore('media');
         const getRequest = store.get(siteKey);
-        
+
         getRequest.onsuccess = () => {
-          const result = getRequest.result;
+          const { result } = getRequest;
           resolve(result ? result.data : []);
         };
-        
+
         getRequest.onerror = () => {
           console.warn('Failed to get data from IndexedDB:', getRequest.error);
           resolve([]);
@@ -124,10 +124,10 @@ class BrowserStorage {
       localStorage.setItem(`media-library-${siteKey}`, JSON.stringify({
         data,
         timestamp: Date.now(),
-        siteKey: siteKey
+        siteKey,
       }));
     } catch (error) {
-      throw new Error('Failed to save to localStorage: ' + error.message);
+      throw new Error(`Failed to save to localStorage: ${error.message}`);
     }
   }
 
@@ -135,7 +135,7 @@ class BrowserStorage {
     try {
       const stored = localStorage.getItem(`media-library-${siteKey}`);
       if (!stored) return [];
-      
+
       const parsed = JSON.parse(stored);
       return parsed.data || [];
     } catch (error) {
@@ -158,7 +158,7 @@ class BrowserStorage {
   async clearIndexedDB() {
     try {
       const db = await this.ensureDatabase();
-      
+
       const storesToClear = [];
       if (db.objectStoreNames.contains('media')) {
         storesToClear.push('media');
@@ -166,63 +166,64 @@ class BrowserStorage {
       if (db.objectStoreNames.contains('last-modified-data')) {
         storesToClear.push('last-modified-data');
       }
-      
+
       if (storesToClear.length === 0) {
         console.warn('No object stores exist, nothing to clear');
-        return;
+        return Promise.resolve();
       }
-      
+
       return new Promise((resolve, reject) => {
         const transaction = db.transaction(storesToClear, 'readwrite');
-        
+
         let completedStores = 0;
         const totalStores = storesToClear.length;
-        
-        storesToClear.forEach(storeName => {
+
+        storesToClear.forEach((storeName) => {
           const store = transaction.objectStore(storeName);
           const clearRequest = store.clear();
-          
+
           clearRequest.onsuccess = () => {
-            completedStores++;
+            completedStores += 1;
             if (completedStores === totalStores) {
               resolve();
             }
           };
-          
+
           clearRequest.onerror = () => {
-            console.error(`Failed to clear ${storeName}:`, clearRequest.error);
+            // Failed to clear store
             reject(clearRequest.error);
           };
         });
       });
     } catch (error) {
       console.warn('Failed to clear IndexedDB:', error);
+      return Promise.resolve();
     }
   }
 
   async resetDatabase() {
-    if (this.type !== 'indexeddb') return;
-    
+    if (this.type !== 'indexeddb') return Promise.resolve();
+
     try {
       if (this._db) {
         this._db.close();
       }
-      
+
       return new Promise((resolve, reject) => {
         const deleteRequest = indexedDB.deleteDatabase(this.dbName);
-        
+
         deleteRequest.onsuccess = () => {
-          console.log('Database deleted successfully');
+          // Database deleted successfully
           resolve();
         };
-        
+
         deleteRequest.onerror = () => {
-          console.error('Failed to delete database:', deleteRequest.error);
+          // Failed to delete database
           reject(deleteRequest.error);
         };
-        
+
         deleteRequest.onblocked = () => {
-          console.warn('Database deletion blocked, please close other tabs');
+          // Database deletion blocked, please close other tabs
           reject(new Error('Database deletion blocked'));
         };
       });
@@ -250,22 +251,22 @@ class BrowserStorage {
   async getLastModifiedFromIndexedDB() {
     try {
       const db = await this.ensureDatabase();
-      
+
       // Check if the object store exists
       if (!db.objectStoreNames.contains('media')) {
         return null;
       }
-      
-      return new Promise((resolve, reject) => {
+
+      return new Promise((resolve) => {
         const transaction = db.transaction(['media'], 'readonly');
         const store = transaction.objectStore('media');
         const getRequest = store.get('media-data');
-        
+
         getRequest.onsuccess = () => {
-          const result = getRequest.result;
+          const { result } = getRequest;
           resolve(result ? result.timestamp : null);
         };
-        
+
         getRequest.onerror = () => {
           console.warn('Failed to get last modified from IndexedDB:', getRequest.error);
           resolve(null);
@@ -281,7 +282,7 @@ class BrowserStorage {
     try {
       const stored = localStorage.getItem('media-library-data');
       if (!stored) return null;
-      
+
       const parsed = JSON.parse(stored);
       return parsed.timestamp || null;
     } catch (error) {
@@ -303,26 +304,26 @@ class BrowserStorage {
   async getAllSitesFromIndexedDB() {
     try {
       const db = await this.ensureDatabase();
-      
+
       if (!db.objectStoreNames.contains('media')) {
         return [];
       }
-      
-      return new Promise((resolve, reject) => {
+
+      return new Promise((resolve) => {
         const transaction = db.transaction(['media'], 'readonly');
         const store = transaction.objectStore('media');
         const getAllRequest = store.getAll();
-        
+
         getAllRequest.onsuccess = () => {
           const results = getAllRequest.result;
-          const sites = results.map(result => ({
+          const sites = results.map((result) => ({
             siteKey: result.siteKey || result.id,
             timestamp: result.timestamp,
-            itemCount: result.data ? result.data.length : 0
+            itemCount: result.data ? result.data.length : 0,
           }));
           resolve(sites);
         };
-        
+
         getAllRequest.onerror = () => {
           console.warn('Failed to get all sites from IndexedDB:', getAllRequest.error);
           resolve([]);
@@ -337,7 +338,7 @@ class BrowserStorage {
   async getAllSitesFromLocalStorage() {
     try {
       const sites = [];
-      for (let i = 0; i < localStorage.length; i++) {
+      for (let i = 0; i < localStorage.length; i += 1) {
         const key = localStorage.key(i);
         if (key && key.startsWith('media-library-')) {
           const siteKey = key.replace('media-library-', '');
@@ -345,9 +346,9 @@ class BrowserStorage {
           if (stored) {
             const parsed = JSON.parse(stored);
             sites.push({
-              siteKey: siteKey,
+              siteKey,
               timestamp: parsed.timestamp,
-              itemCount: parsed.data ? parsed.data.length : 0
+              itemCount: parsed.data ? parsed.data.length : 0,
             });
           }
         }
@@ -373,19 +374,19 @@ class BrowserStorage {
   async deleteSiteFromIndexedDB(siteKey) {
     try {
       const db = await this.ensureDatabase();
-      
+
       if (!db.objectStoreNames.contains('media')) {
-        return;
+        return Promise.resolve();
       }
-      
+
       return new Promise((resolve, reject) => {
         const transaction = db.transaction(['media'], 'readwrite');
         const store = transaction.objectStore('media');
         const deleteRequest = store.delete(siteKey);
-        
+
         deleteRequest.onsuccess = () => resolve();
         deleteRequest.onerror = () => {
-          console.error('Failed to delete site from IndexedDB:', deleteRequest.error);
+          // Failed to delete site from IndexedDB
           reject(deleteRequest.error);
         };
       });
@@ -399,7 +400,7 @@ class BrowserStorage {
     try {
       localStorage.removeItem(`media-library-${siteKey}`);
     } catch (error) {
-      throw new Error('Failed to delete site from localStorage: ' + error.message);
+      throw new Error(`Failed to delete site from localStorage: ${error.message}`);
     }
   }
 
@@ -428,24 +429,24 @@ class BrowserStorage {
   async saveScanMetadataToIndexedDB(siteKey, metadata) {
     try {
       const db = await this.ensureDatabase();
-      
+
       if (!db.objectStoreNames.contains('last-modified-data')) {
         console.warn('Last modified data object store does not exist, cannot save metadata');
-        return;
+        return Promise.resolve();
       }
-      
+
       return new Promise((resolve, reject) => {
         const transaction = db.transaction(['last-modified-data'], 'readwrite');
         const store = transaction.objectStore('last-modified-data');
-        
-        const saveRequest = store.put({ 
-          siteKey: siteKey, 
+
+        const saveRequest = store.put({
+          siteKey,
           ...metadata,
-          timestamp: Date.now()
+          timestamp: Date.now(),
         });
         saveRequest.onsuccess = () => resolve();
         saveRequest.onerror = () => {
-          console.error('Failed to save scan metadata to IndexedDB:', saveRequest.error);
+          // Failed to save scan metadata to IndexedDB
           reject(saveRequest.error);
         };
       });
@@ -458,21 +459,21 @@ class BrowserStorage {
   async loadScanMetadataFromIndexedDB(siteKey) {
     try {
       const db = await this.ensureDatabase();
-      
+
       if (!db.objectStoreNames.contains('last-modified-data')) {
         return null;
       }
-      
-      return new Promise((resolve, reject) => {
+
+      return new Promise((resolve) => {
         const transaction = db.transaction(['last-modified-data'], 'readonly');
         const store = transaction.objectStore('last-modified-data');
         const getRequest = store.get(siteKey);
-        
+
         getRequest.onsuccess = () => {
-          const result = getRequest.result;
+          const { result } = getRequest;
           resolve(result || null);
         };
-        
+
         getRequest.onerror = () => {
           console.warn('Failed to get scan metadata from IndexedDB:', getRequest.error);
           resolve(null);
@@ -487,12 +488,12 @@ class BrowserStorage {
   async saveScanMetadataToLocalStorage(siteKey, metadata) {
     try {
       localStorage.setItem(`scan-metadata-${siteKey}`, JSON.stringify({
-        siteKey: siteKey,
+        siteKey,
         ...metadata,
-        timestamp: Date.now()
+        timestamp: Date.now(),
       }));
     } catch (error) {
-      throw new Error('Failed to save scan metadata to localStorage: ' + error.message);
+      throw new Error(`Failed to save scan metadata to localStorage: ${error.message}`);
     }
   }
 
@@ -500,7 +501,7 @@ class BrowserStorage {
     try {
       const stored = localStorage.getItem(`scan-metadata-${siteKey}`);
       if (!stored) return null;
-      
+
       return JSON.parse(stored);
     } catch (error) {
       console.warn('Failed to load scan metadata from localStorage:', error);
@@ -509,4 +510,4 @@ class BrowserStorage {
   }
 }
 
-export { BrowserStorage };
+export default BrowserStorage;

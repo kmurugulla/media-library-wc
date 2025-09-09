@@ -8,10 +8,10 @@ async function fetchIcon(path) {
       return null;
     }
     const text = await resp.text();
-    
+
     const doc = PARSER.parseFromString(text, 'image/svg+xml');
     const svg = doc.querySelector('svg');
-    
+
     return svg;
   } catch (error) {
     return null;
@@ -24,16 +24,16 @@ export default async function getSvg({ parent, paths }) {
     if (svg && parent) {
       const filename = path.split('/').pop().replace('.svg', '');
       svg.id = filename;
-      
+
       const existingIdElement = svg.querySelector(`#${filename}`);
       if (existingIdElement) {
         existingIdElement.id = filename;
       }
-      
+
       parent.append(svg);
     }
     return svg;
   }));
-  
+
   return svgs;
 }

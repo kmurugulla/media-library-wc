@@ -33,7 +33,7 @@ export default defineConfig({
     // Ensure CSS is processed correctly
     postcss: {
       plugins: []
-    }
+    },
   },
   build: {
     lib: {

@@ -1,103 +1,104 @@
 {
-  "version": "1.0",
+  "version": "2.0",
   "lastUpdated": "2024-01-15",
   "confidence": {
     "thresholds": {
-      "high": 0.8,
-      "medium": 0.6,
-      "low": 0.4
+      "high": 8,
+      "medium": 6,
+      "low": 4
     }
   },
   "categories": {
-    "hero-images": {
+    "screenshots": {
+      "description": "App interfaces, software demos, and UI previews",
       "keywords": {
-        "filename": ["hero-", "banner-", "main-", "featured-", "header-", "jumbotron-", "splash-", "landing-", "article-", "blog-", "post-", "content-", "editorial-", "news-", "story-", "media-", "image-", "photo-"],
-        "context": ["hero-section", "banner", "main-banner", "featured", "header", "jumbotron", "splash", "landing", "above-fold", "lcp-candidate", "article", "content", "blog", "post", "editorial", "news", "story", "text-content", "announcement", "press", "release", "update", "report", "nvidia", "snowflake", "hpe", "tech", "companies", "hiring", "channel", "executive", "moves", "notable", "biggest", "summit", "intelligence", "agents"],
-        "alt": ["launch", "announcement", "featured", "main", "welcome", "hero", "banner", "promotion", "article", "blog", "post", "content", "editorial", "news", "story", "illustration", "diagram", "chart", "graph", "infographic", "screenshot", "interface", "dashboard", "application", "IoT", "Internet of Things", "digital", "technology", "AI", "artificial intelligence"],
-        "position": ["above-fold", "lcp-candidate", "header", "content", "article", "below-fold", "main-content"]
+        "filename": ["screenshot-", "screen-", "demo-", "ui-", "interface-", "app-", "software-", "mockup-", "preview-", "dashboard-"],
+        "context": ["screenshot", "screen", "demo", "ui", "interface", "app", "software", "mockup", "preview", "dashboard", "application", "feature-section", "release-notes", "feature", "update", "change", "improvement", "fix", "bug", "enhancement", "adobe", "microsoft", "google", "apple", "documentation", "guide", "tutorial", "help", "manual", "technical", "development", "programming", "code"],
+        "alt": ["screenshot", "screen", "demo", "ui", "interface", "app", "software", "mockup", "preview", "dashboard", "application", "feature", "update", "change", "improvement", "fix", "bug", "enhancement", "technical", "development", "programming", "code"],
+        "position": ["demo", "preview", "below-fold", "feature-section", "documentation", "guide", "tutorial", "help", "manual"]
+      },
+      "negativeIndicators": {
+        "filename": ["logo-", "brand-", "team-", "person-", "headshot-", "portrait-", "product-", "catalog-"],
+        "context": ["logo", "brand", "team", "staff", "person", "headshot", "portrait", "product", "catalog", "award", "winner", "announcement", "partner", "executive", "leadership"],
+        "alt": ["logo", "brand", "team", "person", "headshot", "portrait", "product", "catalog", "award", "winner", "announcement", "partner", "executive", "leadership"]
+      },
+      "dimensions": {
+        "minAspectRatio": 1.3,
+        "minPixels": 100000
       },
       "confidence": {
-        "high": 0.9,
-        "medium": 0.7,
-        "low": 0.5
-      }
-    },
-    "people-photos": {
-      "keywords": {
-        "filename": ["team-", "staff-", "member-", "leadership-", "employee-", "person-", "headshot-", "portrait-", "profile-", "about-", "people-", "executive-", "ceo-", "cto-", "director-", "manager-"],
-        "context": ["team-section", "about-section", "staff", "leadership", "team", "member", "employee", "headshot", "portrait", "about", "people", "team-member", "award", "winner", "announcement", "partner", "executive", "ecosystem", "global", "partner awards", "winners", "executive moves", "hiring", "notable", "moves", "news", "story", "article", "announcement", "press", "release", "awards", "winners", "executives", "leaders"],
-        "alt": ["CEO", "CTO", "Manager", "Director", "Founder", "Team", "Staff", "Member", "Employee", "Headshot", "Portrait", "About", "People", "Executive", "Leader", "Head", "Chief", "Vice President", "Award", "Winner", "Partner", "Announcement", "Smiling", "Professional", "Business", "Suit", "Smile", "Looking", "Standing", "Sitting"],
-        "position": ["below-fold", "about-section", "team-section", "team", "content", "article"]
-      },
-      "confidence": {
-        "high": 0.9,
-        "medium": 0.7,
-        "low": 0.5
-      }
-    },
-    "product-images": {
-      "keywords": {
-        "filename": ["product-", "service-", "item-", "catalog-", "inventory-", "merchandise-", "feature-"],
-        "context": ["product", "service", "catalog", "inventory", "merchandise", "feature", "shop", "store"],
-        "alt": ["product", "service", "item", "catalog", "inventory", "merchandise", "feature", "shop"],
-        "position": ["product-section", "catalog", "below-fold"]
-      },
-      "confidence": {
-        "high": 0.8,
-        "medium": 0.6,
-        "low": 0.4
-      }
-    },
-    "decorative": {
-      "keywords": {
-        "filename": ["bg-", "background-", "pattern-", "texture-", "decorative-", "ornament-", "accent-", "divider-", "separator-", "visual-", "element-"],
-        "context": ["background", "pattern", "texture", "decorative", "ornament", "accent", "divider", "separator", "visual-element", "design-element", "graphic-element"],
-        "alt": ["decorative", "background", "pattern", "texture", "ornament", "accent", "divider", "separator", "design element", "graphic element"],
-        "position": ["background", "decorative", "visual-element", "design"]
-      },
-      "confidence": {
-        "high": 0.7,
-        "medium": 0.5,
-        "low": 0.3
-      }
-    },
-    "social-graphics": {
-      "keywords": {
-        "filename": ["og-", "social-", "share-", "facebook-", "twitter-", "meta-"],
-        "context": ["og-image", "social-image", "share-image", "facebook", "twitter", "meta"],
-        "alt": ["social", "share", "facebook", "twitter", "og-image", "social-image"],
-        "position": ["meta", "social", "og"]
-      },
-      "confidence": {
-        "high": 0.9,
-        "medium": 0.7,
-        "low": 0.5
+        "high": 4,
+        "medium": 2,
+        "low": 1
       }
     },
     "logos": {
+      "description": "Brand logos, company symbols, and identity elements",
       "keywords": {
-        "filename": ["logo-", "brand-", "identity-", "trademark-", "watermark-", "symbol-", "emblem-", "badge-"],
-        "context": ["logo", "brand", "identity", "trademark", "watermark", "symbol", "emblem", "badge", "header"],
+        "filename": ["logo-", "brand-", "identity-", "trademark-", "watermark-", "symbol-", "emblem-", "badge-", "icon-"],
+        "context": ["logo", "brand", "identity", "trademark", "watermark", "symbol", "emblem", "badge", "header", "footer", "navigation", "branding"],
         "alt": ["logo", "brand", "identity", "trademark", "watermark", "symbol", "emblem", "badge"],
-        "position": ["header", "footer", "brand"]
+        "position": ["header", "footer", "brand", "navigation"]
+      },
+      "negativeIndicators": {
+        "filename": ["screenshot-", "team-", "person-", "headshot-", "portrait-", "product-", "catalog-"],
+        "context": ["screenshot", "team", "staff", "person", "headshot", "portrait", "product", "catalog", "interface"],
+        "alt": ["screenshot", "team", "person", "headshot", "portrait", "product", "catalog", "interface"]
+      },
+      "dimensions": {
+        "maxPixels": 100000,
+        "minAspectRatio": 0.4,
+        "maxAspectRatio": 2.5
       },
       "confidence": {
-        "high": 0.9,
-        "medium": 0.7,
-        "low": 0.5
+        "high": 7,
+        "medium": 5,
+        "low": 3
       }
     },
-    "screenshots": {
+    "people-photos": {
+      "description": "Team photos, headshots, and professional portraits",
       "keywords": {
-        "filename": ["screenshot-", "screen-", "demo-", "ui-", "interface-", "app-", "software-", "mockup-"],
-        "context": ["screenshot", "screen", "demo", "ui", "interface", "app", "software", "mockup", "preview"],
-        "alt": ["screenshot", "screen", "demo", "ui", "interface", "app", "software", "mockup", "preview"],
-        "position": ["demo", "preview", "below-fold"]
+        "filename": ["team-", "staff-", "member-", "person-", "headshot-", "portrait-", "profile-", "about-", "people-", "executive-", "ceo-", "cto-", "director-", "manager-"],
+        "context": ["team", "staff", "member", "person", "headshot", "portrait", "about", "people", "leadership", "executive", "team-section", "about-section"],
+        "alt": ["team", "staff", "member", "person", "headshot", "portrait", "about", "people", "CEO", "CTO", "Manager", "Director", "Executive", "Leader", "Head", "Chief"],
+        "position": ["below-fold", "about-section", "team-section", "team", "content", "article"]
+      },
+      "negativeIndicators": {
+        "filename": ["screenshot-", "logo-", "brand-", "product-", "catalog-", "demo-", "ui-", "interface-", "app-", "software-", "release-", "feature-", "update-", "change-", "improvement-", "fix-", "bug-", "enhancement-"],
+        "context": ["screenshot", "logo", "brand", "product", "catalog", "interface", "demo", "release-notes", "feature", "update", "change", "improvement", "fix", "bug", "enhancement", "adobe", "microsoft", "google", "apple", "documentation", "guide", "tutorial", "help", "manual", "technical", "development", "programming", "code", "software", "application", "app", "ui", "ux"],
+        "alt": ["screenshot", "logo", "brand", "product", "catalog", "interface", "demo", "release-notes", "feature", "update", "change", "improvement", "fix", "bug", "enhancement", "adobe", "microsoft", "google", "apple", "documentation", "guide", "tutorial", "help", "manual", "technical", "development", "programming", "code", "software", "application", "app", "ui", "ux"]
+      },
+      "dimensions": {
+        "maxAspectRatio": 1.5,
+        "minPixels": 50000
       },
       "confidence": {
-        "high": 0.85,
-        "medium": 0.7,
-        "low": 0.5
+        "high": 8,
+        "medium": 6,
+        "low": 4
+      }
+    },
+    "products": {
+      "description": "Product photos, catalog images, and merchandise",
+      "keywords": {
+        "filename": ["product-", "item-", "catalog-", "inventory-", "merchandise-", "feature-", "shop-", "store-", "ecommerce-"],
+        "context": ["product", "catalog", "inventory", "merchandise", "feature", "shop", "store", "e-commerce", "gallery", "product-section"],
+        "alt": ["product", "item", "catalog", "inventory", "merchandise", "feature", "shop", "store"],
+        "position": ["product-section", "catalog", "below-fold", "gallery"]
+      },
+      "negativeIndicators": {
+        "filename": ["screenshot-", "logo-", "brand-", "team-", "person-", "headshot-", "portrait-", "demo-", "ui-", "interface-", "app-", "software-", "release-", "update-", "change-", "improvement-", "fix-", "bug-", "enhancement-"],
+        "context": ["screenshot", "logo", "brand", "team", "staff", "person", "headshot", "portrait", "interface", "demo", "release-notes", "feature", "update", "change", "improvement", "fix", "bug", "enhancement", "adobe", "microsoft", "google", "apple", "documentation", "guide", "tutorial", "help", "manual", "technical", "development", "programming", "code", "software", "application", "app", "ui", "ux"],
+        "alt": ["screenshot", "logo", "brand", "team", "person", "headshot", "portrait", "interface", "demo", "release-notes", "feature", "update", "change", "improvement", "fix", "bug", "enhancement", "adobe", "microsoft", "google", "apple", "documentation", "guide", "tutorial", "help", "manual", "technical", "development", "programming", "code", "software", "application", "app", "ui", "ux"]
+      },
+      "dimensions": {
+        "minPixels": 50000
+      },
+      "confidence": {
+        "high": 7,
+        "medium": 5,
+        "low": 3
       }
     },
     "404-media": {

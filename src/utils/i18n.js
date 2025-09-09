@@ -1,5 +1,5 @@
 // src/utils/i18n.js
-import enTranslations from '../locales/en.json';
+import enTranslations from '../locales/en';
 
 class I18nManager extends EventTarget {
   constructor() {
@@ -7,7 +7,7 @@ class I18nManager extends EventTarget {
     this.currentLocale = 'en';
     this.translations = new Map();
     this.fallbackLocale = 'en';
-    
+
     this.translations.set('en', enTranslations);
   }
 
@@ -21,33 +21,31 @@ class I18nManager extends EventTarget {
         this.translations.set(locale, enTranslations);
         return enTranslations;
       }
-      
+
       return this.translations.get(this.fallbackLocale) || {};
     } catch (error) {
-      console.warn(`Failed to load locale ${locale}:`, error);
+      // Failed to load locale
       return this.translations.get(this.fallbackLocale) || {};
     }
   }
 
   setLocale(locale) {
     this.currentLocale = locale;
-    this.dispatchEvent(new CustomEvent('locale-changed', { 
-      detail: { locale } 
-    }));
+    this.dispatchEvent(new CustomEvent('locale-changed', { detail: { locale } }));
   }
 
   t(key, params = {}) {
     const translations = this.translations.get(this.currentLocale) || {};
     let translation = this.getNestedValue(translations, key);
-    
+
     if (!translation) {
       // Fallback to English
       const fallbackTranslations = this.translations.get(this.fallbackLocale) || {};
       translation = this.getNestedValue(fallbackTranslations, key);
     }
-    
+
     if (!translation) {
-      console.warn(`Translation missing for key: ${key}`);
+      // Translation missing for key
       return key;
     }
 
@@ -74,9 +72,11 @@ class I18nManager extends EventTarget {
     const units = ['bytes', 'KB', 'MB', 'GB'];
     const k = 1024;
     const i = Math.floor(Math.log(bytes) / Math.log(k));
-    const size = parseFloat((bytes / Math.pow(k, i)).toFixed(2));
+    const size = parseFloat((bytes / k ** i).toFixed(2));
     return `${size} ${this.t(`units.${units[i]}`)}`;
   }
 }
 
-export const i18n = new I18nManager();
+const i18n = new I18nManager();
+
+export default i18n;

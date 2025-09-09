@@ -1,5 +1,11 @@
 // src/utils/sitemap-parser.js
-import { analyzeImage, updateAnalysisConfig, getAnalysisConfig, clearAnalysisCache } from './image-analysis.js';
+import {
+  analyzeImage,
+  updateAnalysisConfig,
+  getAnalysisConfig,
+  clearAnalysisCache,
+} from './image-analysis.js';
+import Queue from './queue.js';
 
 class SitemapParser {
   constructor(options = {}) {
@@ -12,91 +18,83 @@ class SitemapParser {
       '/sitemaps.xml',
       '/sitemap/sitemap.xml',
       '/sitemap/index.xml',
-      '/robots.txt'
+      '/robots.txt',
     ];
     this.contentOrigin = null;
     this.enableImageAnalysis = options.enableImageAnalysis || false;
     this.analysisConfig = options.analysisConfig || {};
-    
+
     if (this.enableImageAnalysis) {
       updateAnalysisConfig({
         enabled: true,
-        ...this.analysisConfig
+        ...this.analysisConfig,
       });
     }
   }
 
   async autoDetectSitemap(websiteUrl) {
-    try {
-      const urlVariations = this.generateUrlVariations(websiteUrl);
-      for (const baseUrl of urlVariations) {
-        try {
-          this.contentOrigin = baseUrl;
+    const urlVariations = this.generateUrlVariations(websiteUrl);
+    for (const baseUrl of urlVariations) {
+      try {
+        this.contentOrigin = baseUrl;
 
-          const sitemapFromRobots = await this.findSitemapInRobots(baseUrl);
-          if (sitemapFromRobots) {
-            return sitemapFromRobots;
-          }
-          for (const path of this.commonSitemapPaths) {
-            if (path === '/robots.txt') continue;
-            
+        const sitemapFromRobots = await this.findSitemapInRobots(baseUrl);
+        if (sitemapFromRobots) {
+          return sitemapFromRobots;
+        }
+        for (const path of this.commonSitemapPaths) {
+          if (path !== '/robots.txt') {
             const sitemapUrl = `${baseUrl}${path}`;
-            try {
-              const response = await fetch(sitemapUrl, { method: 'HEAD' });
-              if (response.ok) {
-                return sitemapUrl;
-              }
-            } catch (error) {
-              // Continue to next path
+            const response = await fetch(sitemapUrl, { method: 'HEAD' }).catch(() => null);
+            if (response?.ok) {
+              return sitemapUrl;
             }
           }
-
-        } catch (error) {
-          // Continue to next URL variation
         }
+      } catch (error) {
+        // Continue to next URL variation
       }
-
-      for (const baseUrl of urlVariations) {
-        try {
-          this.contentOrigin = baseUrl;
-          return await this.createFallbackPageList(baseUrl);
-        } catch (error) {
-          // Continue to next URL variation
-        }
-      }
-
-      throw new Error(`No sitemap found and unable to create fallback page list for any URL variation of: ${websiteUrl}`);
-    } catch (error) {
-      console.error('Sitemap auto-detection error:', error);
-      throw error;
     }
+
+    for (const baseUrl of urlVariations) {
+      try {
+        this.contentOrigin = baseUrl;
+        return await this.createFallbackPageList(baseUrl);
+      } catch (error) {
+        // Continue to next URL variation
+      }
+    }
+
+    throw new Error(
+      `No sitemap found and unable to create fallback page list for any URL variation of: ${websiteUrl}`,
+    );
   }
 
   normalizeWebsiteUrl(url) {
     let normalizedUrl = url.trim();
-    
+
     if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
       normalizedUrl = `https://${normalizedUrl}`;
     }
-    
+
     normalizedUrl = normalizedUrl.replace(/\/$/, '');
-    
+
     return normalizedUrl;
   }
 
   generateUrlVariations(url) {
     let domain = url.trim();
-    
+
     domain = domain.replace(/^https?:\/\//, '');
-    
+
     const baseDomain = domain.replace(/^www\./, '');
     const variations = [
       `https://${baseDomain}`,
       `https://www.${baseDomain}`,
       `http://${baseDomain}`,
-      `http://www.${baseDomain}`
+      `http://www.${baseDomain}`,
     ];
-    
+
     return [...new Set(variations)];
   }
 
@@ -108,11 +106,11 @@ class SitemapParser {
   setImageAnalysis(enabled, config = {}) {
     this.enableImageAnalysis = enabled;
     this.analysisConfig = config;
-    
+
     if (enabled) {
       updateAnalysisConfig({
         enabled: true,
-        ...config
+        ...config,
       });
     } else {
       updateAnalysisConfig({ enabled: false });
@@ -127,14 +125,14 @@ class SitemapParser {
     return {
       enabled: this.enableImageAnalysis,
       config: this.analysisConfig,
-      analysisConfig: getAnalysisConfig()
+      analysisConfig: getAnalysisConfig(),
     };
   }
 
   async findSitemapInRobots(baseUrl) {
     try {
       const robotsUrl = `${baseUrl}/robots.txt`;
-      
+
       const response = await fetch(robotsUrl);
       if (!response.ok) {
         return null;
@@ -142,12 +140,12 @@ class SitemapParser {
 
       const robotsText = await response.text();
       const sitemapMatches = robotsText.match(/^Sitemap:\s*(.+)$/gim);
-      
+
       if (sitemapMatches && sitemapMatches.length > 0) {
         const sitemapUrl = sitemapMatches[0].replace(/^Sitemap:\s*/i, '').trim();
         return sitemapUrl;
       }
-      
+
       return null;
     } catch (error) {
       return null;
@@ -165,7 +163,7 @@ class SitemapParser {
       '/stories',
       '/posts',
       '/archive',
-      '/search'
+      '/search',
     ];
 
     if (baseUrl.includes('medium.com')) {
@@ -179,7 +177,7 @@ class SitemapParser {
         '/topic/productivity',
         '/topic/startup',
         '/topic/artificial-intelligence',
-        '/topic/web-development'
+        '/topic/web-development',
       ];
     }
 
@@ -189,58 +187,55 @@ class SitemapParser {
         throw new Error(`Cannot access ${baseUrl}: ${response.status} ${response.statusText}`);
       }
     } catch (error) {
-      throw new Error(`Cannot access ${baseUrl}. This might be due to CORS restrictions or the site blocking requests.`);
+      throw new Error(
+        `Cannot access ${baseUrl}. This might be due to CORS restrictions or the site blocking requests.`,
+      );
     }
 
     return {
       type: 'fallback',
       baseUrl,
-      pages: commonPages.map(page => ({
+      pages: commonPages.map((page) => ({
         loc: `${baseUrl}${page}`,
-        lastmod: new Date().toISOString()
-      }))
+        lastmod: new Date().toISOString(),
+      })),
     };
   }
 
   async parseSitemap(sitemapUrl) {
-    try {
-      if (sitemapUrl && typeof sitemapUrl === 'object' && sitemapUrl.type === 'fallback') {
-        return sitemapUrl.pages;
-      }
-
-      const response = await fetch(sitemapUrl);
-      if (!response.ok) {
-        throw new Error(`Failed to fetch sitemap: ${response.status} ${response.statusText}`);
-      }
-
-      const sitemapText = await response.text();
-      const parser = new DOMParser();
-      const sitemapDoc = parser.parseFromString(sitemapText, 'text/xml');
-
-      const parserError = sitemapDoc.querySelector('parsererror');
-      if (parserError) {
-        throw new Error('Invalid XML in sitemap');
-      }
-
-      return await this.extractUrls(sitemapDoc);
-    } catch (error) {
-      console.error('Sitemap parsing error:', error);
-      throw error;
+    if (sitemapUrl && typeof sitemapUrl === 'object' && sitemapUrl.type === 'fallback') {
+      return sitemapUrl.pages;
     }
+
+    const response = await fetch(sitemapUrl);
+    if (!response.ok) {
+      throw new Error(`Failed to fetch sitemap: ${response.status} ${response.statusText}`);
+    }
+
+    const sitemapText = await response.text();
+    const parser = new DOMParser();
+    const sitemapDoc = parser.parseFromString(sitemapText, 'text/xml');
+
+    const parserError = sitemapDoc.querySelector('parsererror');
+    if (parserError) {
+      throw new Error('Invalid XML in sitemap');
+    }
+
+    return this.extractUrls(sitemapDoc);
   }
 
   async extractUrls(sitemapDoc) {
     const urls = [];
-    
+
     const urlElements = sitemapDoc.querySelectorAll('url');
-    urlElements.forEach(urlElement => {
+    urlElements.forEach((urlElement) => {
       const loc = urlElement.querySelector('loc');
       const lastmod = urlElement.querySelector('lastmod');
-      
+
       if (loc && loc.textContent) {
         urls.push({
           loc: loc.textContent.trim(),
-          lastmod: lastmod ? lastmod.textContent.trim() : new Date().toISOString()
+          lastmod: lastmod ? lastmod.textContent.trim() : new Date().toISOString(),
         });
       }
     });
@@ -248,17 +243,17 @@ class SitemapParser {
     const sitemapElements = sitemapDoc.querySelectorAll('sitemap');
     if (sitemapElements.length > 0) {
       const maxSitemaps = Math.min(sitemapElements.length, 5);
-      for (let i = 0; i < maxSitemaps; i++) {
+      for (let i = 0; i < maxSitemaps; i += 1) {
         const sitemapElement = sitemapElements[i];
         const loc = sitemapElement.querySelector('loc');
-        const lastmod = sitemapElement.querySelector('lastmod');
-        
+        sitemapElement.querySelector('lastmod');
+
         if (loc && loc.textContent) {
           try {
             const nestedUrls = await this.parseSitemap(loc.textContent.trim());
             urls.push(...nestedUrls);
           } catch (error) {
-            console.warn(`Failed to parse nested sitemap ${loc.textContent.trim()}:`, error);
+            // Failed to parse nested sitemap
           }
         }
       }
@@ -277,21 +272,22 @@ class SitemapParser {
     skipped = urls.length - urlsToScan.length;
 
     if (skipped > 0) {
+      // URLs were skipped due to no changes
     }
     const callback = async (url) => {
       try {
         const mediaItems = await this.scanPage(url);
-        completed++;
-        
+        completed += 1;
+
         if (onProgress) {
           onProgress(completed, urlsToScan.length, mediaItems.length);
         }
-        
+
         results.push(...mediaItems);
       } catch (error) {
-        console.error(`Failed to scan page ${url.loc}:`, error);
-        completed++;
-        
+        // Failed to scan page
+        completed += 1;
+
         if (onProgress) {
           onProgress(completed, urlsToScan.length, 0);
         }
@@ -300,11 +296,11 @@ class SitemapParser {
 
     const onError = (item, error) => {
       errors.push({ item, error });
-      console.error(`Queue error for ${item.loc}:`, error);
+      // Queue error
     };
 
     const queue = new Queue(callback, this.maxConcurrency, onError);
-    const promises = urlsToScan.map(url => queue.push(url));
+    const promises = urlsToScan.map((url) => queue.push(url));
     await Promise.allSettled(promises);
 
     return results;
@@ -318,54 +314,60 @@ class SitemapParser {
       }
 
       const html = await response.text();
-      
+
       const parser = new DOMParser();
       const doc = parser.parseFromString(html, 'text/html');
-      
+
       const baseTag = doc.querySelector('base');
       if (baseTag) {
+        // Base tag found but not used in current implementation
       }
-      
+
       const title = doc.querySelector('title');
       if (title) {
+        // Title found but not used in current implementation
       }
-      
-      const metaTags = doc.querySelectorAll('meta[name*="env"], meta[name*="environment"], meta[property*="env"]');
+
+      const metaTags = doc.querySelectorAll(
+        'meta[name*="env"], meta[name*="environment"], meta[property*="env"]',
+      );
       if (metaTags.length > 0) {
+        // Environment meta tags found but not used in current implementation
       }
-      
+
       const mediaItems = [];
       const timestamp = new Date(url.lastmod).getTime();
 
       const images = doc.querySelectorAll('img');
-      
+
       if (images.length > 0) {
+        // Images found, processing below
       }
-      
-      for (let index = 0; index < images.length; index++) {
+
+      for (let index = 0; index < images.length; index += 1) {
         const img = images[index];
-        
+
         const rawSrc = img.getAttribute('src');
-        const lazySrc = img.getAttribute('data-src') || 
-                       img.getAttribute('data-lazy-src') || 
-                       img.getAttribute('data-original') || 
-                       img.getAttribute('data-sling-src') ||
-                       img.getAttribute('data-responsive-src');
-        
+        const lazySrc = img.getAttribute('data-src')
+                       || img.getAttribute('data-lazy-src')
+                       || img.getAttribute('data-original')
+                       || img.getAttribute('data-sling-src')
+                       || img.getAttribute('data-responsive-src');
+
         const actualSrc = rawSrc || lazySrc;
-        
+
         if (actualSrc && actualSrc.trim() !== '') {
           const isMedia = this.isMediaFile(actualSrc);
           const extension = this.getFileExtension(actualSrc);
-          
+
           if (isMedia) {
             const resolvedUrl = this.resolveUrl(actualSrc, url.loc);
-            
+
             const documentDomain = new URL(url.loc).hostname;
             const fixedUrl = this.fixLocalhostUrl(resolvedUrl, documentDomain);
-            
+
             const cleanFilename = this.getCleanFilename(actualSrc);
-            
+
             const mediaItem = {
               url: fixedUrl,
               name: cleanFilename,
@@ -375,13 +377,13 @@ class SitemapParser {
               ctx: this.captureContext(img, 'img'),
               hash: this.createHash(actualSrc + img.alt + url.loc),
               firstUsedAt: timestamp,
-              lastUsedAt: timestamp
+              lastUsedAt: timestamp,
             };
 
             if (this.enableImageAnalysis) {
               try {
                 const analysis = await analyzeImage(fixedUrl, null, mediaItem.ctx);
-                
+
                 mediaItem.orientation = analysis.orientation;
                 mediaItem.category = analysis.category;
                 mediaItem.categoryConfidence = analysis.categoryConfidence;
@@ -395,20 +397,19 @@ class SitemapParser {
                 mediaItem.faceCount = analysis.faceCount;
                 mediaItem.dominantColor = analysis.dominantColor;
                 mediaItem.analysisConfidence = analysis.confidence;
-                
+
                 if (analysis.exifError) {
                   mediaItem.hasError = true;
                   mediaItem.errorType = analysis.exifError.errorType;
                   mediaItem.errorMessage = analysis.exifError.errorMessage;
                   mediaItem.statusCode = analysis.exifError.statusCode;
-                  
+
                   if (analysis.exifError.errorType === '404') {
                     mediaItem.category = '404s';
                   }
                 }
-                
               } catch (error) {
-                console.warn(`  → Image analysis failed for ${fixedUrl}:`, error);
+                // Image analysis failed
               }
             }
 
@@ -418,7 +419,7 @@ class SitemapParser {
       }
 
       const videos = doc.querySelectorAll('video');
-      videos.forEach(video => {
+      videos.forEach((video) => {
         if (video.src && this.isMediaFile(video.src)) {
           mediaItems.push({
             url: this.resolveUrl(video.src, url.loc),
@@ -427,15 +428,15 @@ class SitemapParser {
             type: `video > ${this.getFileExtension(video.src)}`,
             doc: url.loc,
             ctx: this.captureContext(video, 'video'),
-            hash: this.createHash(video.src + '' + url.loc),
+            hash: this.createHash(`${video.src}${url.loc}`),
             firstUsedAt: timestamp,
-            lastUsedAt: timestamp
+            lastUsedAt: timestamp,
           });
         }
       });
 
       const sources = doc.querySelectorAll('video source');
-      sources.forEach(source => {
+      sources.forEach((source) => {
         if (source.src && this.isMediaFile(source.src)) {
           mediaItems.push({
             url: this.resolveUrl(source.src, url.loc),
@@ -444,15 +445,15 @@ class SitemapParser {
             type: `video-source > ${this.getFileExtension(source.src)}`,
             doc: url.loc,
             ctx: this.captureContext(source, 'video-source'),
-            hash: this.createHash(source.src + '' + url.loc),
+            hash: this.createHash(`${source.src}${url.loc}`),
             firstUsedAt: timestamp,
-            lastUsedAt: timestamp
+            lastUsedAt: timestamp,
           });
         }
       });
 
       const links = doc.querySelectorAll('a[href]');
-      links.forEach(link => {
+      links.forEach((link) => {
         const href = link.getAttribute('href');
         if (href && this.isMediaFile(href)) {
           mediaItems.push({
@@ -464,14 +465,14 @@ class SitemapParser {
             ctx: this.captureContext(link, 'link'),
             hash: this.createHash(href + link.textContent + url.loc),
             firstUsedAt: timestamp,
-            lastUsedAt: timestamp
+            lastUsedAt: timestamp,
           });
         }
       });
 
       return mediaItems;
     } catch (error) {
-      console.error(`Error scanning page ${url.loc}:`, error);
+      // Error scanning page
       return [];
     }
   }
@@ -494,7 +495,7 @@ class SitemapParser {
       const result = resolvedUrl.toString();
       return result;
     } catch (error) {
-      console.warn(`Failed to resolve URL: ${src} against ${docPath}`, error);
+      // Failed to resolve URL
       return src;
     }
   }
@@ -505,7 +506,7 @@ class SitemapParser {
     let divElement = element;
     while (divElement && divElement !== document.body) {
       if (divElement.tagName === 'DIV' && divElement.className) {
-        const classes = divElement.className.split(' ').filter(c => c.trim());
+        const classes = divElement.className.split(' ').filter((c) => c.trim());
         if (classes.length > 0) {
           context.push(`In div: ${classes.join(' ')}`);
           break;
@@ -542,7 +543,7 @@ class SitemapParser {
     }
 
     const siblings = Array.from(element.parentElement?.children || []);
-    siblings.forEach(sibling => {
+    siblings.forEach((sibling) => {
       if (sibling !== element && sibling.textContent) {
         const text = sibling.textContent.trim();
         if (text && text.length > 5) {
@@ -595,7 +596,7 @@ class SitemapParser {
    */
   analyzePosition(element) {
     const tags = [];
-    
+
     const isAboveFold = this.isAboveFold(element);
     if (isAboveFold) {
       tags.push('above-fold');
@@ -622,10 +623,10 @@ class SitemapParser {
    */
   analyzeLoadingStrategy(element) {
     const tags = [];
-    
+
     const loading = element.getAttribute('loading');
     const fetchpriority = element.getAttribute('fetchpriority');
-    
+
     if (loading === 'lazy') {
       tags.push('lazy-loading');
     } else if (loading === 'eager') {
@@ -648,14 +649,14 @@ class SitemapParser {
    */
   analyzeResponsiveImages(element) {
     const tags = [];
-    
+
     const srcset = element.getAttribute('srcset');
     const sizes = element.getAttribute('sizes');
-    
+
     if (srcset) {
       tags.push('has-srcset');
       tags.push('responsive');
-      
+
       const sizeCount = srcset.split(',').length;
       if (sizeCount > 1) {
         tags.push('multiple-sizes');
@@ -679,22 +680,23 @@ class SitemapParser {
    */
   analyzeFormat(element) {
     const tags = [];
-    
+
     const src = element.getAttribute('src') || element.getAttribute('data-src') || '';
     const srcset = element.getAttribute('srcset') || '';
-    
+
     if (src.includes('.webp') || srcset.includes('.webp')) {
       tags.push('webp-available');
     }
-    
+
     if (src.includes('.avif') || srcset.includes('.avif')) {
       tags.push('avif-supported');
     }
-    
-    if (src.match(/\.(jpg|jpeg|png|gif)$/i) && !srcset.includes('.webp') && !srcset.includes('.avif')) {
+
+    if (src.match(/\.(jpg|jpeg|png|gif)$/i) && !srcset.includes('.webp')
+        && !srcset.includes('.avif')) {
       tags.push('legacy-format');
     }
-    
+
     if (src.includes('.webp') || src.includes('.avif')) {
       tags.push('modern-format');
     }
@@ -707,13 +709,13 @@ class SitemapParser {
    */
   analyzeSize(element) {
     const tags = [];
-    
+
     const src = element.getAttribute('src') || element.getAttribute('data-src') || '';
-    
+
     if (src.includes('1920') || src.includes('2048') || src.includes('2560')) {
       tags.push('large-size');
     }
-    
+
     if (src.includes('800') || src.includes('600') || src.includes('400')) {
       tags.push('optimized-size');
     }
@@ -726,18 +728,18 @@ class SitemapParser {
    */
   analyzeSocialMedia(element) {
     const tags = [];
-    
+
     const src = element.getAttribute('src') || element.getAttribute('data-src') || '';
     const filename = src.toLowerCase();
-    
+
     if (filename.includes('og-') || filename.includes('social-') || filename.includes('share-')) {
       tags.push('social-image');
     }
-    
+
     if (filename.includes('og-image') || filename.includes('ogimage')) {
       tags.push('og-image');
     }
-    
+
     if (filename.includes('twitter-') || filename.includes('twitterimage')) {
       tags.push('twitter-image');
     }
@@ -750,32 +752,34 @@ class SitemapParser {
    */
   analyzeOptimizationStatus(existingTags) {
     const tags = [];
-    
+
     const optimizationIssues = {
       'no-srcset': 'add-responsive-images',
       'legacy-format': 'convert-to-webp',
       'no-loading-strategy': 'add-loading-attribute',
-      'large-size': 'resize-image'
+      'large-size': 'resize-image',
     };
-    
+
     Object.entries(optimizationIssues).forEach(([issue, action]) => {
       if (existingTags.includes(issue)) {
         tags.push(action);
       }
     });
-    
-    const isFullyOptimized = existingTags.some(tag => 
-      ['has-srcset', 'modern-format', 'lazy-loading', 'optimized-size'].includes(tag)
-    );
-    
-    const hasAnyIssues = Object.keys(optimizationIssues).some(issue => 
-      existingTags.includes(issue)
-    );
-    
+
+    const isFullyOptimized = existingTags.some((tag) => [
+      'has-srcset',
+      'modern-format',
+      'lazy-loading',
+      'optimized-size',
+    ].includes(tag));
+
+    const hasAnyIssues = Object.keys(optimizationIssues)
+      .some((issue) => existingTags.includes(issue));
+
     if (isFullyOptimized && !hasAnyIssues) {
       tags.push('fully-optimized');
     }
-    
+
     if (existingTags.includes('lcp-candidate') && hasAnyIssues) {
       tags.push('critical-performance-issue');
     }
@@ -791,22 +795,22 @@ class SitemapParser {
     const parentClasses = element.parentElement?.className || '';
     const grandparentClasses = element.parentElement?.parentElement?.className || '';
     const allClasses = `${classes} ${parentClasses} ${grandparentClasses}`.toLowerCase();
-    
+
     const aboveFoldIndicators = [
       'hero', 'banner', 'header', 'navigation', 'nav', 'top', 'above', 'fold',
       'main', 'primary', 'featured', 'lead', 'intro', 'welcome',
-      'article', 'card', 'content'
+      'article', 'card', 'content',
     ];
-    
+
     const belowFoldIndicators = [
-      'footer', 'sidebar', 'bottom', 'end', 'conclusion'
+      'footer', 'sidebar', 'bottom', 'end', 'conclusion',
     ];
-    
-    const isBelowFold = belowFoldIndicators.some(indicator => allClasses.includes(indicator));
+
+    const isBelowFold = belowFoldIndicators.some((indicator) => allClasses.includes(indicator));
     if (isBelowFold) return false;
-    
-    const isMainContent = aboveFoldIndicators.some(indicator => allClasses.includes(indicator));
-    
+
+    const isMainContent = aboveFoldIndicators.some((indicator) => allClasses.includes(indicator));
+
     return isMainContent;
   }
 
@@ -817,12 +821,12 @@ class SitemapParser {
     const classes = element.className || '';
     const parentClasses = element.parentElement?.className || '';
     const allClasses = `${classes} ${parentClasses}`.toLowerCase();
-    
+
     const heroIndicators = [
-      'hero', 'banner', 'jumbotron', 'masthead', 'header-image', 'main-image'
+      'hero', 'banner', 'jumbotron', 'masthead', 'header-image', 'main-image',
     ];
-    
-    return heroIndicators.some(indicator => allClasses.includes(indicator));
+
+    return heroIndicators.some((indicator) => allClasses.includes(indicator));
   }
 
   /**
@@ -832,85 +836,85 @@ class SitemapParser {
     const classes = element.className || '';
     const parentClasses = element.parentElement?.className || '';
     const allClasses = `${classes} ${parentClasses}`.toLowerCase();
-    
+
     const criticalIndicators = [
-      'main', 'primary', 'content', 'article', 'post', 'featured', 'important'
+      'main', 'primary', 'content', 'article', 'post', 'featured', 'important',
     ];
-    
-    return criticalIndicators.some(indicator => allClasses.includes(indicator));
+
+    return criticalIndicators.some((indicator) => allClasses.includes(indicator));
   }
 
   isMediaFile(url) {
     if (!url || typeof url !== 'string') return false;
-    
+
     const mediaExtensions = [
       'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif', 'bmp', 'tiff', 'ico', // Images
       'mp4', 'webm', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'm4v', // Videos
       'pdf', 'doc', 'docx', 'txt', 'rtf', // Documents
-      'mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a' // Audio
+      'mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a', // Audio
     ];
-    
+
     const extension = this.getFileExtension(url);
     return extension && mediaExtensions.includes(extension.toLowerCase());
   }
 
   getFileExtension(url) {
     if (!url) return '';
-    
+
     try {
       // Remove query parameters and fragments using regex (more robust)
       const cleanUrl = url.split(/[?#]/)[0];
-      
+
       // Extract the file extension
       const extension = cleanUrl.split('.').pop()?.toLowerCase() || '';
-      
+
       // Validate the extension - ensure it's not empty and different from the entire URL
       // Also check it doesn't contain invalid characters (like spaces, slashes, etc.)
       if (!extension || extension === cleanUrl || /[^a-z0-9]/.test(extension)) {
         return '';
       }
-      
+
       return extension;
     } catch (error) {
-      console.warn('Error extracting file extension from URL:', url, error);
+      // Error extracting file extension from URL
       return '';
     }
   }
 
   getCleanFilename(url) {
     if (!url) return '';
-    
+
     try {
       // Remove query parameters and fragments first
       const cleanUrl = url.split(/[?#]/)[0];
-      
+
       // Get the filename from the path
       const filename = cleanUrl.split('/').pop() || '';
-      
+
       return filename;
     } catch (error) {
-      console.warn('Error extracting clean filename from URL:', url, error);
+      // Error extracting clean filename from URL
       return '';
     }
   }
 
   fixLocalhostUrl(url, originalDomain) {
     if (!url || !originalDomain) return url;
-    
+
     if (url.includes('localhost:')) {
       try {
         const localhostUrl = new URL(url);
         const pathAndQuery = localhostUrl.pathname + localhostUrl.search;
-        
+
         const fixedUrl = `https://${originalDomain}${pathAndQuery}`;
-        
+
         return fixedUrl;
       } catch (error) {
-        console.warn('Error fixing localhost URL:', url, error);
+        // Error fixing localhost URL
         return url;
       }
     }
-    
+
     return url;
   }
 
@@ -933,12 +937,12 @@ class SitemapParser {
     }
 
     const changedUrls = [];
-    const pageLastModified = previousMetadata.pageLastModified;
+    const { pageLastModified } = previousMetadata;
 
     for (const url of urls) {
       const urlKey = url.loc;
       const previousLastMod = pageLastModified[urlKey];
-      
+
       if (!previousLastMod || !url.lastmod || url.lastmod !== previousLastMod) {
         changedUrls.push(url);
       }
@@ -947,64 +951,25 @@ class SitemapParser {
     return changedUrls;
   }
 
-  testHtmlParsing(htmlString, baseUrl = 'https://example.com') {
+  testHtmlParsing(htmlString) {
     const parser = new DOMParser();
     const doc = parser.parseFromString(htmlString, 'text/html');
-    
+
     const images = doc.querySelectorAll('img');
-    
-    images.forEach((img, index) => {
-      const context = this.captureContext(img, 'img');
-      console.log(`Image ${index + 1} context:`, context);
-      
-      const performanceTags = this.analyzePerformanceContext(img, 'img');
-      console.log(`Image ${index + 1} performance tags:`, performanceTags);
+
+    images.forEach((img) => {
+      this.captureContext(img, 'img');
+      // Image context processed
+
+      this.analyzePerformanceContext(img, 'img');
+      // Image performance tags processed
     });
-    
+
     return images.length;
   }
-
 }
 
-class Queue {
-  constructor(callback, maxConcurrent = 20, onError = null) {
-    this.queue = [];
-    this.activeCount = 0;
-    this.maxConcurrent = maxConcurrent;
-    this.callback = callback;
-    this.onError = onError;
-  }
-
-  async push(data) {
-    this.queue.push(data);
-    await this.processQueue();
-  }
-
-  async processQueue() {
-    while (this.activeCount < this.maxConcurrent && this.queue.length > 0) {
-      const item = this.queue.shift();
-      await this.processItem(item);
-    }
-  }
-
-  async processItem(item) {
-    this.activeCount += 1;
-    try {
-      await this.callback(item);
-    } catch (e) {
-      if (this.onError) {
-        this.onError(item, e);
-      } else {
-        throw e;
-      }
-    } finally {
-      this.activeCount -= 1;
-      await this.processQueue();
-    }
-  }
-}
-
-export { SitemapParser };
+export default SitemapParser;
 
 if (typeof window !== 'undefined') {
   window.clearAnalysisCache = clearAnalysisCache;

@@ -1,6 +1,6 @@
 // src/components/sidebar/sidebar.js
 import { html } from 'lit';
-import { LocalizableElement } from '../base-localizable.js';
+import LocalizableElement from '../base-localizable.js';
 import { getStyles } from '../../utils/get-styles.js';
 import { getCategoryFilters } from '../../utils/filters.js';
 import sidebarStyles from './sidebar.css?inline';
@@ -9,7 +9,7 @@ class MediaSidebar extends LocalizableElement {
   static properties = {
     activeFilter: { type: String },
     filterCounts: { type: Object },
-    locale: { type: String }
+    locale: { type: String },
   };
 
   static styles = getStyles(sidebarStyles);
@@ -23,7 +23,7 @@ class MediaSidebar extends LocalizableElement {
 
   render() {
     const counts = this.filterCounts || {};
-    
+
     return html`
       <aside class="media-sidebar">
         <div class="sidebar-header">
@@ -66,35 +66,17 @@ class MediaSidebar extends LocalizableElement {
         ` : ''}
 
         ${this.renderCategorySection(counts)}
-
-        ${(counts.lcpCandidate > 0 || counts.aboveFold > 0 || counts.needsOptimization > 0 || counts.performanceIssue > 0) ? html`
-          <div class="filter-section">
-            <h3>Performance</h3>
-            <ul class="filter-list">
-              ${this.renderFilterItem('lcpCandidate', counts.lcpCandidate)}
-              ${this.renderFilterItem('aboveFold', counts.aboveFold)}
-              ${this.renderFilterItem('belowFold', counts.belowFold)}
-              ${this.renderFilterItem('needsOptimization', counts.needsOptimization)}
-              ${this.renderFilterItem('fullyOptimized', counts.fullyOptimized)}
-              ${this.renderFilterItem('noSrcset', counts.noSrcset)}
-              ${this.renderFilterItem('legacyFormat', counts.legacyFormat)}
-              ${this.renderFilterItem('noLazyLoading', counts.noLazyLoading)}
-              ${this.renderFilterItem('socialImage', counts.socialImage)}
-              ${this.renderFilterItem('performanceIssue', counts.performanceIssue)}
-            </ul>
-          </div>
-        ` : ''}
       </aside>
     `;
   }
 
   renderFilterItem(filterType, count, customLabel = null) {
     if (!count || count === 0) return '';
-    
+
     const label = customLabel || this.t(`filters.${filterType}`);
     const categoryFilters = getCategoryFilters();
     const isCategoryFilter = categoryFilters.includes(filterType);
-    
+
     return html`
       <li class="filter-item">
         <button 
@@ -112,26 +94,22 @@ class MediaSidebar extends LocalizableElement {
 
   renderCategorySection(counts) {
     const categoryFilters = getCategoryFilters();
-    const hasCategoryItems = categoryFilters.some(category => counts[category] > 0);
-    
+    const hasCategoryItems = categoryFilters.some((category) => counts[category] > 0);
+
     if (!hasCategoryItems) return '';
-    
+
     return html`
       <div class="filter-section">
         <h3>${this.t('categories.title')}</h3>
         <ul class="filter-list">
-          ${categoryFilters.map(category => 
-            this.renderFilterItem(category, counts[category])
-          )}
+          ${categoryFilters.map((category) => this.renderFilterItem(category, counts[category]))}
         </ul>
       </div>
     `;
   }
 
   handleFilter(filterType) {
-    this.dispatchEvent(new CustomEvent('filter', { 
-      detail: { type: filterType } 
-    }));
+    this.dispatchEvent(new CustomEvent('filter', { detail: { type: filterType } }));
   }
 }
 

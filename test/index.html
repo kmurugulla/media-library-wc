@@ -311,7 +311,7 @@
         async function loadAvailableSites() {
             try {
                 const storageType = document.getElementById('storage-type').value;
-                const { BrowserStorage } = await import('/src/utils/storage.js');
+                const BrowserStorage = (await import('/src/utils/storage.js')).default;
                 const storage = new BrowserStorage(storageType);
                 const sites = await storage.getAllSites();
                 
@@ -415,7 +415,7 @@
         window.clearOldData = async () => {
             try {
                 const storageType = document.getElementById('storage-type').value;
-                const { BrowserStorage } = await import('/src/utils/storage.js');
+                const BrowserStorage = (await import('/src/utils/storage.js')).default;
                 const storage = new BrowserStorage(storageType);
                 
                 // Check if there's old data to migrate
@@ -484,7 +484,7 @@
                 output += `Filter Counts: ${JSON.stringify(mediaLibrary.filterCounts, null, 2)}\n\n`;
                 
                 // Test storage
-                const { BrowserStorage } = await import('/src/utils/storage.js');
+                const BrowserStorage = (await import('/src/utils/storage.js')).default;
                 const storage = new BrowserStorage('local');
                 const data = await storage.load();
                 output += `Storage Data Count: ${data?.length || 0}\n`;
@@ -528,7 +528,7 @@
             let output = 'Storage Test Results:\n\n';
             
             try {
-                const { BrowserStorage } = await import('/src/utils/storage.js');
+                const BrowserStorage = (await import('/src/utils/storage.js')).default;
                 
                 // Test IndexedDB
                 const indexedDBStorage = new BrowserStorage('indexeddb');
@@ -569,7 +569,7 @@
                 results.textContent = `Generated ${datasetSize} items in ${generationTime.toFixed(2)}ms\nLoading into storage...`;
                 
                 // Load into storage first, then reload the component
-                const { BrowserStorage } = await import('/src/utils/storage.js');
+                const BrowserStorage = (await import('/src/utils/storage.js')).default;
                 const storage = new BrowserStorage('local');
                 await storage.save(largeDataset);
                 
@@ -588,7 +588,7 @@
 
         window.clearLargeDataset = async () => {
             try {
-                const { BrowserStorage } = await import('/src/utils/storage.js');
+                const BrowserStorage = (await import('/src/utils/storage.js')).default;
                 const storage = new BrowserStorage('local');
                 await storage.clear();
                 await performanceMediaLibrary.loadMediaData();

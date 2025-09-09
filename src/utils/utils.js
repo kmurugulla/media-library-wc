@@ -17,19 +17,19 @@ export const MEDIA_EXTENSIONS = [
 
 function extractFileExtension(filePath) {
   if (!filePath) return '';
-  
+
   try {
     const cleanUrl = filePath.split(/[?#]/)[0];
-    
+
     const extension = cleanUrl.split('.').pop()?.toLowerCase() || '';
-    
+
     if (!extension || extension === cleanUrl || /[^a-z0-9]/.test(extension)) {
       return '';
     }
-    
+
     return extension;
   } catch (error) {
-    console.warn('Error extracting file extension from URL:', filePath, error);
+    // Error extracting file extension from URL
     return '';
   }
 }
@@ -358,7 +358,7 @@ export async function copyMediaToClipboard(media) {
     await navigator.clipboard.writeText(mediaUrl);
     return { heading: 'Copied', message: 'Media URL copied to clipboard.' };
   } catch (error) {
-    console.error('Failed to copy to clipboard:', error);
+    // Failed to copy to clipboard
     return { heading: 'Error', message: 'Failed to copy to clipboard.' };
   }
 }

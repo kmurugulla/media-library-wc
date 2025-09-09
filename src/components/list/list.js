@@ -1,9 +1,9 @@
 // src/components/list/list.js
 import { html } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
-import { LocalizableElement } from '../base-localizable.js';
+import LocalizableElement from '../base-localizable.js';
 import getSvg from '../../utils/getSvg.js';
-import { getMediaType, isImage, isVideo, isPdf, formatFileSize } from '../../utils/utils.js';
+import { getMediaType, isImage } from '../../utils/utils.js';
 import { getStyles } from '../../utils/get-styles.js';
 import listStyles from './list.css?inline';
 
@@ -11,7 +11,7 @@ class MediaList extends LocalizableElement {
   static properties = {
     mediaData: { type: Array },
     searchQuery: { type: String },
-    locale: { type: String }
+    locale: { type: String },
   };
 
   static styles = getStyles(listStyles);
@@ -25,7 +25,7 @@ class MediaList extends LocalizableElement {
 
   async connectedCallback() {
     super.connectedCallback();
-    
+
     await this.loadIcons();
   }
 
@@ -35,9 +35,9 @@ class MediaList extends LocalizableElement {
       '/src/icons/video.svg',
       '/src/icons/pdf.svg',
       '/src/icons/external-link.svg',
-      '/src/icons/copy.svg'
+      '/src/icons/copy.svg',
     ];
-    
+
     const existingIcons = this.shadowRoot.querySelectorAll('svg[id]');
     if (existingIcons.length === 0) {
       await getSvg({ parent: this.shadowRoot, paths: ICONS });
@@ -69,9 +69,7 @@ class MediaList extends LocalizableElement {
         </div>
         <div class="list-content">
           <div class="list-grid">
-            ${repeat(this.mediaData, (media) => media.url, (media, i) => {
-              return this.renderListItem(media, i);
-            })}
+            ${repeat(this.mediaData, (media) => media.url, (media, i) => this.renderListItem(media, i))}
           </div>
         </div>
       </main>
@@ -80,7 +78,7 @@ class MediaList extends LocalizableElement {
 
   renderListItem(media, index) {
     const mediaType = getMediaType(media);
-    
+
     return html`
       <div 
         class="media-item" 
@@ -92,20 +90,18 @@ class MediaList extends LocalizableElement {
         </div>
         
         <div class="media-info">
-          <h4 class="media-name" title=${media.name}>${this.truncateText(media.name, 35)}</h4>
-          <p class="media-url" title=${media.url}>${this.getShortUrl(media.url)}</p>
+          <h4 class="media-name" title=${media.name} .innerHTML=${this.highlightSearchTerm(this.truncateText(media.name, 35), this.searchQuery)}></h4>
+          <p class="media-url" title=${media.url} .innerHTML=${this.highlightSearchTerm(this.getShortUrl(media.url), this.searchQuery)}></p>
         </div>
         
         <div class="media-type">
           ${this.getDisplayMediaType(mediaType)}
         </div>
         
-        <div class="media-doc" title=${media.doc || ''}>
-          ${this.getShortDoc(media.doc)}
+        <div class="media-doc" title=${media.doc || ''} .innerHTML=${this.highlightSearchTerm(this.getShortDoc(media.doc), this.searchQuery)}>
         </div>
         
-        <div class="media-alt" title=${media.alt || ''}>
-          ${this.getShortAlt(media.alt)}
+        <div class="media-alt" title=${media.alt || ''} .innerHTML=${this.highlightSearchTerm(this.getShortAlt(media.alt), this.searchQuery)}>
         </div>
         
         <div class="media-actions">
@@ -134,7 +130,7 @@ class MediaList extends LocalizableElement {
         />
       `;
     }
-    
+
     if (isImage(media.url) && media.hasError === true) {
       return html`
         <div class="placeholder cors-error">
@@ -147,7 +143,7 @@ class MediaList extends LocalizableElement {
         </div>
       `;
     }
-    
+
     return html`
       <div class="placeholder">
         <svg class="placeholder-icon">
@@ -169,7 +165,7 @@ class MediaList extends LocalizableElement {
 
   truncateText(text, maxLength = 30) {
     if (!text || text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + '...';
+    return `${text.substring(0, maxLength)}...`;
   }
 
   getDisplayMediaType(mediaType) {
@@ -199,31 +195,48 @@ class MediaList extends LocalizableElement {
 
   getShortAlt(alt) {
     if (!alt || alt === 'null') return '—';
-    return alt.length > 20 ? alt.substring(0, 20) + '...' : alt;
+    return alt.length > 20 ? `${alt.substring(0, 20)}...` : alt;
   }
 
   handleMediaClick(media) {
     this.dispatchEvent(new CustomEvent('mediaClick', {
       detail: { media },
-      bubbles: true
+      bubbles: true,
     }));
   }
 
   handleAction(e, action, media) {
     e.stopPropagation();
-    
+
     this.dispatchEvent(new CustomEvent('mediaAction', {
       detail: { action, media },
-      bubbles: true
+      bubbles: true,
     }));
   }
 
   handleImageError(e, media) {
     media.hasError = true;
-    
+
     e.target.style.display = 'none';
-    
+
     this.requestUpdate();
+  }
+
+  highlightSearchTerm(text, query) {
+    if (!query || !text) return text;
+
+    let searchTerm = query;
+    if (query.includes(':')) {
+      const parts = query.split(':');
+      if (parts.length > 1) {
+        searchTerm = parts[1].trim();
+      }
+    }
+
+    if (!searchTerm) return text;
+
+    const regex = new RegExp(`(${searchTerm})`, 'gi');
+    return text.replace(regex, '<mark>$1</mark>');
   }
 }
 

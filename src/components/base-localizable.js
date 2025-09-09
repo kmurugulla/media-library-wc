@@ -1,8 +1,8 @@
 // src/components/base-localizable.js
 import { LitElement } from 'lit';
-import { i18n } from '../utils/i18n.js';
+import i18n from '../utils/i18n.js';
 
-export class LocalizableElement extends LitElement {
+class LocalizableElement extends LitElement {
   constructor() {
     super();
     this.t = i18n.t.bind(i18n);
@@ -25,3 +25,5 @@ export class LocalizableElement extends LitElement {
     this.requestUpdate();
   };
 }
+
+export default LocalizableElement;

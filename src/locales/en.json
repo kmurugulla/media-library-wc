@@ -60,13 +60,10 @@
     "socialImage": "Social Images",
     "ogImage": "OG Images",
     "performanceIssue": "Performance Issues",
-    "hero-images": "Hero Images",
-    "people-photos": "People Photos",
-    "product-images": "Product Images",
-    "social-graphics": "Social Graphics",
-    "logos": "Logos",
     "screenshots": "Screenshots",
-    "decorative": "Decorative",
+    "logos": "Logos",
+    "people-photos": "People Photos",
+    "products": "Products",
     "404-media": "404 Media"
   },
   "views": {
