@@ -1,5 +1,5 @@
 // src/utils/i18n.js
-import enTranslations from '../locales/en';
+import enTranslations from '../locales/en.json';
 
 class I18nManager extends EventTarget {
   constructor() {

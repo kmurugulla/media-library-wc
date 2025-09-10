@@ -16,7 +16,7 @@ module.exports = {
     'linebreak-style': ['error', 'unix'],
     'no-await-in-loop': 0,
     'no-underscore-dangle': ['error', { allowAfterThis: true }],
-    'import/extensions': ['error', { js: 'always' }],
+    'import/extensions': ['error', { js: 'always', json: 'always' }],
     'object-curly-newline': ['error', {
       ObjectExpression: { multiline: true, minProperties: 6 },
       ObjectPattern: { multiline: true, minProperties: 6 },

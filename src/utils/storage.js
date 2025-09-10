@@ -1,8 +1,10 @@
 // src/utils/storage.js
+import logger from './logger.js';
+
 class BrowserStorage {
   constructor(type = 'indexeddb') {
     this.type = type;
-    this.dbVersion = 3; // Incremented to rename scanMetadata to last-modified-data
+    this.dbVersion = 3;
     this.dbName = 'MediaLibrary';
   }
 
@@ -30,7 +32,7 @@ class BrowserStorage {
       };
 
       request.onerror = () => {
-        console.error('Failed to open IndexedDB:', request.error);
+        logger.error('Failed to open IndexedDB:', request.error);
         reject(request.error);
       };
     });
@@ -63,7 +65,7 @@ class BrowserStorage {
       const db = await this.ensureDatabase();
 
       if (!db.objectStoreNames.contains('media')) {
-        console.warn('Media object store does not exist, cannot save data');
+        logger.warn('Media object store does not exist, cannot save data');
         return Promise.resolve();
       }
 
@@ -84,7 +86,7 @@ class BrowserStorage {
         };
       });
     } catch (error) {
-      console.error('Failed to save to IndexedDB:', error);
+      logger.error('Failed to save to IndexedDB:', error);
       throw error;
     }
   }
@@ -94,7 +96,7 @@ class BrowserStorage {
       const db = await this.ensureDatabase();
 
       if (!db.objectStoreNames.contains('media')) {
-        console.warn('Media object store does not exist, returning empty array');
+        logger.warn('Media object store does not exist, returning empty array');
         return [];
       }
 
@@ -109,12 +111,12 @@ class BrowserStorage {
         };
 
         getRequest.onerror = () => {
-          console.warn('Failed to get data from IndexedDB:', getRequest.error);
+          logger.warn('Failed to get data from IndexedDB:', getRequest.error);
           resolve([]);
         };
       });
     } catch (error) {
-      console.warn('Failed to load from IndexedDB:', error);
+      logger.warn('Failed to load from IndexedDB:', error);
       return [];
     }
   }
@@ -139,7 +141,7 @@ class BrowserStorage {
       const parsed = JSON.parse(stored);
       return parsed.data || [];
     } catch (error) {
-      console.warn('Failed to load from localStorage:', error);
+      logger.warn('Failed to load from localStorage:', error);
       return [];
     }
   }
@@ -168,7 +170,7 @@ class BrowserStorage {
       }
 
       if (storesToClear.length === 0) {
-        console.warn('No object stores exist, nothing to clear');
+        logger.warn('No object stores exist, nothing to clear');
         return Promise.resolve();
       }
 
@@ -196,7 +198,7 @@ class BrowserStorage {
         });
       });
     } catch (error) {
-      console.warn('Failed to clear IndexedDB:', error);
+      logger.warn('Failed to clear IndexedDB:', error);
       return Promise.resolve();
     }
   }
@@ -228,7 +230,7 @@ class BrowserStorage {
         };
       });
     } catch (error) {
-      console.error('Failed to reset database:', error);
+      logger.error('Failed to reset database:', error);
       throw error;
     }
   }
@@ -268,12 +270,12 @@ class BrowserStorage {
         };
 
         getRequest.onerror = () => {
-          console.warn('Failed to get last modified from IndexedDB:', getRequest.error);
+          logger.warn('Failed to get last modified from IndexedDB:', getRequest.error);
           resolve(null);
         };
       });
     } catch (error) {
-      console.warn('Failed to get last modified from IndexedDB:', error);
+      logger.warn('Failed to get last modified from IndexedDB:', error);
       return null;
     }
   }
@@ -325,12 +327,12 @@ class BrowserStorage {
         };
 
         getAllRequest.onerror = () => {
-          console.warn('Failed to get all sites from IndexedDB:', getAllRequest.error);
+          logger.warn('Failed to get all sites from IndexedDB:', getAllRequest.error);
           resolve([]);
         };
       });
     } catch (error) {
-      console.warn('Failed to get all sites from IndexedDB:', error);
+      logger.warn('Failed to get all sites from IndexedDB:', error);
       return [];
     }
   }
@@ -355,7 +357,7 @@ class BrowserStorage {
       }
       return sites;
     } catch (error) {
-      console.warn('Failed to get all sites from localStorage:', error);
+      logger.warn('Failed to get all sites from localStorage:', error);
       return [];
     }
   }
@@ -391,7 +393,7 @@ class BrowserStorage {
         };
       });
     } catch (error) {
-      console.error('Failed to delete site from IndexedDB:', error);
+      logger.error('Failed to delete site from IndexedDB:', error);
       throw error;
     }
   }
@@ -431,7 +433,7 @@ class BrowserStorage {
       const db = await this.ensureDatabase();
 
       if (!db.objectStoreNames.contains('last-modified-data')) {
-        console.warn('Last modified data object store does not exist, cannot save metadata');
+        logger.warn('Last modified data object store does not exist, cannot save metadata');
         return Promise.resolve();
       }
 
@@ -451,7 +453,7 @@ class BrowserStorage {
         };
       });
     } catch (error) {
-      console.error('Failed to save scan metadata to IndexedDB:', error);
+      logger.error('Failed to save scan metadata to IndexedDB:', error);
       throw error;
     }
   }
@@ -475,12 +477,12 @@ class BrowserStorage {
         };
 
         getRequest.onerror = () => {
-          console.warn('Failed to get scan metadata from IndexedDB:', getRequest.error);
+          logger.warn('Failed to get scan metadata from IndexedDB:', getRequest.error);
           resolve(null);
         };
       });
     } catch (error) {
-      console.warn('Failed to load scan metadata from IndexedDB:', error);
+      logger.warn('Failed to load scan metadata from IndexedDB:', error);
       return null;
     }
   }
@@ -504,7 +506,7 @@ class BrowserStorage {
 
       return JSON.parse(stored);
     } catch (error) {
-      console.warn('Failed to load scan metadata from localStorage:', error);
+      logger.warn('Failed to load scan metadata from localStorage:', error);
       return null;
     }
   }

@@ -187,7 +187,7 @@
   gap: 4px;
   line-height: 1.2;
   margin-bottom: 2px;
-  word-break: break-word;
+  overflow-wrap: break-word;
 }
 
 .media-used-text {
