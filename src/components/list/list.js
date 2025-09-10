@@ -139,10 +139,10 @@ class MediaList extends LocalizableElement {
         <div class="list-content">
           <div class="list-grid" style="height: ${totalHeight}px;">
             ${repeat(visibleItems, (media) => media.url, (media, i) => {
-              const index = this.visibleStart + i;
-              const offset = this.virtualScroll.getItemOffset(index);
-              return this.renderListItem(media, index, offset);
-            })}
+    const index = this.visibleStart + i;
+    const offset = this.virtualScroll.getItemOffset(index);
+    return this.renderListItem(media, index, offset);
+  })}
           </div>
         </div>
       </main>
