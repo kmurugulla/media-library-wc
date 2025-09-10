@@ -6,7 +6,7 @@ import BrowserStorage from '../utils/storage.js';
 import SitemapDiscovery from '../utils/sitemap.js';
 import ContentParser from '../utils/parser.js';
 import { processMediaData, calculateFilteredMediaData } from '../utils/filters.js';
-import { copyMediaToClipboard } from '../utils/utils.js';
+import { copyMediaToClipboard, urlsMatch } from '../utils/utils.js';
 import { getStyles } from '../utils/get-styles.js';
 import './topbar/topbar.js';
 import './sidebar/sidebar.js';
@@ -259,25 +259,42 @@ class MediaLibrary extends LocalizableElement {
     if (!mediaData) return [];
 
     const usageCounts = {};
+    const urlGroups = {};
 
+    // Group items by matching URLs
     mediaData.forEach((item) => {
       if (item.url) {
-        if (!usageCounts[item.url]) {
-          usageCounts[item.url] = 0;
+        let groupKey = null;
+
+        // Find existing group for this URL
+        for (const existingKey of Object.keys(urlGroups)) {
+          if (urlsMatch(item.url, existingKey)) {
+            groupKey = existingKey;
+            break;
+          }
         }
 
-        usageCounts[item.url] += 1;
+        // If no existing group found, create new one
+        if (!groupKey) {
+          groupKey = item.url;
+          urlGroups[groupKey] = [];
+        }
+
+        urlGroups[groupKey].push(item);
+        usageCounts[groupKey] = (usageCounts[groupKey] || 0) + 1;
       }
     });
 
+    // Create unique media items using the first item from each group
     const uniqueMedia = {};
-    mediaData.forEach((item) => {
-      if (item.url && !uniqueMedia[item.url]) {
-        uniqueMedia[item.url] = {
-          ...item,
-          usageCount: usageCounts[item.url] || 1,
-        };
-      }
+    Object.keys(urlGroups).forEach((groupKey) => {
+      const group = urlGroups[groupKey];
+      const firstItem = group[0];
+
+      uniqueMedia[groupKey] = {
+        ...firstItem,
+        usageCount: usageCounts[groupKey] || 1,
+      };
     });
 
     return Object.values(uniqueMedia);
