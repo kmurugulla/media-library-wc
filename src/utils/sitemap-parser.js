@@ -285,7 +285,6 @@ class SitemapParser {
 
         results.push(...mediaItems);
       } catch (error) {
-        // Failed to scan page
         completed += 1;
 
         if (onProgress) {
@@ -296,7 +295,6 @@ class SitemapParser {
 
     const onError = (item, error) => {
       errors.push({ item, error });
-      // Queue error
     };
 
     const queue = new Queue(callback, this.maxConcurrency, onError);
@@ -393,9 +391,6 @@ class SitemapParser {
                 mediaItem.height = analysis.height;
                 mediaItem.exifCamera = analysis.exifCamera;
                 mediaItem.exifDate = analysis.exifDate;
-                mediaItem.hasFaces = analysis.hasFaces;
-                mediaItem.faceCount = analysis.faceCount;
-                mediaItem.dominantColor = analysis.dominantColor;
                 mediaItem.analysisConfidence = analysis.confidence;
 
                 if (analysis.exifError) {
@@ -472,7 +467,6 @@ class SitemapParser {
 
       return mediaItems;
     } catch (error) {
-      // Error scanning page
       return [];
     }
   }
@@ -495,7 +489,6 @@ class SitemapParser {
       const result = resolvedUrl.toString();
       return result;
     } catch (error) {
-      // Failed to resolve URL
       return src;
     }
   }
@@ -503,16 +496,10 @@ class SitemapParser {
   captureContext(element, type) {
     const context = [type];
 
-    let divElement = element;
-    while (divElement && divElement !== document.body) {
-      if (divElement.tagName === 'DIV' && divElement.className) {
-        const classes = divElement.className.split(' ').filter((c) => c.trim());
-        if (classes.length > 0) {
-          context.push(`In div: ${classes.join(' ')}`);
-          break;
-        }
-      }
-      divElement = divElement.parentElement;
+    const containerInfo = this.findMeaningfulContainer(element);
+    if (containerInfo) {
+      context.push(`In div: ${containerInfo}`);
+      return context.join(' > ');
     }
 
     const surroundingText = this.extractSurroundingContext(element);
@@ -520,338 +507,188 @@ class SitemapParser {
       context.push(`text: ${surroundingText}`);
     }
 
-    const performanceTags = this.analyzePerformanceContext(element, type);
-    if (performanceTags.length > 0) {
-      context.push(`perf:${performanceTags.join(',')}`);
+    return context.join(' > ');
+  }
+
+  findMeaningfulContainer(element) {
+    let currentElement = element;
+
+    while (currentElement && currentElement !== document.body) {
+      if (currentElement.tagName === 'DIV' || currentElement.tagName === 'MAIN' || currentElement.tagName === 'SECTION' || currentElement.tagName === 'ARTICLE') {
+        const classAttr = currentElement.getAttribute('class') || '';
+
+        if (classAttr) {
+          const classes = classAttr.split(' ').filter((c) => c.trim());
+          if (classes.length > 0) {
+            const meaningfulClasses = classes.filter((cls) => {
+              const lowerCls = cls.toLowerCase();
+              if (['style', 'content', 'div', 'span', 'p', 'a', 'img'].includes(lowerCls)) {
+                return false;
+              }
+              return cls.length > 3
+                || cls.includes('section')
+                || cls.includes('container')
+                || cls.includes('metadata')
+                || cls.includes('wrapper')
+                || cls.includes('block')
+                || cls.includes('main')
+                || cls.includes('header')
+                || cls.includes('footer')
+                || cls.includes('nav')
+                || cls.includes('article')
+                || cls.includes('aside');
+            });
+
+            if (meaningfulClasses.length > 0) {
+              return meaningfulClasses.join(' ');
+            }
+          }
+        }
+      }
+      currentElement = currentElement.parentElement;
     }
 
-    return context.join(' > ');
+    return this.findNearbyContainer(element);
+  }
+
+  findNearbyContainer(element) {
+    let currentElement = element;
+    while (currentElement && currentElement !== document.body) {
+      if (currentElement.tagName === 'DIV' || currentElement.tagName === 'MAIN' || currentElement.tagName === 'SECTION' || currentElement.tagName === 'ARTICLE') {
+        const classAttr = currentElement.getAttribute('class') || '';
+        if (classAttr) {
+          const classes = classAttr.split(' ').filter((c) => c.trim());
+          if (classes.length > 0) {
+            const meaningfulClasses = classes.filter((cls) => cls.includes('section')
+              || cls.includes('container')
+              || cls.includes('metadata')
+              || cls.includes('content')
+              || cls.includes('wrapper')
+              || cls.includes('block')
+              || cls.includes('main')
+              || cls.length > 4);
+            if (meaningfulClasses.length > 0) {
+              return meaningfulClasses.join(' ');
+            }
+          }
+        }
+      }
+      currentElement = currentElement.parentElement;
+    }
+
+    const parent = element.parentElement;
+    if (!parent) return null;
+
+    const siblings = Array.from(parent.children || []);
+    for (const sibling of siblings) {
+      if (sibling.tagName === 'DIV' || sibling.tagName === 'MAIN' || sibling.tagName === 'SECTION' || sibling.tagName === 'ARTICLE') {
+        const classAttr = sibling.getAttribute('class') || '';
+        if (classAttr) {
+          const classes = classAttr.split(' ').filter((c) => c.trim());
+          if (classes.length > 0) {
+            const meaningfulClasses = classes.filter((cls) => cls.includes('section')
+              || cls.includes('container')
+              || cls.includes('metadata')
+              || cls.includes('content')
+              || cls.includes('wrapper')
+              || cls.includes('block')
+              || cls.includes('main')
+              || cls.length > 4);
+            if (meaningfulClasses.length > 0) {
+              return meaningfulClasses.join(' ');
+            }
+          }
+        }
+      }
+    }
+
+    const parentSiblings = Array.from(parent.parentElement?.children || []);
+    for (const sibling of parentSiblings) {
+      if (sibling.tagName === 'DIV' || sibling.tagName === 'MAIN' || sibling.tagName === 'SECTION' || sibling.tagName === 'ARTICLE') {
+        const classAttr = sibling.getAttribute('class') || '';
+        if (classAttr) {
+          const classes = classAttr.split(' ').filter((c) => c.trim());
+          if (classes.length > 0) {
+            const meaningfulClasses = classes.filter((cls) => cls.includes('section')
+              || cls.includes('container')
+              || cls.includes('metadata')
+              || cls.includes('content')
+              || cls.includes('wrapper')
+              || cls.includes('block')
+              || cls.includes('main')
+              || cls.length > 4);
+            if (meaningfulClasses.length > 0) {
+              return meaningfulClasses.join(' ');
+            }
+          }
+        }
+      }
+    }
+
+    return null;
   }
 
   extractSurroundingContext(element, maxLength = 100) {
     const context = [];
+    const meaninglessWords = ['style', 'content', 'div', 'span', 'p', 'a', 'img', 'button', 'input'];
 
-    let parent = element.parentElement;
-    let depth = 0;
-    while (parent && depth < 3) {
-      const text = parent.textContent?.trim();
-      if (text && text.length > 10) {
-        context.push(text.substring(0, maxLength));
-      }
-      parent = parent.parentElement;
-      depth += 1;
-    }
-
-    const siblings = Array.from(element.parentElement?.children || []);
-    siblings.forEach((sibling) => {
-      if (sibling !== element && sibling.textContent) {
-        const text = sibling.textContent.trim();
-        if (text && text.length > 5) {
-          context.push(text.substring(0, maxLength));
+    const parent = element.parentElement;
+    if (parent) {
+      const siblings = Array.from(parent.children || []);
+      for (const sibling of siblings) {
+        if (sibling !== element && sibling.textContent) {
+          const text = sibling.textContent.trim();
+          if (this.isMeaningfulText(text, meaninglessWords)) {
+            context.push(text.substring(0, maxLength));
+          }
         }
       }
-    });
+
+      const parentSiblings = Array.from(parent.parentElement?.children || []);
+      for (const sibling of parentSiblings) {
+        if (sibling.textContent) {
+          const text = sibling.textContent.trim();
+          if (this.isMeaningfulText(text, meaninglessWords)) {
+            context.push(text.substring(0, maxLength));
+          }
+        }
+      }
+    }
+
+    if (context.length === 0) {
+      let currentParent = element.parentElement;
+      let depth = 0;
+      while (currentParent && depth < 3) {
+        const text = currentParent.textContent?.trim();
+        if (this.isMeaningfulText(text, meaninglessWords)) {
+          context.push(text.substring(0, maxLength));
+        }
+        currentParent = currentParent.parentElement;
+        depth += 1;
+      }
+    }
 
     return context.slice(0, 3).join(' ').substring(0, maxLength);
   }
 
-  /**
-   * Analyze performance context and generate performance tags
-   * @param {Element} element - The media element
-   * @param {string} type - The element type (img, video, etc.)
-   * @returns {Array<string>} Array of performance tags
-   */
-  analyzePerformanceContext(element, type) {
-    const tags = [];
+  isMeaningfulText(text, meaninglessWords) {
+    if (!text || text.length < 5) return false;
 
-    if (type !== 'img') {
-      return tags;
-    }
-    const positionTags = this.analyzePosition(element);
-    tags.push(...positionTags);
+    const words = text.toLowerCase().split(/\s+/);
+    const meaningfulWords = words.filter((word) => word.length > 2
+      && !meaninglessWords.includes(word));
 
-    const loadingTags = this.analyzeLoadingStrategy(element);
-    tags.push(...loadingTags);
-
-    const responsiveTags = this.analyzeResponsiveImages(element);
-    tags.push(...responsiveTags);
-
-    const formatTags = this.analyzeFormat(element);
-    tags.push(...formatTags);
-
-    const sizeTags = this.analyzeSize(element);
-    tags.push(...sizeTags);
-
-    const socialTags = this.analyzeSocialMedia(element);
-    tags.push(...socialTags);
-
-    const optimizationTags = this.analyzeOptimizationStatus(tags);
-    tags.push(...optimizationTags);
-
-    return tags;
-  }
-
-  /**
-   * Analyze element position for performance tags
-   */
-  analyzePosition(element) {
-    const tags = [];
-
-    const isAboveFold = this.isAboveFold(element);
-    if (isAboveFold) {
-      tags.push('above-fold');
-    } else {
-      tags.push('below-fold');
-    }
-
-    const isHeroSection = this.isHeroSection(element);
-    if (isHeroSection) {
-      tags.push('hero-section');
-      tags.push('lcp-candidate');
-    }
-
-    const isCritical = this.isCriticalContent(element);
-    if (isCritical) {
-      tags.push('critical-content');
-    }
-
-    return tags;
-  }
-
-  /**
-   * Analyze loading strategy
-   */
-  analyzeLoadingStrategy(element) {
-    const tags = [];
-
-    const loading = element.getAttribute('loading');
-    const fetchpriority = element.getAttribute('fetchpriority');
-
-    if (loading === 'lazy') {
-      tags.push('lazy-loading');
-    } else if (loading === 'eager') {
-      tags.push('eager-loading');
-    } else {
-      tags.push('no-loading-strategy');
-    }
-
-    if (fetchpriority === 'high') {
-      tags.push('high-priority');
-    } else if (fetchpriority === 'low') {
-      tags.push('low-priority');
-    }
-
-    return tags;
-  }
-
-  /**
-   * Analyze responsive image support
-   */
-  analyzeResponsiveImages(element) {
-    const tags = [];
-
-    const srcset = element.getAttribute('srcset');
-    const sizes = element.getAttribute('sizes');
-
-    if (srcset) {
-      tags.push('has-srcset');
-      tags.push('responsive');
-
-      const sizeCount = srcset.split(',').length;
-      if (sizeCount > 1) {
-        tags.push('multiple-sizes');
-      }
-    } else {
-      tags.push('no-srcset');
-      tags.push('fixed-size');
-    }
-
-    if (sizes) {
-      tags.push('has-sizes');
-    } else {
-      tags.push('no-sizes');
-    }
-
-    return tags;
-  }
-
-  /**
-   * Analyze image format
-   */
-  analyzeFormat(element) {
-    const tags = [];
-
-    const src = element.getAttribute('src') || element.getAttribute('data-src') || '';
-    const srcset = element.getAttribute('srcset') || '';
-
-    if (src.includes('.webp') || srcset.includes('.webp')) {
-      tags.push('webp-available');
-    }
-
-    if (src.includes('.avif') || srcset.includes('.avif')) {
-      tags.push('avif-supported');
-    }
-
-    if (src.match(/\.(jpg|jpeg|png|gif)$/i) && !srcset.includes('.webp')
-        && !srcset.includes('.avif')) {
-      tags.push('legacy-format');
-    }
-
-    if (src.includes('.webp') || src.includes('.avif')) {
-      tags.push('modern-format');
-    }
-
-    return tags;
-  }
-
-  /**
-   * Analyze image size optimization
-   */
-  analyzeSize(element) {
-    const tags = [];
-
-    const src = element.getAttribute('src') || element.getAttribute('data-src') || '';
-
-    if (src.includes('1920') || src.includes('2048') || src.includes('2560')) {
-      tags.push('large-size');
-    }
-
-    if (src.includes('800') || src.includes('600') || src.includes('400')) {
-      tags.push('optimized-size');
-    }
-
-    return tags;
-  }
-
-  /**
-   * Analyze social media usage
-   */
-  analyzeSocialMedia(element) {
-    const tags = [];
-
-    const src = element.getAttribute('src') || element.getAttribute('data-src') || '';
-    const filename = src.toLowerCase();
-
-    if (filename.includes('og-') || filename.includes('social-') || filename.includes('share-')) {
-      tags.push('social-image');
-    }
-
-    if (filename.includes('og-image') || filename.includes('ogimage')) {
-      tags.push('og-image');
-    }
-
-    if (filename.includes('twitter-') || filename.includes('twitterimage')) {
-      tags.push('twitter-image');
-    }
-
-    return tags;
-  }
-
-  /**
-   * Analyze overall optimization status
-   */
-  analyzeOptimizationStatus(existingTags) {
-    const tags = [];
-
-    const optimizationIssues = {
-      'no-srcset': 'add-responsive-images',
-      'legacy-format': 'convert-to-webp',
-      'no-loading-strategy': 'add-loading-attribute',
-      'large-size': 'resize-image',
-    };
-
-    Object.entries(optimizationIssues).forEach(([issue, action]) => {
-      if (existingTags.includes(issue)) {
-        tags.push(action);
-      }
-    });
-
-    const isFullyOptimized = existingTags.some((tag) => [
-      'has-srcset',
-      'modern-format',
-      'lazy-loading',
-      'optimized-size',
-    ].includes(tag));
-
-    const hasAnyIssues = Object.keys(optimizationIssues)
-      .some((issue) => existingTags.includes(issue));
-
-    if (isFullyOptimized && !hasAnyIssues) {
-      tags.push('fully-optimized');
-    }
-
-    if (existingTags.includes('lcp-candidate') && hasAnyIssues) {
-      tags.push('critical-performance-issue');
-    }
-
-    return tags;
-  }
-
-  /**
-   * Check if element is above the fold
-   */
-  isAboveFold(element) {
-    const classes = element.className || '';
-    const parentClasses = element.parentElement?.className || '';
-    const grandparentClasses = element.parentElement?.parentElement?.className || '';
-    const allClasses = `${classes} ${parentClasses} ${grandparentClasses}`.toLowerCase();
-
-    const aboveFoldIndicators = [
-      'hero', 'banner', 'header', 'navigation', 'nav', 'top', 'above', 'fold',
-      'main', 'primary', 'featured', 'lead', 'intro', 'welcome',
-      'article', 'card', 'content',
-    ];
-
-    const belowFoldIndicators = [
-      'footer', 'sidebar', 'bottom', 'end', 'conclusion',
-    ];
-
-    const isBelowFold = belowFoldIndicators.some((indicator) => allClasses.includes(indicator));
-    if (isBelowFold) return false;
-
-    const isMainContent = aboveFoldIndicators.some((indicator) => allClasses.includes(indicator));
-
-    return isMainContent;
-  }
-
-  /**
-   * Check if element is in a hero section
-   */
-  isHeroSection(element) {
-    const classes = element.className || '';
-    const parentClasses = element.parentElement?.className || '';
-    const allClasses = `${classes} ${parentClasses}`.toLowerCase();
-
-    const heroIndicators = [
-      'hero', 'banner', 'jumbotron', 'masthead', 'header-image', 'main-image',
-    ];
-
-    return heroIndicators.some((indicator) => allClasses.includes(indicator));
-  }
-
-  /**
-   * Check if element is in critical content
-   */
-  isCriticalContent(element) {
-    const classes = element.className || '';
-    const parentClasses = element.parentElement?.className || '';
-    const allClasses = `${classes} ${parentClasses}`.toLowerCase();
-
-    const criticalIndicators = [
-      'main', 'primary', 'content', 'article', 'post', 'featured', 'important',
-    ];
-
-    return criticalIndicators.some((indicator) => allClasses.includes(indicator));
+    return meaningfulWords.length > 0 || text.length > 20;
   }
 
   isMediaFile(url) {
     if (!url || typeof url !== 'string') return false;
 
     const mediaExtensions = [
-      'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif', 'bmp', 'tiff', 'ico', // Images
-      'mp4', 'webm', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'm4v', // Videos
-      'pdf', 'doc', 'docx', 'txt', 'rtf', // Documents
-      'mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a', // Audio
+      'jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif', 'bmp', 'tiff', 'ico',
+      'mp4', 'webm', 'mov', 'avi', 'mkv', 'flv', 'wmv', 'm4v',
+      'pdf', 'doc', 'docx', 'txt', 'rtf',
+      'mp3', 'wav', 'ogg', 'aac', 'flac', 'm4a',
     ];
 
     const extension = this.getFileExtension(url);
@@ -862,21 +699,16 @@ class SitemapParser {
     if (!url) return '';
 
     try {
-      // Remove query parameters and fragments using regex (more robust)
       const cleanUrl = url.split(/[?#]/)[0];
 
-      // Extract the file extension
       const extension = cleanUrl.split('.').pop()?.toLowerCase() || '';
 
-      // Validate the extension - ensure it's not empty and different from the entire URL
-      // Also check it doesn't contain invalid characters (like spaces, slashes, etc.)
       if (!extension || extension === cleanUrl || /[^a-z0-9]/.test(extension)) {
         return '';
       }
 
       return extension;
     } catch (error) {
-      // Error extracting file extension from URL
       return '';
     }
   }
@@ -885,15 +717,12 @@ class SitemapParser {
     if (!url) return '';
 
     try {
-      // Remove query parameters and fragments first
       const cleanUrl = url.split(/[?#]/)[0];
 
-      // Get the filename from the path
       const filename = cleanUrl.split('/').pop() || '';
 
       return filename;
     } catch (error) {
-      // Error extracting clean filename from URL
       return '';
     }
   }
@@ -910,7 +739,6 @@ class SitemapParser {
 
         return fixedUrl;
       } catch (error) {
-        // Error fixing localhost URL
         return url;
       }
     }
@@ -933,7 +761,7 @@ class SitemapParser {
 
   filterChangedUrls(urls, previousMetadata) {
     if (!previousMetadata || !previousMetadata.pageLastModified) {
-      return urls; // No previous data, scan all URLs
+      return urls;
     }
 
     const changedUrls = [];
@@ -959,10 +787,6 @@ class SitemapParser {
 
     images.forEach((img) => {
       this.captureContext(img, 'img');
-      // Image context processed
-
-      this.analyzePerformanceContext(img, 'img');
-      // Image performance tags processed
     });
 
     return images.length;

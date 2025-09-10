@@ -22,7 +22,6 @@
                         type="url" 
                         id="source-url" 
                         placeholder="https://example.com"
-                        value="aem.live"
                     >
                 </div>
                 <div class="control-group">
@@ -64,7 +63,6 @@
             <div class="media-library-container">
                 <media-library 
                     id="media-library"
-                    source="medium.com"
                     storage="indexeddb"
                     locale="en">
                 </media-library>
@@ -90,6 +88,14 @@
             const storageSelect = document.getElementById('storage-type');
             const localeSelect = document.getElementById('locale');
             const siteSelector = document.getElementById('site-selector');
+            
+            // Initialize component with current input values
+            if (sourceInput.value) {
+                mediaLibrary.source = sourceInput.value;
+            }
+            if (sitemapInput.value) {
+                mediaLibrary.sitemapUrl = sitemapInput.value;
+            }
             
             sourceInput.addEventListener('input', (e) => {
                 mediaLibrary.source = e.target.value;

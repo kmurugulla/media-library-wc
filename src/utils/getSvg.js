@@ -22,14 +22,7 @@ export default async function getSvg({ parent, paths }) {
   const svgs = await Promise.all(paths.map(async (path) => {
     const svg = await fetchIcon(path);
     if (svg && parent) {
-      const filename = path.split('/').pop().replace('.svg', '');
-      svg.id = filename;
-
-      const existingIdElement = svg.querySelector(`#${filename}`);
-      if (existingIdElement) {
-        existingIdElement.id = filename;
-      }
-
+      // Just append the SVG as-is - the SVG files already have the correct IDs
       parent.append(svg);
     }
     return svg;

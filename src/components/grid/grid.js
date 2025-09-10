@@ -5,6 +5,7 @@ import LocalizableElement from '../base-localizable.js';
 import { getMediaType, isImage } from '../../utils/utils.js';
 import { getStyles } from '../../utils/get-styles.js';
 import { GridVirtualScrollManager } from '../../utils/virtual-scroll.js';
+import getSvg from '../../utils/getSvg.js';
 import gridStyles from './grid.css?inline';
 
 class MediaGrid extends LocalizableElement {
@@ -46,11 +47,11 @@ class MediaGrid extends LocalizableElement {
     });
   }
 
-  async connectedCallback() {
+  connectedCallback() {
     super.connectedCallback();
   }
 
-  firstUpdated() {
+  async firstUpdated() {
     this.setupScrollListener();
     window.addEventListener('resize', () => {
       this.virtualScroll.updateColCount();
@@ -69,6 +70,9 @@ class MediaGrid extends LocalizableElement {
   }
 
   updated(changedProperties) {
+    // Load icons if they haven't been loaded yet
+    this.loadIcons();
+
     if (changedProperties.has('mediaData')) {
       this.updateComplete.then(() => {
         if (this.mediaData && this.mediaData.length > 0) {
@@ -87,6 +91,21 @@ class MediaGrid extends LocalizableElement {
   disconnectedCallback() {
     super.disconnectedCallback();
     this.virtualScroll.cleanup();
+  }
+
+  async loadIcons() {
+    const ICONS = [
+      '/src/icons/photo.svg',
+      '/src/icons/video.svg',
+      '/src/icons/pdf.svg',
+      '/src/icons/external-link.svg',
+      '/src/icons/copy.svg',
+    ];
+
+    const existingIcons = this.shadowRoot.querySelectorAll('svg[id]');
+    if (existingIcons.length === 0) {
+      await getSvg({ parent: this.shadowRoot, paths: ICONS });
+    }
   }
 
   setupScrollListener() {

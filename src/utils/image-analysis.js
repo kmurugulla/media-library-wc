@@ -59,7 +59,7 @@ async function extractEXIFData(imageUrl) {
     }
 
     const blob = await response.blob();
-    const exifData = await exifr.parse(blob, { pick: ['Make', 'Model', 'DateTime', 'Orientation'] });
+    const exifData = await exifr.parse(blob, { pick: ['Make', 'Model', 'DateTime'] });
 
     if (!exifData) {
       return null;
@@ -80,7 +80,6 @@ async function extractEXIFData(imageUrl) {
     return {
       camera,
       dateTime: exifData.DateTime,
-      orientation: exifData.Orientation,
     };
   } catch (error) {
     return {
@@ -151,7 +150,6 @@ async function runAnalysisPipeline(imageUrl, context = '') {
       } else {
         analysis.exifCamera = exifData.camera;
         analysis.exifDate = exifData.date;
-        analysis.exifOrientation = exifData.orientation;
         if (exifData.camera || exifData.date) {
           analysis.confidence = 'high';
         }

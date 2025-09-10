@@ -322,7 +322,6 @@ class MediaLibrary extends LocalizableElement {
           media,
           usageData,
           source: this.source,
-          isSitemapSource: this.isSitemapSource(),
         },
       },
     }));

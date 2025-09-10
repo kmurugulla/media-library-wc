@@ -135,19 +135,19 @@
 
 .media-type-badge svg {
   color: #fff;
-  fill: #fff;
+  fill: currentcolor;
 }
 
 .media-type-icon {
   color: #fff;
-  fill: #fff;
+  fill: currentcolor;
   height: 16px;
   width: 16px;
 }
 
 .action-icon {
   color: #fff;
-  fill: #fff;
+  fill: currentcolor;
   height: 18px;
   width: 18px;
 }

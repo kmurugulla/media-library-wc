@@ -568,48 +568,6 @@
     font-style: italic;
   }
 
-  /* Performance-specific context styles */
-  .performance-container {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .performance-issues {
-    background: #fef2f2;
-    border-color: #fecaca;
-  }
-
-  .performance-issues .context-label {
-    color: #ef4444;
-  }
-
-  .performance-recommendations {
-    background: #f0f9ff;
-    border-color: #bae6fd;
-  }
-
-  .performance-recommendations .context-label {
-    color: #0284c7;
-  }
-
-  .performance-status {
-    background: #f0fdf4;
-    border-color: #bbf7d0;
-  }
-
-  .performance-status .context-label {
-    color: #16a34a;
-  }
-
-  .performance-summary {
-    background: #fefce8;
-    border-color: #fde047;
-  }
-
-  .performance-summary .context-label {
-    color: #ca8a04;
-  }
 
   .alt-text {
     background: #f9fafb;
