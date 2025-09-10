@@ -1,5 +1,8 @@
 // src/utils/i18n.js
 import enTranslations from '../locales/en.json';
+import esTranslations from '../locales/es.json';
+import deTranslations from '../locales/de.json';
+import frTranslations from '../locales/fr.json';
 
 class I18nManager extends EventTarget {
   constructor() {
@@ -9,6 +12,9 @@ class I18nManager extends EventTarget {
     this.fallbackLocale = 'en';
 
     this.translations.set('en', enTranslations);
+    this.translations.set('es', esTranslations);
+    this.translations.set('de', deTranslations);
+    this.translations.set('fr', frTranslations);
   }
 
   async loadLocale(locale) {
@@ -20,6 +26,18 @@ class I18nManager extends EventTarget {
       if (locale === 'en') {
         this.translations.set(locale, enTranslations);
         return enTranslations;
+      }
+      if (locale === 'es') {
+        this.translations.set(locale, esTranslations);
+        return esTranslations;
+      }
+      if (locale === 'de') {
+        this.translations.set(locale, deTranslations);
+        return deTranslations;
+      }
+      if (locale === 'fr') {
+        this.translations.set(locale, frTranslations);
+        return frTranslations;
       }
 
       return this.translations.get(this.fallbackLocale) || {};

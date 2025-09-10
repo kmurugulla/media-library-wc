@@ -1,4 +1,4 @@
-// src/utils/getSvg.js
+// src/utils/get-svg.js
 const PARSER = new DOMParser();
 
 async function fetchIcon(path) {

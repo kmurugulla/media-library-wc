@@ -4,8 +4,8 @@ import { repeat } from 'lit/directives/repeat.js';
 import LocalizableElement from '../base-localizable.js';
 import { getMediaType, isImage } from '../../utils/utils.js';
 import { getStyles } from '../../utils/get-styles.js';
-import { GridVirtualScrollManager } from '../../utils/virtual-scroll.js';
-import getSvg from '../../utils/getSvg.js';
+import { GridVirtualScrollManager } from '../../utils/virtual-scroll/scroll.js';
+import getSvg from '../../utils/get-svg.js';
 import gridStyles from './grid.css?inline';
 
 class MediaGrid extends LocalizableElement {

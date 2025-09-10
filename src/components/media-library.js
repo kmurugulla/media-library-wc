@@ -3,7 +3,8 @@ import { html } from 'lit';
 import LocalizableElement from './base-localizable.js';
 import i18n from '../utils/i18n.js';
 import BrowserStorage from '../utils/storage.js';
-import SitemapParser from '../utils/sitemap-parser.js';
+import SitemapDiscovery from '../utils/sitemap.js';
+import ContentParser from '../utils/parser.js';
 import { processMediaData, calculateFilteredMediaData } from '../utils/filters.js';
 import { copyMediaToClipboard } from '../utils/utils.js';
 import { getStyles } from '../utils/get-styles.js';
@@ -12,7 +13,7 @@ import './sidebar/sidebar.js';
 import './grid/grid.js';
 import './list/list.js';
 import './modal-manager/modal-manager.js';
-import getSvg from '../utils/getSvg.js';
+import getSvg from '../utils/get-svg.js';
 import mediaLibraryStyles from './media-library.css?inline';
 
 class MediaLibrary extends LocalizableElement {
@@ -51,7 +52,8 @@ class MediaLibrary extends LocalizableElement {
     this._imageAnalysisEnabled = true;
 
     this.storageManager = null;
-    this.sitemapParser = null;
+    this.sitemapDiscovery = null;
+    this.contentParser = null;
     this._processedData = null;
   }
 
@@ -73,7 +75,8 @@ class MediaLibrary extends LocalizableElement {
     i18n.setLocale(this.locale);
 
     this.storageManager = new BrowserStorage(this.storage);
-    this.sitemapParser = new SitemapParser({
+    this.sitemapDiscovery = new SitemapDiscovery();
+    this.contentParser = new ContentParser({
       enableImageAnalysis: this._imageAnalysisEnabled,
       analysisConfig: {
         extractEXIF: true,
@@ -85,8 +88,11 @@ class MediaLibrary extends LocalizableElement {
     await this.loadMediaData();
   }
 
-  updated() {
-    // Locale will be set during connectedCallback
+  async updated(changedProperties) {
+    if (changedProperties.has('locale')) {
+      await i18n.loadLocale(this.locale);
+      i18n.setLocale(this.locale);
+    }
   }
 
   async initialize() {
@@ -135,19 +141,28 @@ class MediaLibrary extends LocalizableElement {
     try {
       this._isScanning = true;
       this._error = null;
+      this._mediaData = [];
+      this._processedData = null;
+      this._searchQuery = '';
+      this._selectedFilterType = 'all';
       this._scanStartTime = Date.now();
       this._scanProgress = { current: 0, total: 0, found: 0 };
+      this._lastScanDuration = null;
+      this._scanStats = null;
+
+      window.dispatchEvent(new CustomEvent('clear-search'));
+      window.dispatchEvent(new CustomEvent('clear-filters'));
       let sitemapUrl = this.source;
       if (this.sitemapUrl && this.sitemapUrl.trim()) {
         // Using manual sitemap URL
         sitemapUrl = this.sitemapUrl;
       } else if (this.isWebsiteUrl(this.source)) {
         // Website URL detected, auto-detecting sitemap
-        sitemapUrl = await this.sitemapParser.autoDetectSitemap(this.source);
+        sitemapUrl = await this.sitemapDiscovery.autoDetectSitemap(this.source);
         // Auto-detected sitemap
       }
 
-      const urls = await this.sitemapParser.parseSitemap(sitemapUrl);
+      const urls = await this.sitemapDiscovery.parseSitemap(sitemapUrl);
       // Parsed sitemap: Found URLs to scan
       // First few URLs processed
 
@@ -161,7 +176,7 @@ class MediaLibrary extends LocalizableElement {
 
       this._scanProgress = { current: 0, total: urls.length, found: 0 };
       this.requestUpdate();
-      const mediaData = await this.sitemapParser.scanPages(urls, (completed, total, found) => {
+      const mediaData = await this.contentParser.scanPages(urls, (completed, total, found) => {
         this._scanProgress = { current: completed, total, found };
         this.requestUpdate();
       }, previousMetadata);
@@ -219,8 +234,8 @@ class MediaLibrary extends LocalizableElement {
   handleToggleImageAnalysis(event) {
     this._imageAnalysisEnabled = event.detail.enabled;
 
-    if (this.sitemapParser) {
-      this.sitemapParser.setImageAnalysis(this._imageAnalysisEnabled, {
+    if (this.contentParser) {
+      this.contentParser.setImageAnalysis(this._imageAnalysisEnabled, {
         extractEXIF: true,
         extractDimensions: true,
         categorizeFromFilename: true,

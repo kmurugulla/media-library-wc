@@ -21,6 +21,22 @@ class MediaSidebar extends LocalizableElement {
     this.locale = 'en';
   }
 
+  async connectedCallback() {
+    super.connectedCallback();
+    this.handleClearFilters = this.handleClearFilters.bind(this);
+    window.addEventListener('clear-filters', this.handleClearFilters);
+  }
+
+  disconnectedCallback() {
+    super.disconnectedCallback();
+    window.removeEventListener('clear-filters', this.handleClearFilters);
+  }
+
+  handleClearFilters() {
+    this.activeFilter = 'all';
+    this.requestUpdate();
+  }
+
   render() {
     const counts = this.filterCounts || {};
 

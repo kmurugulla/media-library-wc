@@ -1,7 +1,7 @@
 // src/components/topbar/topbar.js
 import { html } from 'lit';
 import LocalizableElement from '../base-localizable.js';
-import getSvg from '../../utils/getSvg.js';
+import getSvg from '../../utils/get-svg.js';
 import { getStyles } from '../../utils/get-styles.js';
 import { generateSearchSuggestions, createSearchSuggestion } from '../../utils/filters.js';
 import topbarStyles from './topbar.css?inline';
@@ -57,12 +57,15 @@ class MediaTopbar extends LocalizableElement {
     getSvg({ parent: this.shadowRoot, paths: ICONS });
 
     this.handleOutsideClick = this.handleOutsideClick.bind(this);
+    this.handleClearSearch = this.handleClearSearch.bind(this);
     document.addEventListener('click', this.handleOutsideClick);
+    window.addEventListener('clear-search', this.handleClearSearch);
   }
 
   disconnectedCallback() {
     super.disconnectedCallback();
     document.removeEventListener('click', this.handleOutsideClick);
+    window.removeEventListener('clear-search', this.handleClearSearch);
   }
 
   handleOutsideClick(e) {
@@ -72,6 +75,14 @@ class MediaTopbar extends LocalizableElement {
       this._activeIndex = -1;
       this._suppressSuggestions = true;
     }
+  }
+
+  handleClearSearch() {
+    this.searchQuery = '';
+    this._suggestions = [];
+    this._activeIndex = -1;
+    this._suppressSuggestions = false;
+    this.requestUpdate();
   }
 
   render() {
@@ -85,7 +96,7 @@ class MediaTopbar extends LocalizableElement {
             <input 
               class="search-input"
               type="text"
-              placeholder="Search media, doc:path, folder:path, or / for root files..."
+              placeholder=${this.t('mediaLibrary.searchPlaceholder')}
               .value=${this.searchQuery || ''}
               @input=${this.handleSearchInput}
               @keydown=${this.handleKeyDown}

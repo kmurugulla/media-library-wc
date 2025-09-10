@@ -1,5 +1,5 @@
-// src/utils/virtual-scroll-list.js
-import { VirtualScrollManager } from './virtual-scroll-base.js';
+// src/utils/virtual-scroll/list.js
+import { VirtualScrollManager } from './base.js';
 
 /**
  * Virtual scroll manager specifically for list layouts

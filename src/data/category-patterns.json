@@ -57,12 +57,12 @@
       }
     },
     "people-photos": {
-      "description": "Team photos, headshots, and professional portraits",
+      "description": "Team photos, headshots, professional portraits, and testimonials",
       "keywords": {
-        "filename": ["team-", "staff-", "member-", "person-", "headshot-", "portrait-", "profile-", "about-", "people-", "executive-", "ceo-", "cto-", "director-", "manager-"],
-        "context": ["team", "staff", "member", "person", "headshot", "portrait", "about", "people", "leadership", "executive", "team-section", "about-section"],
-        "alt": ["team", "staff", "member", "person", "headshot", "portrait", "about", "people", "CEO", "CTO", "Manager", "Director", "Executive", "Leader", "Head", "Chief"],
-        "position": ["below-fold", "about-section", "team-section", "team", "content", "article"]
+        "filename": ["team-", "staff-", "member-", "person-", "headshot-", "portrait-", "profile-", "about-", "people-", "executive-", "ceo-", "cto-", "director-", "manager-", "testimonial-", "customer-", "client-", "review-"],
+        "context": ["team", "staff", "member", "person", "headshot", "portrait", "about", "people", "leadership", "executive", "team-section", "about-section", "testimonial", "testimonials", "customer", "customers", "client", "clients", "review", "reviews", "feedback", "quote", "quotes", "endorsement", "endorsements", "recommendation", "recommendations"],
+        "alt": ["team", "staff", "member", "person", "headshot", "portrait", "about", "people", "CEO", "CTO", "Manager", "Director", "Executive", "Leader", "Head", "Chief", "testimonial", "customer", "client", "review", "feedback", "quote", "endorsement", "recommendation"],
+        "position": ["below-fold", "about-section", "team-section", "team", "content", "article", "testimonial-section", "testimonials", "reviews-section", "feedback-section"]
       },
       "negativeIndicators": {
         "filename": ["screenshot-", "logo-", "brand-", "product-", "catalog-", "demo-", "ui-", "interface-", "app-", "software-", "release-", "feature-", "update-", "change-", "improvement-", "fix-", "bug-", "enhancement-"],

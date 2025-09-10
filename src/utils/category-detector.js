@@ -254,7 +254,7 @@ function analyzeContextClustering(categoryName, context, altText) {
       break;
 
     case 'people-photos':
-      if (text.includes('team') || text.includes('staff')) {
+      if (text.includes('team') || text.includes('staff') || text.includes('testimonial') || text.includes('customer') || text.includes('client')) {
         score += 2;
       }
       break;
@@ -438,7 +438,7 @@ export function getCategoryDescription(categoryName) {
   const descriptions = {
     screenshots: 'App interfaces, software demos, and UI previews',
     logos: 'Brand logos, company symbols, and identity elements',
-    'people-photos': 'Team photos, headshots, and professional portraits',
+    'people-photos': 'Team photos, headshots, professional portraits, and testimonials',
     products: 'Product photos, catalog images, and merchandise',
     '404-media': 'Images that return 404 errors or other HTTP errors',
     other: 'Images that don\'t fit into other categories',

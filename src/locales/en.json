@@ -18,7 +18,7 @@
   },
   "mediaLibrary": {
     "title": "Media Library",
-    "searchPlaceholder": "Search media...",
+    "searchPlaceholder": "Search media, doc:path, folder:path, or / for root files...",
     "noResults": "No media found",
     "loadingMedia": "Loading media...",
     "scanProgress": "Scanning {{current}} of {{total}} pages...",
@@ -74,6 +74,7 @@
     "title": "Categories",
     "hero-banner": "Hero/Banner",
     "team-member": "Team/People", 
+    "testimonials": "Testimonials",
     "navigation-ui": "Navigation/UI",
     "article-content": "Article/Content",
     "product-service": "Product/Service",

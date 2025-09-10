@@ -2,10 +2,10 @@
 import { html } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import LocalizableElement from '../base-localizable.js';
-import getSvg from '../../utils/getSvg.js';
+import getSvg from '../../utils/get-svg.js';
 import { getMediaType, isImage } from '../../utils/utils.js';
 import { getStyles } from '../../utils/get-styles.js';
-import { ListVirtualScrollManager } from '../../utils/virtual-scroll.js';
+import { ListVirtualScrollManager } from '../../utils/virtual-scroll/scroll.js';
 import listStyles from './list.css?inline';
 
 class MediaList extends LocalizableElement {

@@ -1,5 +1,5 @@
-// src/utils/virtual-scroll-grid.js
-import { VirtualScrollManager } from './virtual-scroll-base.js';
+// src/utils/virtual-scroll/grid.js
+import { VirtualScrollManager } from './base.js';
 
 /**
  * Virtual scroll manager specifically for grid layouts

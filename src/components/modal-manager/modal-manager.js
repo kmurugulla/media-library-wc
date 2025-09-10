@@ -1,6 +1,6 @@
 import { html } from 'lit';
 import LocalizableElement from '../base-localizable.js';
-import getSvg from '../../utils/getSvg.js';
+import getSvg from '../../utils/get-svg.js';
 import { getStyles } from '../../utils/get-styles.js';
 import modalManagerStyles from './modal-manager.css?inline';
 
@@ -310,7 +310,7 @@ class ModalManager extends LocalizableElement {
                             </button>
                           ` : html`
                             <button class="action-button" @click=${() => this.handleViewDocument(doc)}>
-                              View
+                              Open
                             </button>
                           `}
                         </div>
