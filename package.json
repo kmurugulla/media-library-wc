@@ -21,11 +21,14 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:with-proxy": "concurrently \"npm run cors-proxy\" \"npm run dev\"",
+    "cors-proxy": "node scripts/cors-proxy-server.js",
     "build": "vite build && npm run build:assets",
+    "build:core": "vite build --mode core && npm run build:assets",
     "build:full": "vite build --mode self-contained && npm run build:assets",
+    "build:all": "npm run build && npm run build:core && npm run build:full",
     "build:assets": "node build-dist.js",
     "preview": "vite preview",
-    "test": "vite --open /test/index.html",
     "lint:js": "eslint src",
     "lint:css": "stylelint \"src/**/*.css\"",
     "lint": "npm run lint:js && npm run lint:css",
@@ -51,6 +54,7 @@
   "devDependencies": {
     "@babel/core": "7.24.5",
     "@babel/eslint-parser": "7.24.5",
+    "concurrently": "^8.2.2",
     "eslint": "8.57.0",
     "eslint-config-airbnb-base": "15.0.0",
     "eslint-plugin-import": "2.29.1",

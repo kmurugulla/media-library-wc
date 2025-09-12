@@ -1,5 +1,5 @@
 import { build } from 'vite';
-import { copyFileSync, mkdirSync, existsSync } from 'fs';
+import { copyFileSync, mkdirSync, existsSync, cpSync } from 'fs';
 import { join } from 'path';
 
 // This function only copies assets - the main build is handled by vite build command
@@ -63,6 +63,9 @@ dataFiles.forEach(dataFile => {
     console.log(`Copied ${dataFile}`);
   }
 });
+
+// Examples are kept at root level for development
+// They are not copied to dist as dist only contains core WC files
 
 // Fix asset paths in the built JavaScript file
 import { readFileSync, writeFileSync } from 'fs';

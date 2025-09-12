@@ -1,0 +1,561 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Library - Multi-Source Integration</title>
+    <link rel="stylesheet" href="../style.css">
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+        .controls {
+            padding: 20px;
+            border-bottom: 1px solid #e5e7eb;
+            background: #f9fafb;
+        }
+        .source-section {
+            margin-bottom: 25px;
+            padding: 15px;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            background: white;
+        }
+        .source-section h3 {
+            margin: 0 0 15px 0;
+            color: #374151;
+            font-size: 16px;
+        }
+        .control-group {
+            margin-bottom: 15px;
+        }
+        .control-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+            color: #374151;
+        }
+        .control-group input, .control-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .checkbox-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        .button-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+            flex-wrap: wrap;
+        }
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background-color 0.2s;
+        }
+        .btn-primary {
+            background: #667eea;
+            color: white;
+        }
+        .btn-primary:hover {
+            background: #5a67d8;
+        }
+        .btn-secondary {
+            background: #6b7280;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #4b5563;
+        }
+        .btn-success {
+            background: #059669;
+            color: white;
+        }
+        .btn-success:hover {
+            background: #047857;
+        }
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .media-library-container {
+            padding: 20px;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 6px;
+            font-size: 14px;
+        }
+        .status.info {
+            background: #dbeafe;
+            color: #1e40af;
+            border: 1px solid #93c5fd;
+        }
+        .status.success {
+            background: #dcfce7;
+            color: #166534;
+            border: 1px solid #86efac;
+        }
+        .status.error {
+            background: #fee2e2;
+            color: #dc2626;
+            border: 1px solid #fca5a5;
+        }
+        .info-box {
+            background: #f0f9ff;
+            border: 1px solid #0ea5e9;
+            border-radius: 6px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .info-box h3 {
+            margin: 0 0 10px 0;
+            color: #0c4a6e;
+        }
+        .info-box p {
+            margin: 0;
+            color: #075985;
+            font-size: 14px;
+        }
+        .source-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .stat-card {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 15px;
+            text-align: center;
+        }
+        .stat-card h4 {
+            margin: 0 0 5px 0;
+            color: #475569;
+            font-size: 14px;
+        }
+        .stat-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1e293b;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Media Library - Multi-Source Integration</h1>
+            <p>Example showing how to integrate multiple data sources with the Media Library</p>
+        </div>
+
+        <div class="controls">
+            <div class="info-box">
+                <h3>Multi-Source Integration</h3>
+                <p>This example demonstrates how to combine multiple data sources to create a comprehensive media library. You can scan from different sources and merge the results into a single media library view.</p>
+            </div>
+
+            <!-- Sitemap Source -->
+            <div class="source-section">
+                <h3>🌐 Sitemap Source</h3>
+                <div class="control-group">
+                    <label for="sitemap-url">Website URL:</label>
+                    <input 
+                        type="url" 
+                        id="sitemap-url" 
+                        placeholder="https://example.com"
+                    >
+                </div>
+                <div class="control-group">
+                    <label for="sitemap-specific">Specific Sitemap URL (Optional):</label>
+                    <input 
+                        type="url" 
+                        id="sitemap-specific" 
+                        placeholder="https://example.com/sitemap.xml"
+                    >
+                </div>
+                <button id="scan-sitemap-btn" class="btn btn-primary">Scan Sitemap</button>
+            </div>
+
+            <!-- WordPress Source -->
+            <div class="source-section">
+                <h3>📝 WordPress Source</h3>
+                <div class="control-group">
+                    <label for="wordpress-url">WordPress Site URL:</label>
+                    <input 
+                        type="url" 
+                        id="wordpress-url" 
+                        placeholder="https://your-wordpress-site.com"
+                    >
+                </div>
+                <div class="control-group">
+                    <label>Content Types:</label>
+                    <div class="checkbox-group">
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="wp-posts" checked>
+                            <label for="wp-posts">Posts</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="wp-pages" checked>
+                            <label for="wp-pages">Pages</label>
+                        </div>
+                        <div class="checkbox-item">
+                            <input type="checkbox" id="wp-media" checked>
+                            <label for="wp-media">Media</label>
+                        </div>
+                    </div>
+                </div>
+                <button id="scan-wordpress-btn" class="btn btn-primary">Scan WordPress</button>
+            </div>
+
+            <!-- AEM Source -->
+            <div class="source-section">
+                <h3>🏢 AEM Source</h3>
+                <div class="control-group">
+                    <label for="aem-url">AEM Site URL:</label>
+                    <input 
+                        type="url" 
+                        id="aem-url" 
+                        placeholder="https://your-aem-site.com"
+                    >
+                </div>
+                <div class="control-group">
+                    <label for="aem-content-path">Content Path:</label>
+                    <input 
+                        type="text" 
+                        id="aem-content-path" 
+                        placeholder="/content"
+                        value="/content"
+                    >
+                </div>
+                <button id="scan-aem-btn" class="btn btn-primary">Scan AEM</button>
+            </div>
+
+            <!-- Adobe Dynamic Assets Source -->
+            <div class="source-section">
+                <h3>🎨 Adobe Dynamic Assets</h3>
+                <div class="control-group">
+                    <label for="adobe-url">Adobe Dynamic Media URL:</label>
+                    <input 
+                        type="url" 
+                        id="adobe-url" 
+                        placeholder="https://your-company.scene7.com"
+                    >
+                </div>
+                <div class="control-group">
+                    <label for="adobe-api-key">API Key:</label>
+                    <input 
+                        type="text" 
+                        id="adobe-api-key" 
+                        placeholder="Your API key"
+                    >
+                </div>
+                <div class="control-group">
+                    <label for="adobe-company-id">Company ID:</label>
+                    <input 
+                        type="text" 
+                        id="adobe-company-id" 
+                        placeholder="Your company ID"
+                    >
+                </div>
+                <button id="scan-adobe-btn" class="btn btn-primary">Scan Adobe Assets</button>
+            </div>
+
+            <!-- Global Controls -->
+            <div class="source-section">
+                <h3>⚙️ Global Controls</h3>
+                <div class="control-group">
+                    <label for="storage-type">Storage:</label>
+                    <select id="storage-type">
+                        <option value="indexeddb">IndexedDB</option>
+                        <option value="local">Local Storage</option>
+                    </select>
+                </div>
+                <div class="button-group">
+                    <button id="scan-all-btn" class="btn btn-success">Scan All Sources</button>
+                    <button id="clear-btn" class="btn btn-secondary">Clear All Data</button>
+                </div>
+            </div>
+
+            <div id="status"></div>
+            <div id="stats" class="source-stats"></div>
+        </div>
+
+        <div class="media-library-container">
+            <media-library 
+                id="media-library"
+                storage="indexeddb"
+                locale="en">
+            </media-library>
+        </div>
+    </div>
+
+    <script type="module">
+        import MediaLibrary from '../media-library.es.js';
+        import { SitemapSource, WordPressSource, AEMSource, AdobeDASource } from '../sources/index.js';
+        
+        // Initialize components
+        const mediaLibrary = document.getElementById('media-library');
+        const sitemapSource = new SitemapSource();
+        const wordpressSource = new WordPressSource();
+        const aemSource = new AEMSource();
+        const adobeSource = new AdobeDASource();
+        
+        // Get DOM elements
+        const sitemapUrlInput = document.getElementById('sitemap-url');
+        const sitemapSpecificInput = document.getElementById('sitemap-specific');
+        const wordpressUrlInput = document.getElementById('wordpress-url');
+        const aemUrlInput = document.getElementById('aem-url');
+        const aemContentPathInput = document.getElementById('aem-content-path');
+        const adobeUrlInput = document.getElementById('adobe-url');
+        const adobeApiKeyInput = document.getElementById('adobe-api-key');
+        const adobeCompanyIdInput = document.getElementById('adobe-company-id');
+        const storageSelect = document.getElementById('storage-type');
+        
+        const scanSitemapBtn = document.getElementById('scan-sitemap-btn');
+        const scanWordpressBtn = document.getElementById('scan-wordpress-btn');
+        const scanAemBtn = document.getElementById('scan-aem-btn');
+        const scanAdobeBtn = document.getElementById('scan-adobe-btn');
+        const scanAllBtn = document.getElementById('scan-all-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        
+        const statusDiv = document.getElementById('status');
+        const statsDiv = document.getElementById('stats');
+        
+        // Source statistics
+        const sourceStats = {
+            sitemap: { pages: 0, media: 0 },
+            wordpress: { pages: 0, media: 0 },
+            aem: { pages: 0, media: 0 },
+            adobe: { pages: 0, media: 0 }
+        };
+        
+        // Update storage type
+        storageSelect.addEventListener('change', (e) => {
+            mediaLibrary.storage = e.target.value;
+            showStatus('Storage type changed', 'info');
+        });
+        
+        // Sitemap scan handler
+        scanSitemapBtn.addEventListener('click', async () => {
+            await scanSource('sitemap', async () => {
+                const url = sitemapUrlInput.value.trim();
+                const specific = sitemapSpecificInput.value.trim();
+                
+                if (!url) throw new Error('Please enter a website URL');
+                
+                const pageList = await sitemapSource.getPageList(url, specific || null);
+                const siteKey = mediaLibrary.generateSiteKey(url);
+                
+                return await mediaLibrary.loadFromPageList(pageList, (completed, total, found) => {
+                    showStatus(`Sitemap scan: ${completed}/${total} pages, ${found} media items`, 'info');
+                }, siteKey);
+            });
+        });
+        
+        // WordPress scan handler
+        scanWordpressBtn.addEventListener('click', async () => {
+            await scanSource('wordpress', async () => {
+                const url = wordpressUrlInput.value.trim();
+                
+                if (!url) throw new Error('Please enter a WordPress site URL');
+                
+                const postTypes = [];
+                if (document.getElementById('wp-posts').checked) postTypes.push('posts');
+                if (document.getElementById('wp-pages').checked) postTypes.push('pages');
+                
+                const options = { postTypes, perPage: 100, maxPages: 10 };
+                const pageList = await wordpressSource.getPageList(url, options);
+                
+                const siteKey = mediaLibrary.generateSiteKey(url);
+                
+                return await mediaLibrary.loadFromPageList(pageList, (completed, total, found) => {
+                    showStatus(`WordPress scan: ${completed}/${total} pages, ${found} media items`, 'info');
+                }, siteKey);
+            });
+        });
+        
+        // AEM scan handler
+        scanAemBtn.addEventListener('click', async () => {
+            await scanSource('aem', async () => {
+                const url = aemUrlInput.value.trim();
+                const contentPath = aemContentPathInput.value.trim() || '/content';
+                
+                if (!url) throw new Error('Please enter an AEM site URL');
+                
+                const options = { contentPath, maxResults: 1000 };
+                const pageList = await aemSource.getPageList(url, options);
+                
+                const siteKey = mediaLibrary.generateSiteKey(url);
+                
+                return await mediaLibrary.loadFromPageList(pageList, (completed, total, found) => {
+                    showStatus(`AEM scan: ${completed}/${total} pages, ${found} media items`, 'info');
+                }, siteKey);
+            });
+        });
+        
+        // Adobe scan handler
+        scanAdobeBtn.addEventListener('click', async () => {
+            await scanSource('adobe', async () => {
+                const url = adobeUrlInput.value.trim();
+                const apiKey = adobeApiKeyInput.value.trim();
+                const companyId = adobeCompanyIdInput.value.trim();
+                
+                if (!url || !apiKey || !companyId) {
+                    throw new Error('Please enter Adobe Dynamic Media URL, API key, and Company ID');
+                }
+                
+                const options = { apiKey, companyId, maxResults: 1000 };
+                const pageList = await adobeSource.getPageList(url, options);
+                
+                const siteKey = mediaLibrary.generateSiteKey(url);
+                
+                return await mediaLibrary.loadFromPageList(pageList, (completed, total, found) => {
+                    showStatus(`Adobe scan: ${completed}/${total} pages, ${found} media items`, 'info');
+                }, siteKey);
+            });
+        });
+        
+        // Scan all sources handler
+        scanAllBtn.addEventListener('click', async () => {
+            const sources = [
+                { name: 'sitemap', button: scanSitemapBtn },
+                { name: 'wordpress', button: scanWordpressBtn },
+                { name: 'aem', button: scanAemBtn },
+                { name: 'adobe', button: scanAdobeBtn }
+            ];
+            
+            scanAllBtn.disabled = true;
+            scanAllBtn.textContent = 'Scanning All Sources...';
+            
+            try {
+                showStatus('Starting multi-source scan...', 'info');
+                
+                for (const source of sources) {
+                    if (source.button.disabled) {
+                        source.button.click();
+                        // Wait a bit between sources
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                    }
+                }
+                
+                showStatus('Multi-source scan completed!', 'success');
+            } catch (error) {
+                showStatus(`Multi-source scan failed: ${error.message}`, 'error');
+            } finally {
+                scanAllBtn.disabled = false;
+                scanAllBtn.textContent = 'Scan All Sources';
+            }
+        });
+        
+        // Clear button handler
+        clearBtn.addEventListener('click', () => {
+            mediaLibrary.clearData();
+            sourceStats.sitemap = { pages: 0, media: 0 };
+            sourceStats.wordpress = { pages: 0, media: 0 };
+            sourceStats.aem = { pages: 0, media: 0 };
+            sourceStats.adobe = { pages: 0, media: 0 };
+            updateStats();
+            showStatus('All data cleared', 'info');
+        });
+        
+        // Generic scan source function
+        async function scanSource(sourceName, scanFunction) {
+            const button = document.getElementById(`scan-${sourceName}-btn`);
+            
+            try {
+                button.disabled = true;
+                button.textContent = 'Scanning...';
+                
+                const mediaData = await scanFunction();
+                
+                sourceStats[sourceName].media = mediaData.length;
+                updateStats();
+                
+                showStatus(`${sourceName} scan complete! Found ${mediaData.length} media items`, 'success');
+                
+            } catch (error) {
+                showStatus(`${sourceName} scan failed: ${error.message}`, 'error');
+                console.error(`${sourceName} scan error:`, error);
+            } finally {
+                button.disabled = false;
+                button.textContent = `Scan ${sourceName.charAt(0).toUpperCase() + sourceName.slice(1)}`;
+            }
+        }
+        
+        // Update statistics display
+        function updateStats() {
+            const totalPages = Object.values(sourceStats).reduce((sum, stat) => sum + stat.pages, 0);
+            const totalMedia = Object.values(sourceStats).reduce((sum, stat) => sum + stat.media, 0);
+            
+            statsDiv.innerHTML = `
+                <div class="stat-card">
+                    <h4>Total Pages</h4>
+                    <div class="value">${totalPages}</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Total Media</h4>
+                    <div class="value">${totalMedia}</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Sitemap Media</h4>
+                    <div class="value">${sourceStats.sitemap.media}</div>
+                </div>
+                <div class="stat-card">
+                    <h4>WordPress Media</h4>
+                    <div class="value">${sourceStats.wordpress.media}</div>
+                </div>
+                <div class="stat-card">
+                    <h4>AEM Media</h4>
+                    <div class="value">${sourceStats.aem.media}</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Adobe Media</h4>
+                    <div class="value">${sourceStats.adobe.media}</div>
+                </div>
+            `;
+        }
+        
+        // Show status message
+        function showStatus(message, type = 'info') {
+            statusDiv.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+        
+        // Initialize
+        showStatus('Ready to scan multiple sources. Configure each source and click individual scan buttons or "Scan All Sources"', 'info');
+        updateStats();
+    </script>
+</body>
+</html>

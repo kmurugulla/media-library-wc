@@ -1,6 +1,6 @@
 // src/utils/category-detector.js
 
-import categoryPatterns from '../data/category-patterns.json' with { type: 'json' };
+import categoryPatterns from '../data/category-patterns.json';
 
 let parsedPatterns = null;
 

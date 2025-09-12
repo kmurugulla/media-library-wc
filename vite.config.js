@@ -2,9 +2,14 @@
 import { defineConfig } from 'vite';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import litCss from 'vite-plugin-lit-css';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { copyFileSync, mkdirSync, existsSync } from 'fs';
+// eslint-disable-next-line import/no-extraneous-dependencies
+import { resolve } from 'path';
 
 export default defineConfig(({ mode }) => {
   const isSelfContained = mode === 'self-contained';
+  const isCore = mode === 'core';
 
   return {
     plugins: [
@@ -16,6 +21,49 @@ export default defineConfig(({ mode }) => {
         // Enable HMR for CSS files
         hmr: true,
       }),
+      // Custom plugin to copy data sources and examples
+      {
+        name: 'copy-data-sources',
+        writeBundle() {
+          const distDir = resolve(__dirname, 'dist');
+          
+          // Copy data sources
+          const sourcesDir = resolve(distDir, 'sources');
+          if (!existsSync(sourcesDir)) {
+            mkdirSync(sourcesDir, { recursive: true });
+          }
+          
+          // Copy examples
+          const examplesDir = resolve(distDir, 'examples');
+          if (!existsSync(examplesDir)) {
+            mkdirSync(examplesDir, { recursive: true });
+          }
+          
+          // Copy docs
+          const docsDir = resolve(distDir, 'docs');
+          if (!existsSync(docsDir)) {
+            mkdirSync(docsDir, { recursive: true });
+          }
+          
+          // Copy assets
+          const assetsDir = resolve(distDir, 'assets');
+          if (!existsSync(assetsDir)) {
+            mkdirSync(assetsDir, { recursive: true });
+          }
+          
+          // Copy locales
+          const localesDir = resolve(distDir, 'locales');
+          if (!existsSync(localesDir)) {
+            mkdirSync(localesDir, { recursive: true });
+          }
+          
+          // Copy data
+          const dataDir = resolve(distDir, 'data');
+          if (!existsSync(dataDir)) {
+            mkdirSync(dataDir, { recursive: true });
+          }
+        }
+      }
     ],
     optimizeDeps: {
       include: [
@@ -40,9 +88,17 @@ export default defineConfig(({ mode }) => {
     },
     build: {
       lib: {
-        entry: 'src/index.js',
+        entry: isCore ? 'src/components/media-library.js' : 'src/index.js',
         name: 'MediaLibrary',
-        fileName: (format) => (isSelfContained ? `media-library-full.${format}.js` : `media-library.${format}.js`),
+        fileName: (format) => {
+          if (isCore) {
+            return `media-library-core.${format}.js`;
+          } else if (isSelfContained) {
+            return `media-library-full.${format}.js`;
+          } else {
+            return `media-library.${format}.js`;
+          }
+        },
         formats: isSelfContained ? ['iife'] : ['es', 'umd'],
       },
       rollupOptions: {
@@ -77,9 +133,34 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 3000,
-      open: '/test/index.html',
+      strictPort: true, // Don't try other ports if 3000 is busy
+      open: '/examples/sitemap/index.html',
       // Enable HMR for CSS files
       hmr: { overlay: true },
+      // CORS proxy configuration for development
+      proxy: {
+        '/api/proxy': {
+          target: 'https://cors-anywhere.herokuapp.com/',
+          changeOrigin: true,
+          rewrite: (path) => path.replace(/^\/api\/proxy/, ''),
+          configure: (proxy, options) => {
+            proxy.on('proxyReq', (proxyReq, req, res) => {
+              // Add CORS headers
+              proxyReq.setHeader('Origin', 'https://cors-anywhere.herokuapp.com');
+            });
+          },
+        },
+        // Alternative proxy using allorigins.win
+        '/api/cors': {
+          target: 'https://api.allorigins.win',
+          changeOrigin: true,
+          rewrite: (path) => {
+            // Extract the encoded URL from the path and convert to query parameter
+            const encodedUrl = path.replace(/^\/api\/cors\//, '');
+            return `/raw?url=${encodedUrl}`;
+          },
+        },
+      },
     },
   };
 });

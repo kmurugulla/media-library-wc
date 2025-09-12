@@ -3,7 +3,6 @@ import { html } from 'lit';
 import LocalizableElement from './base-localizable.js';
 import i18n from '../utils/i18n.js';
 import BrowserStorage from '../utils/storage.js';
-import SitemapDiscovery from '../utils/sitemap.js';
 import ContentParser from '../utils/parser.js';
 import { processMediaData, calculateFilteredMediaData } from '../utils/filters.js';
 import { copyMediaToClipboard, urlsMatch } from '../utils/utils.js';
@@ -18,8 +17,6 @@ import mediaLibraryStyles from './media-library.css?inline';
 
 class MediaLibrary extends LocalizableElement {
   static properties = {
-    source: { type: String },
-    sitemapUrl: { type: String },
     storage: { type: String },
     locale: { type: String },
     _mediaData: { state: true },
@@ -38,8 +35,6 @@ class MediaLibrary extends LocalizableElement {
 
   constructor() {
     super();
-    this.source = '';
-    this.sitemapUrl = '';
     this.storage = 'indexeddb';
     this.locale = 'en';
     this._mediaData = [];
@@ -49,10 +44,9 @@ class MediaLibrary extends LocalizableElement {
     this._currentView = 'grid';
     this._isScanning = false;
     this._scanProgress = null;
-    this._imageAnalysisEnabled = true;
+    this._imageAnalysisEnabled = false;
 
     this.storageManager = null;
-    this.sitemapDiscovery = null;
     this.contentParser = null;
     this._processedData = null;
   }
@@ -75,13 +69,19 @@ class MediaLibrary extends LocalizableElement {
     i18n.setLocale(this.locale);
 
     this.storageManager = new BrowserStorage(this.storage);
-    this.sitemapDiscovery = new SitemapDiscovery();
     this.contentParser = new ContentParser({
       enableImageAnalysis: this._imageAnalysisEnabled,
+      enableCategorization: true, // Always enabled by default
       analysisConfig: {
         extractEXIF: true,
         extractDimensions: true,
         categorizeFromFilename: true,
+      },
+      categorizationConfig: {
+        useFilename: true,
+        useContext: true,
+        useAltText: true,
+        usePosition: true,
       },
     });
 
@@ -112,7 +112,7 @@ class MediaLibrary extends LocalizableElement {
         return;
       }
 
-      const key = siteKey || (this.source ? this.generateSiteKey(this.source) : 'media-data');
+      const key = siteKey || 'media-data';
       const data = await this.storageManager.load(key);
       if (data && data.length > 0) {
         this._mediaData = data;
@@ -132,10 +132,17 @@ class MediaLibrary extends LocalizableElement {
     }
   }
 
-  async handleScan() {
-    if (!this.source) {
-      this._error = this.t('errors.invalidSource');
-      return;
+  /**
+   * Load media data from a list of pages
+   * @param {Array} pageList - Array of page objects with url, lastmod, etc.
+   * @param {Function} onProgress - Progress callback function
+   * @param {string} siteKey - Optional site key for storage
+   * @returns {Promise<Array>} Array of media data
+   */
+  async loadFromPageList(pageList, onProgress = null, siteKey = null) {
+    if (!pageList || pageList.length === 0) {
+      this._error = 'No pages provided to scan';
+      return [];
     }
 
     try {
@@ -152,47 +159,38 @@ class MediaLibrary extends LocalizableElement {
 
       window.dispatchEvent(new CustomEvent('clear-search'));
       window.dispatchEvent(new CustomEvent('clear-filters'));
-      let sitemapUrl = this.source;
-      if (this.sitemapUrl && this.sitemapUrl.trim()) {
-        // Using manual sitemap URL
-        sitemapUrl = this.sitemapUrl;
-      } else if (this.isWebsiteUrl(this.source)) {
-        // Website URL detected, auto-detecting sitemap
-        sitemapUrl = await this.sitemapDiscovery.autoDetectSitemap(this.source);
-        // Auto-detected sitemap
-      }
 
-      const urls = await this.sitemapDiscovery.parseSitemap(sitemapUrl);
-      // Parsed sitemap: Found URLs to scan
-      // First few URLs processed
+      const storageKey = siteKey || 'media-data';
+      const previousMetadata = await this.storageManager.loadScanMetadata(storageKey);
 
-      if (urls.length === 0) {
-        this._error = 'No URLs found in sitemap. This could be because:\n• The sitemap is empty\n• The sitemap contains only sitemap indexes (nested sitemaps)\n• CORS restrictions are blocking access to nested sitemaps\n• The sitemap format is not supported\n\nFor sites without sitemaps (like Medium.com), the scanner will try to access common pages instead.';
-        return;
-      }
-
-      const siteKey = this.generateSiteKey(this.source);
-      const previousMetadata = await this.storageManager.loadScanMetadata(siteKey);
-
-      this._scanProgress = { current: 0, total: urls.length, found: 0 };
+      this._scanProgress = { current: 0, total: pageList.length, found: 0 };
       this.requestUpdate();
-      const mediaData = await this.contentParser.scanPages(urls, (completed, total, found) => {
+
+      const progressCallback = (completed, total, found) => {
         this._scanProgress = { current: completed, total, found };
         this.requestUpdate();
-      }, previousMetadata);
+        if (onProgress) {
+          onProgress(completed, total, found);
+        }
+      };
+
+      const mediaData = await this.contentParser.scanPages(
+        pageList,
+        progressCallback,
+        previousMetadata,
+      );
 
       const scanDuration = Date.now() - this._scanStartTime;
       const durationSeconds = (scanDuration / 1000).toFixed(1);
 
-      await this.storageManager.save(mediaData, siteKey);
+      await this.storageManager.save(mediaData, storageKey);
       const pageLastModified = {};
-      urls.forEach((url) => {
-        pageLastModified[url.loc] = url.lastmod;
+      pageList.forEach((page) => {
+        pageLastModified[page.loc || page.url] = page.lastmod;
       });
 
-      await this.storageManager.saveScanMetadata(siteKey, {
-        sitemapUrl,
-        totalPages: urls.length,
+      await this.storageManager.saveScanMetadata(storageKey, {
+        totalPages: pageList.length,
         pageLastModified,
         scanDuration,
       });
@@ -204,30 +202,65 @@ class MediaLibrary extends LocalizableElement {
       this._lastScanDuration = durationSeconds;
 
       this._scanStats = {
-        pagesScanned: urls.length,
+        pagesScanned: pageList.length,
         mediaFound: mediaData.length,
         duration: durationSeconds,
       };
 
-      this.showNotification(`Scan complete: ${mediaData.length} items found in ${durationSeconds}s`);
       if (typeof window.refreshSites === 'function') {
         window.refreshSites();
       }
+
+      return mediaData;
     } catch (error) {
       this._isScanning = false;
       this._scanProgress = null;
+      this._error = `Scan failed: ${error.message}`;
+      throw error;
+    }
+  }
 
-      if (error.message.includes('Failed to fetch')) {
-        this._error = `Failed to fetch sitemap from: ${this.source}\n\nError: ${error.message}\n\nThis is likely due to:\n• CORS (Cross-Origin Resource Sharing) restrictions\n• The site blocking requests from your domain\n• Network connectivity issues\n• Invalid sitemap URL\n\nTry using a different sitemap URL or test with a local sitemap.`;
-      } else if (error.message.includes('Failed to fetch sitemap')) {
-        this._error = `Failed to fetch sitemap: ${error.message}\n\nThis could be due to:\n• CORS restrictions\n• Network connectivity issues\n• Invalid sitemap URL\n• Server blocking the request`;
-      } else if (error.message.includes('Invalid XML')) {
-        this._error = `Invalid XML in sitemap: ${error.message}\n\nThe sitemap may be malformed or not a valid XML document.`;
-      } else {
-        this._error = `Scan failed: ${error.message}\n\nFull error details: ${JSON.stringify(error, null, 2)}`;
+  /**
+   * Load media data from storage
+   * @param {string} siteKey - Site key to load data for
+   * @returns {Promise<Array>} Array of media data
+   */
+  async loadFromStorage(siteKey) {
+    await this.loadMediaData(siteKey);
+    return this._mediaData;
+  }
+
+  /**
+   * Clear all media data
+   */
+  clearData() {
+    this._mediaData = [];
+    this._processedData = processMediaData([]);
+    this._error = null;
+    this._searchQuery = '';
+    this._selectedFilterType = 'all';
+    this._scanStats = null;
+    this._lastScanDuration = null;
+    this.requestUpdate();
+  }
+
+  /**
+   * Generate a site key from a source URL
+   * @param {string} source - Source URL or identifier
+   * @returns {string} Generated site key
+   */
+  generateSiteKey(source) {
+    if (!source) return 'media-data';
+
+    try {
+      if (source.startsWith('http://') || source.startsWith('https://')) {
+        const url = new URL(source);
+        return url.hostname.replace(/[^a-zA-Z0-9.-]/g, '_');
       }
 
-      // Scan failed
+      return source.replace(/[^a-zA-Z0-9.-]/g, '_');
+    } catch (error) {
+      return source.replace(/[^a-zA-Z0-9.-]/g, '_');
     }
   }
 
@@ -241,9 +274,6 @@ class MediaLibrary extends LocalizableElement {
         categorizeFromFilename: true,
       });
     }
-
-    const status = this._imageAnalysisEnabled ? 'enabled' : 'disabled';
-    this.showNotification(`Image analysis ${status}. ${this._imageAnalysisEnabled ? 'Next scan will include image analysis.' : 'Next scan will be faster without analysis.'}`);
   }
 
   get filteredMediaData() {
@@ -353,7 +383,6 @@ class MediaLibrary extends LocalizableElement {
         data: {
           media,
           usageData,
-          source: this.source,
         },
       },
     }));
@@ -403,7 +432,6 @@ class MediaLibrary extends LocalizableElement {
             .mediaData=${this._mediaData}
             @search=${this.handleSearch}
             @viewChange=${this.handleViewChange}
-            @scan=${this.handleScan}
             @toggleImageAnalysis=${this.handleToggleImageAnalysis}
           ></media-topbar>
         </div>
@@ -443,47 +471,6 @@ class MediaLibrary extends LocalizableElement {
 
   clearError() {
     this._error = null;
-  }
-
-  isWebsiteUrl(url) {
-    if (!url) return false;
-
-    if (url.includes('/sitemap') || url.endsWith('.xml')) {
-      return false;
-    }
-    const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/.*)?$/i;
-    return urlPattern.test(url);
-  }
-
-  isSitemapSource() {
-    if (!this.source) return false;
-
-    // Check if source is a sitemap URL
-    if (this.source.includes('/sitemap') || this.source.endsWith('.xml')) {
-      return true;
-    }
-
-    // Check if we have a manual sitemap URL set
-    if (this.sitemapUrl && this.sitemapUrl.trim()) {
-      return true;
-    }
-
-    return false;
-  }
-
-  generateSiteKey(source) {
-    if (!source) return 'media-data';
-
-    try {
-      if (source.startsWith('http://') || source.startsWith('https://')) {
-        const url = new URL(source);
-        return url.hostname.replace(/[^a-zA-Z0-9.-]/g, '_');
-      }
-
-      return source.replace(/[^a-zA-Z0-9.-]/g, '_');
-    } catch (error) {
-      return source.replace(/[^a-zA-Z0-9.-]/g, '_');
-    }
   }
 
   renderCurrentView() {

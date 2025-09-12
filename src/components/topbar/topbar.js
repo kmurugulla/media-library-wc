@@ -34,7 +34,7 @@ class MediaTopbar extends LocalizableElement {
     this.scanProgress = null;
     this.lastScanDuration = null;
     this.scanStats = null;
-    this.imageAnalysisEnabled = true;
+    this.imageAnalysisEnabled = false;
     this.mediaData = [];
     this._suggestions = [];
     this._activeIndex = -1;
@@ -163,50 +163,28 @@ class MediaTopbar extends LocalizableElement {
           </svg>
         </button>
 
-        <div class="scan-container">
-          <button 
-            class="scan-button"
-            @click=${this.handleScan}
-            ?disabled=${this.isScanning}
-          >
-            <svg class="scan-icon">
-              <use href="#refresh"></use>
-            </svg>
-            ${this.isScanning ? this.t('mediaLibrary.scanning') : this.t('mediaLibrary.scanButton')}
-          </button>
-          
-          <div class="analysis-toggle-container">
-            <label class="analysis-toggle-label">
-              <input 
-                type="checkbox" 
-                class="analysis-toggle-input"
-                ?checked=${this.imageAnalysisEnabled}
-                @change=${this.toggleImageAnalysis}
-                ?disabled=${this.isScanning}
-              />
-              <span class="analysis-toggle-slider ${this.imageAnalysisEnabled ? 'enabled' : ''}"></span>
-            </label>
-          </div>
-          
-          ${this.lastScanDuration ? html`
-            <div class="scan-duration">
-              Last scan: ${this.lastScanDuration}s
-            </div>
-          ` : ''}
+        <div class="analysis-toggle-container">
+          <span class="analysis-toggle-text">Deep Analysis</span>
+          <label class="analysis-toggle-label">
+            <input 
+              type="checkbox" 
+              class="analysis-toggle-input"
+              ?checked=${this.imageAnalysisEnabled}
+              @change=${this.toggleImageAnalysis}
+              ?disabled=${this.isScanning}
+            />
+            <span class="analysis-toggle-slider ${this.imageAnalysisEnabled ? 'enabled' : ''}"></span>
+          </label>
         </div>
+
+        
+        ${this.lastScanDuration ? html`
+          <div class="scan-duration">
+            Last scan: ${this.lastScanDuration}s
+          </div>
+        ` : ''}
       </div>
 
-      ${this.scanProgress ? html`
-        <div class="scan-progress">
-          ${this.scanProgress.current === 0
-    ? this.t('mediaLibrary.scanStarting')
-    : this.t('mediaLibrary.scanProgress', {
-      current: this.scanProgress.current || 0,
-      total: this.scanProgress.total || 0,
-    })
-}
-        </div>
-      ` : ''}
     `;
   }
 
@@ -362,14 +340,12 @@ class MediaTopbar extends LocalizableElement {
     this.handleViewChange(newView);
   }
 
-  handleScan() {
-    this.dispatchEvent(new CustomEvent('scan', { detail: {} }));
-  }
 
   toggleImageAnalysis(event) {
     this.imageAnalysisEnabled = event.target.checked;
     this.dispatchEvent(new CustomEvent('toggleImageAnalysis', { detail: { enabled: this.imageAnalysisEnabled } }));
   }
+
 }
 
 customElements.define('media-topbar', MediaTopbar);

@@ -1,6 +1,13 @@
-// src/utils/sitemap.js
-class SitemapDiscovery {
+// src/sources/sitemap.js
+/**
+ * Sitemap Data Source
+ * Provides page lists from XML sitemaps for the Media Library component
+ */
+
+class SitemapSource {
   constructor() {
+    this.name = 'Sitemap Source';
+    this.description = 'Discovers and parses XML sitemaps to extract page lists';
     this.commonSitemapPaths = [
       '/sitemap.xml',
       '/sitemap_index.xml',
@@ -11,6 +18,65 @@ class SitemapDiscovery {
       '/robots.txt',
     ];
     this.contentOrigin = null;
+  }
+
+  /**
+   * Check if the source can handle the given URL
+   * @param {string} url - URL to check
+   * @returns {boolean} True if this source can handle the URL
+   */
+  canHandle(url) {
+    if (!url) return false;
+    
+    // Check if it's a sitemap URL
+    if (url.includes('/sitemap') || url.endsWith('.xml')) {
+      return true;
+    }
+    
+    // Check if it's a website URL (we can auto-detect sitemap)
+    const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/.*)?$/i;
+    return urlPattern.test(url);
+  }
+
+  /**
+   * Get page list from sitemap
+   * @param {string} source - Source URL (website or sitemap)
+   * @param {string} sitemapUrl - Optional specific sitemap URL
+   * @returns {Promise<Array>} Array of page objects
+   */
+  async getPageList(source, sitemapUrl = null) {
+    if (!this.canHandle(source)) {
+      throw new Error('Invalid source URL for sitemap discovery');
+    }
+
+    let targetSitemapUrl = source;
+    
+    if (sitemapUrl && sitemapUrl.trim()) {
+      // Use provided sitemap URL
+      targetSitemapUrl = sitemapUrl;
+    } else if (this.isWebsiteUrl(source)) {
+      // Auto-detect sitemap for website URL
+      targetSitemapUrl = await this.autoDetectSitemap(source);
+    }
+
+    return await this.parseSitemap(targetSitemapUrl);
+  }
+
+  /**
+   * Check if URL is a website URL (not a sitemap)
+   * @param {string} url - URL to check
+   * @returns {boolean} True if it's a website URL
+   */
+  isWebsiteUrl(url) {
+    if (!url) return false;
+    
+    if (url.includes('/sitemap') || url.endsWith('.xml')) {
+      return false;
+    }
+    
+    // Check if it's a domain (with or without protocol)
+    const urlPattern = /^(https?:\/\/)?([\w-]+\.)+[\w-]+(\/.*)?$/i;
+    return urlPattern.test(url);
   }
 
   async autoDetectSitemap(websiteUrl) {
@@ -26,9 +92,13 @@ class SitemapDiscovery {
         for (const path of this.commonSitemapPaths) {
           if (path !== '/robots.txt') {
             const sitemapUrl = `${baseUrl}${path}`;
-            const response = await fetch(sitemapUrl, { method: 'HEAD' }).catch(() => null);
-            if (response?.ok) {
-              return sitemapUrl;
+            try {
+              const response = await fetch(sitemapUrl, { method: 'HEAD' });
+              if (response?.ok) {
+                return sitemapUrl;
+              }
+            } catch (error) {
+              // Continue to next path
             }
           }
         }
@@ -138,7 +208,7 @@ class SitemapDiscovery {
       }
     } catch (error) {
       throw new Error(
-        `Cannot access ${baseUrl}. This might be due to CORS restrictions or the site blocking requests.`,
+        `Cannot access ${baseUrl}. This might be due to CORS restrictions or the site blocking requests. ${error.message}`,
       );
     }
 
@@ -233,4 +303,4 @@ class SitemapDiscovery {
   }
 }
 
-export default SitemapDiscovery;
+export default SitemapSource;

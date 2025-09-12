@@ -1,0 +1,508 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Library - Decoupled Architecture Test</title>
+    <link rel="stylesheet" href="index.css">
+    <style>
+        .controls {
+            display: flex;
+            gap: 16px;
+            flex-wrap: wrap;
+            align-items: end;
+        }
+        
+        .field-section {
+            display: flex;
+            gap: 12px;
+            align-items: end;
+            border: 1px solid #e5e7eb;
+            border-radius: 6px;
+            padding: 8px;
+            background-color: white;
+        }
+        
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 120px;
+        }
+        
+        .control-group label {
+            font-size: 0.75rem;
+            font-weight: 500;
+            color: #374151;
+            margin-bottom: 4px;
+        }
+        
+        .control-group input,
+        .control-group select {
+            padding: 6px 8px;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            font-size: 0.875rem;
+        }
+        
+        .button-group {
+            display: flex;
+            gap: 8px;
+            align-items: end;
+        }
+        
+        .button-group button {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+<body>
+    <div class="test-container">
+        <h1>Media Library - Decoupled Architecture</h1>
+        
+        <div class="test-section">
+            <h2>Data Source Integration</h2>
+            <p>This test page demonstrates the new decoupled architecture where data sources are external to the Media Library component. Choose a data source and configure it to scan for media files.</p>
+            
+            
+            <div class="controls">
+                <!-- Data Source Section -->
+                <div class="field-section source-section">
+                    <div class="control-group">
+                        <label for="data-source">Source:</label>
+                        <select id="data-source">
+                            <option value="sitemap">Sitemap</option>
+                            <option value="wordpress">WordPress</option>
+                            <option value="aem">EDS</option>
+                            <option value="adobe-da">DA</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group" id="website-url-group">
+                        <label for="website-url">Website URL:</label>
+                        <input 
+                            type="url" 
+                            id="website-url" 
+                            placeholder="https://example.com"
+                        >
+                    </div>
+                    
+                    <div class="control-group" id="sitemap-specific-group">
+                        <label for="sitemap-url">Sitemap URL (Optional):</label>
+                        <input 
+                            type="url" 
+                            id="sitemap-url" 
+                            placeholder="https://example.com/sitemap.xml"
+                        >
+                    </div>
+                    
+                    <div class="control-group" id="aem-options-group" style="display: none;">
+                        <div style="display: flex; gap: 15px;">
+                            <div style="flex: 1;">
+                                <label for="aem-org">Org:</label>
+                                <input 
+                                    type="text" 
+                                    id="aem-org" 
+                                    placeholder="your-org"
+                                    style="width: 100%;"
+                                >
+                            </div>
+                            <div style="flex: 1;">
+                                <label for="aem-repo">Repo:</label>
+                                <input 
+                                    type="text" 
+                                    id="aem-repo" 
+                                    placeholder="your-repo"
+                                    style="width: 100%;"
+                                >
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group" id="adobe-options-group" style="display: none;">
+                        <div style="display: flex; gap: 15px;">
+                            <div style="flex: 1;">
+                                <label for="adobe-org">Org:</label>
+                                <input 
+                                    type="text" 
+                                    id="adobe-org" 
+                                    placeholder="your-org"
+                                    style="width: 100%;"
+                                >
+                            </div>
+                            <div style="flex: 1;">
+                                <label for="adobe-repo">Repo:</label>
+                                <input 
+                                    type="text" 
+                                    id="adobe-repo" 
+                                    placeholder="your-repo"
+                                    style="width: 100%;"
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings Section -->
+                <div class="field-section settings-section">
+                    <div class="control-group">
+                        <label for="storage-type">Storage:</label>
+                        <select id="storage-type">
+                            <option value="indexeddb">IndexedDB</option>
+                            <option value="local">Local Storage</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="locale">Locale:</label>
+                        <select id="locale">
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                            <option value="de">German</option>
+                            <option value="fr">French</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="site-selector">Loaded Sites:</label>
+                        <select id="site-selector">
+                            <option value="">Select a site...</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Actions Section -->
+                <div class="field-section actions-section">
+                    <div class="button-group" style="display: flex; gap: 10px;">
+                        <button id="scan-btn" style="background: #2563eb; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 500;">
+                            Scan
+                        </button>
+                        <button id="clear-btn" style="background: #6b7280; color: white; border: none; padding: 10px 20px; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 500;">
+                            Clear Display
+                        </button>
+                        <button onclick="clearOldData()" style="background: #dc2626; color: white; border: none; padding: 10px 14px; border-radius: 6px; cursor: pointer; font-size: 0.875rem; font-weight: 500;">
+                            Clear Storage
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="status" style="margin-top: 15px;"></div>
+            </div>
+            
+            <div class="media-library-container">
+                <media-library 
+                    id="media-library"
+                    storage="indexeddb"
+                    locale="en">
+                </media-library>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module">
+        import '/src/index.js';
+        import { SitemapSource, WordPressSource, AEMSource, AdobeDASource } from '/sources/index.js';
+        
+        let mediaLibrary;
+        let currentDataSource = null;
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            mediaLibrary = document.getElementById('media-library');
+            
+            setupControls();
+            setupNotifications();
+        });
+        
+        function setupControls() {
+            const dataSourceSelect = document.getElementById('data-source');
+            const sourceInput = document.getElementById('website-url');
+            const sitemapInput = document.getElementById('sitemap-url');
+            const storageSelect = document.getElementById('storage-type');
+            const localeSelect = document.getElementById('locale');
+            const siteSelector = document.getElementById('site-selector');
+            const scanBtn = document.getElementById('scan-btn');
+            const clearBtn = document.getElementById('clear-btn');
+            
+            // Data source selection handler
+            dataSourceSelect.addEventListener('change', (e) => {
+                updateDataSourceOptions(e.target.value);
+            });
+            
+            // Storage type change handler
+            storageSelect.addEventListener('change', (e) => {
+                mediaLibrary.storage = e.target.value;
+                mediaLibrary.clearData();
+                showNotification('Content cleared - storage type changed', 'info');
+                loadAvailableSites();
+            });
+            
+            // Locale change handler
+            localeSelect.addEventListener('change', (e) => {
+                mediaLibrary.locale = e.target.value;
+            });
+            
+            // Site selector handler
+            siteSelector.addEventListener('change', async (e) => {
+                const selectedSite = e.target.value;
+                if (selectedSite) {
+                    await mediaLibrary.loadFromStorage(selectedSite);
+                    showNotification(`Loaded data for site: ${selectedSite}`, 'success');
+                } else {
+                    mediaLibrary.clearData();
+                    showNotification('Content cleared', 'info');
+                }
+            });
+            
+            // Scan button handler
+            scanBtn.addEventListener('click', async () => {
+                await performScan();
+            });
+            
+            // Clear button handler
+            clearBtn.addEventListener('click', () => {
+                mediaLibrary.clearData();
+                showNotification('Display cleared', 'info');
+            });
+            
+            // Initialize
+            updateDataSourceOptions(dataSourceSelect.value);
+            loadAvailableSites();
+        }
+        
+        function updateDataSourceOptions(dataSourceType) {
+            // Hide all option groups
+            document.getElementById('sitemap-specific-group').style.display = 'none';
+            document.getElementById('aem-options-group').style.display = 'none';
+            document.getElementById('adobe-options-group').style.display = 'none';
+            
+            // Show/hide Website URL field based on data source
+            const websiteUrlGroup = document.getElementById('website-url-group');
+            if (dataSourceType === 'aem' || dataSourceType === 'adobe-da') {
+                websiteUrlGroup.style.display = 'none';
+            } else {
+                websiteUrlGroup.style.display = 'block';
+            }
+            
+            // Show relevant option group
+            switch (dataSourceType) {
+                case 'sitemap':
+                    document.getElementById('sitemap-specific-group').style.display = 'block';
+                    break;
+                case 'wordpress':
+                    // WordPress doesn't need additional options - just Website URL
+                    break;
+                case 'aem':
+                    document.getElementById('aem-options-group').style.display = 'block';
+                    break;
+                case 'adobe-da':
+                    document.getElementById('adobe-options-group').style.display = 'block';
+                    break;
+            }
+            
+            // Update placeholder text
+            const sourceInput = document.getElementById('website-url');
+            switch (dataSourceType) {
+                case 'sitemap':
+                    sourceInput.placeholder = 'https://example.com';
+                    break;
+                case 'wordpress':
+                    sourceInput.placeholder = 'https://your-wordpress-site.com';
+                    break;
+                case 'aem':
+                    sourceInput.placeholder = 'https://your-aem-site.com';
+                    break;
+                case 'adobe-da':
+                    sourceInput.placeholder = 'https://your-company.scene7.com';
+                    break;
+            }
+        }
+        
+        async function performScan() {
+            const dataSourceType = document.getElementById('data-source').value;
+            const websiteUrlElement = document.getElementById('website-url');
+            const sourceUrl = websiteUrlElement ? websiteUrlElement.value.trim() : '';
+            
+            // Only require Website URL for Sitemap and WordPress sources
+            if ((dataSourceType === 'sitemap' || dataSourceType === 'wordpress') && !sourceUrl) {
+                showNotification('Please enter a website URL', 'error');
+                return;
+            }
+            
+            try {
+                const scanBtn = document.getElementById('scan-btn');
+                scanBtn.disabled = true;
+                scanBtn.textContent = 'Scanning...';
+                
+                
+                // Create data source instance
+                let dataSource;
+                let options = {};
+                
+                switch (dataSourceType) {
+                    case 'sitemap':
+                        dataSource = new SitemapSource();
+                        // For sitemap, use Website URL as the primary source
+                        // Sitemap URL is optional and only used if provided
+                        const sitemapUrlElement = document.getElementById('sitemap-url');
+                        const sitemapUrl = sitemapUrlElement ? sitemapUrlElement.value.trim() : '';
+                        if (sitemapUrl) {
+                            options.sitemapUrl = sitemapUrl;
+                        }
+                        break;
+                    case 'wordpress':
+                        dataSource = new WordPressSource();
+                        // Automatically include all content types
+                        const postTypes = ['posts', 'pages', 'media'];
+                        options = { postTypes, perPage: 100, maxPages: 10 };
+                        break;
+                    case 'aem':
+                        dataSource = new AEMSource();
+                        const aemOrgElement = document.getElementById('aem-org');
+                        const aemRepoElement = document.getElementById('aem-repo');
+                        const aemOrg = aemOrgElement ? aemOrgElement.value.trim() : '';
+                        const aemRepo = aemRepoElement ? aemRepoElement.value.trim() : '';
+                        if (!aemOrg || !aemRepo) {
+                            throw new Error('Org and Repo are required for EDS');
+                        }
+                        options = { org: aemOrg, repo: aemRepo, maxResults: 1000 };
+                        break;
+                    case 'adobe-da':
+                        dataSource = new AdobeDASource();
+                        const adobeOrgElement = document.getElementById('adobe-org');
+                        const adobeRepoElement = document.getElementById('adobe-repo');
+                        const adobeOrg = adobeOrgElement ? adobeOrgElement.value.trim() : '';
+                        const adobeRepo = adobeRepoElement ? adobeRepoElement.value.trim() : '';
+                        if (!adobeOrg || !adobeRepo) {
+                            throw new Error('Org and Repo are required for DA');
+                        }
+                        options = { org: adobeOrg, repo: adobeRepo, maxResults: 1000 };
+                        break;
+                }
+                
+                // Get page list from data source
+                // EDS and DA sources don't use sourceUrl, they use org/repo from options
+                let pageList;
+                if (dataSourceType === 'sitemap') {
+                    // For sitemap, pass sitemapUrl as second parameter if available
+                    const sitemapUrl = options.sitemapUrl || null;
+                    pageList = await dataSource.getPageList(sourceUrl, sitemapUrl);
+                } else if (dataSourceType === 'aem' || dataSourceType === 'adobe-da') {
+                    pageList = await dataSource.getPageList(null, options);
+                } else {
+                    pageList = await dataSource.getPageList(sourceUrl, options);
+                }
+                
+                
+                // Generate site key
+                // For EDS and DA, use org-repo format; for others use sourceUrl
+                const siteKey = (dataSourceType === 'aem' || dataSourceType === 'adobe-da') 
+                    ? `${options.org}-${options.repo}` 
+                    : mediaLibrary.generateSiteKey(sourceUrl);
+                
+                // Load pages into media library
+                const mediaData = await mediaLibrary.loadFromPageList(pageList, null, siteKey);
+                
+                showNotification(`Scan complete! Found ${mediaData.length} media items`, 'success');
+                loadAvailableSites();
+                
+            } catch (error) {
+                let errorMessage = error.message;
+                
+                // Provide more helpful error messages for CORS issues
+                if (error.message.includes('CORS') || error.message.includes('cross-origin')) {
+                    errorMessage = `CORS Error: ${error.message}. This is common when testing against external sites. The application will try to use proxy services to work around this limitation.`;
+                } else if (error.message.includes('proxy')) {
+                    errorMessage = `Proxy Error: ${error.message}. All proxy services failed. Try using a different website or contact the site owner about CORS policies.`;
+                }
+                
+                showNotification(`Scan failed: ${errorMessage}`, 'error');
+                console.error('Scan error:', error);
+            } finally {
+                const scanBtn = document.getElementById('scan-btn');
+                scanBtn.disabled = false;
+                scanBtn.textContent = 'Scan';
+            }
+        }
+        
+        async function loadAvailableSites() {
+            try {
+                const storageType = document.getElementById('storage-type').value;
+                const BrowserStorage = (await import('/src/utils/storage.js')).default;
+                const storage = new BrowserStorage(storageType);
+                const sites = await storage.getAllSites();
+                
+                const siteSelector = document.getElementById('site-selector');
+                siteSelector.innerHTML = '<option value="">Select a site...</option>';
+                
+                sites.forEach(site => {
+                    const option = document.createElement('option');
+                    option.value = site.siteKey;
+                    option.textContent = `${site.siteKey} (${site.itemCount} items) - ${new Date(site.timestamp).toLocaleString()}`;
+                    siteSelector.appendChild(option);
+                });
+                
+                if (sites.length === 0) {
+                    const option = document.createElement('option');
+                    option.value = '';
+                    option.textContent = 'No sites found';
+                    option.disabled = true;
+                    siteSelector.appendChild(option);
+                }
+            } catch (error) {
+                console.error('Failed to load available sites:', error);
+                showNotification(`Failed to load sites: ${error.message}`, 'error');
+            }
+        }
+        
+        function setupNotifications() {
+            window.addEventListener('show-notification', (e) => {
+                const { heading, message, type } = e.detail;
+                showNotification(`${heading}: ${message}`, type);
+            });
+        }
+        
+        function showNotification(message, type = 'info') {
+            const notification = document.createElement('div');
+            notification.className = `notification ${type}`;
+            notification.textContent = message;
+            document.body.appendChild(notification);
+            
+            setTimeout(() => notification.classList.add('show'), 100);
+            setTimeout(() => {
+                notification.classList.remove('show');
+                setTimeout(() => document.body.removeChild(notification), 300);
+            }, 3000);
+        }
+        
+        
+        window.refreshSites = loadAvailableSites;
+        
+        window.clearOldData = async () => {
+            try {
+                const storageType = document.getElementById('storage-type').value;
+                const BrowserStorage = (await import('/src/utils/storage.js')).default;
+                const storage = new BrowserStorage(storageType);
+                
+                const oldData = await storage.load('media-data');
+                if (oldData && oldData.length > 0) {
+                    const shouldMigrate = confirm(`Found ${oldData.length} items in old format. Would you like to migrate them to 'legacy-data' site before clearing?`);
+                    if (shouldMigrate) {
+                        await storage.save(oldData, 'legacy-data');
+                        showNotification(`Migrated ${oldData.length} items to 'legacy-data' site`, 'success');
+                    }
+                }
+                
+                await storage.clear();
+                
+                await loadAvailableSites();
+                
+                showNotification('Old data cleared successfully', 'success');
+            } catch (error) {
+                console.error('Failed to clear old data:', error);
+                showNotification(`Failed to clear data: ${error.message}`, 'error');
+            }
+        };
+
+    </script>
+</body>
+</html>

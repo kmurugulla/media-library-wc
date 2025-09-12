@@ -5,6 +5,7 @@ import {
   getAnalysisConfig,
   clearAnalysisCache,
 } from './image-analysis.js';
+import { detectCategory } from './category-detector.js';
 import Queue from './queue.js';
 
 class ContentParser {
@@ -12,7 +13,9 @@ class ContentParser {
     this.throttleDelay = 50;
     this.maxConcurrency = 20;
     this.enableImageAnalysis = options.enableImageAnalysis || false;
+    this.enableCategorization = options.enableCategorization !== false; // Default to true
     this.analysisConfig = options.analysisConfig || {};
+    this.categorizationConfig = options.categorizationConfig || {};
 
     if (this.enableImageAnalysis) {
       updateAnalysisConfig({
@@ -169,20 +172,50 @@ class ContentParser {
               lastUsedAt: timestamp,
             };
 
+            // Run categorization independently of image analysis
+            if (this.enableCategorization) {
+              try {
+                const categoryResult = detectCategory(
+                  fixedUrl,
+                  mediaItem.ctx,
+                  mediaItem.alt,
+                  '',
+                  0, // width - will be 0 without image analysis
+                  0, // height - will be 0 without image analysis
+                );
+
+                mediaItem.category = categoryResult.category;
+                mediaItem.categoryConfidence = categoryResult.confidence;
+                mediaItem.categoryScore = categoryResult.score;
+                mediaItem.categorySource = categoryResult.source;
+              } catch (error) {
+                // Categorization failed, use default
+                mediaItem.category = 'other';
+                mediaItem.categoryConfidence = 'none';
+                mediaItem.categoryScore = 0;
+                mediaItem.categorySource = 'fallback';
+              }
+            }
+
+            // Run full image analysis if enabled
             if (this.enableImageAnalysis) {
               try {
                 const analysis = await analyzeImage(fixedUrl, null, mediaItem.ctx);
 
                 mediaItem.orientation = analysis.orientation;
-                mediaItem.category = analysis.category;
-                mediaItem.categoryConfidence = analysis.categoryConfidence;
-                mediaItem.categoryScore = analysis.categoryScore;
-                mediaItem.categorySource = analysis.categorySource;
                 mediaItem.width = analysis.width;
                 mediaItem.height = analysis.height;
                 mediaItem.exifCamera = analysis.exifCamera;
                 mediaItem.exifDate = analysis.exifDate;
                 mediaItem.analysisConfidence = analysis.confidence;
+
+                // Override categorization with analysis results if available
+                if (analysis.category) {
+                  mediaItem.category = analysis.category;
+                  mediaItem.categoryConfidence = analysis.categoryConfidence;
+                  mediaItem.categoryScore = analysis.categoryScore;
+                  mediaItem.categorySource = analysis.categorySource;
+                }
 
                 if (analysis.exifError) {
                   mediaItem.hasError = true;
@@ -191,7 +224,7 @@ class ContentParser {
                   mediaItem.statusCode = analysis.exifError.statusCode;
 
                   if (analysis.exifError.errorType === '404') {
-                    mediaItem.category = '404s';
+                    mediaItem.category = '404-media';
                   }
                 }
               } catch (error) {

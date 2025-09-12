@@ -187,6 +187,14 @@
 .analysis-toggle-container {
   align-items: center;
   display: flex;
+  gap: 8px;
+}
+
+.analysis-toggle-text {
+  color: #64748b;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .analysis-toggle-label {
