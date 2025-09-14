@@ -1,5 +1,6 @@
 // src/components/topbar/topbar.js
 import { html } from 'lit';
+import { ref, createRef } from 'lit/directives/ref.js';
 import LocalizableElement from '../base-localizable.js';
 import getSvg from '../../utils/get-svg.js';
 import { getStyles } from '../../utils/get-styles.js';
@@ -40,6 +41,12 @@ class MediaTopbar extends LocalizableElement {
     this._activeIndex = -1;
     this._originalQuery = '';
     this._suppressSuggestions = false;
+
+    this._searchDebounceTimeout = null;
+    this._suggestionDebounceTimeout = null;
+    this._lastSearchQuery = '';
+
+    this.searchContainerRef = createRef();
   }
 
   async connectedCallback() {
@@ -66,10 +73,17 @@ class MediaTopbar extends LocalizableElement {
     super.disconnectedCallback();
     document.removeEventListener('click', this.handleOutsideClick);
     window.removeEventListener('clear-search', this.handleClearSearch);
+
+    if (this._searchDebounceTimeout) {
+      clearTimeout(this._searchDebounceTimeout);
+    }
+    if (this._suggestionDebounceTimeout) {
+      clearTimeout(this._suggestionDebounceTimeout);
+    }
   }
 
   handleOutsideClick(e) {
-    const searchContainer = this.shadowRoot.querySelector('.search-container');
+    const searchContainer = this.searchContainerRef.value;
     if (searchContainer && !searchContainer.contains(e.target)) {
       this._suggestions = [];
       this._activeIndex = -1;
@@ -88,7 +102,7 @@ class MediaTopbar extends LocalizableElement {
   render() {
     return html`
       <div class="topbar">
-        <div class="search-container">
+        <div class="search-container" ${ref(this.searchContainerRef)}>
           <div class="search-wrapper">
             <svg class="search-icon">
               <use href="#search"></use>
@@ -198,14 +212,27 @@ class MediaTopbar extends LocalizableElement {
     this._originalQuery = query;
     this._activeIndex = -1;
 
+    if (this._searchDebounceTimeout) {
+      clearTimeout(this._searchDebounceTimeout);
+    }
+    if (this._suggestionDebounceTimeout) {
+      clearTimeout(this._suggestionDebounceTimeout);
+    }
+
+    this._searchDebounceTimeout = setTimeout(() => {
+      this._lastSearchQuery = query;
+      this.dispatchEvent(new CustomEvent('search', { detail: { query } }));
+    }, 300);
+
     if (!query || !query.trim() || this._suppressSuggestions) {
       this._suggestions = [];
       this._suppressSuggestions = false;
     } else {
-      this._suggestions = this.getOnDemandSearchSuggestions(query);
+      this._suggestionDebounceTimeout = setTimeout(() => {
+        this._suggestions = this.getOnDemandSearchSuggestions(query);
+        this.requestUpdate();
+      }, 200);
     }
-
-    this.dispatchEvent(new CustomEvent('search', { detail: { query } }));
   }
 
   handleKeyDown(e) {
@@ -340,12 +367,10 @@ class MediaTopbar extends LocalizableElement {
     this.handleViewChange(newView);
   }
 
-
   toggleImageAnalysis(event) {
     this.imageAnalysisEnabled = event.target.checked;
     this.dispatchEvent(new CustomEvent('toggleImageAnalysis', { detail: { enabled: this.imageAnalysisEnabled } }));
   }
-
 }
 
 customElements.define('media-topbar', MediaTopbar);

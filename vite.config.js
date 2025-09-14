@@ -3,7 +3,7 @@ import { defineConfig } from 'vite';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import litCss from 'vite-plugin-lit-css';
 // eslint-disable-next-line import/no-extraneous-dependencies
-import { copyFileSync, mkdirSync, existsSync } from 'fs';
+import { mkdirSync, existsSync } from 'fs';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import { resolve } from 'path';
 
@@ -26,44 +26,44 @@ export default defineConfig(({ mode }) => {
         name: 'copy-data-sources',
         writeBundle() {
           const distDir = resolve(__dirname, 'dist');
-          
+
           // Copy data sources
           const sourcesDir = resolve(distDir, 'sources');
           if (!existsSync(sourcesDir)) {
             mkdirSync(sourcesDir, { recursive: true });
           }
-          
+
           // Copy examples
           const examplesDir = resolve(distDir, 'examples');
           if (!existsSync(examplesDir)) {
             mkdirSync(examplesDir, { recursive: true });
           }
-          
+
           // Copy docs
           const docsDir = resolve(distDir, 'docs');
           if (!existsSync(docsDir)) {
             mkdirSync(docsDir, { recursive: true });
           }
-          
+
           // Copy assets
           const assetsDir = resolve(distDir, 'assets');
           if (!existsSync(assetsDir)) {
             mkdirSync(assetsDir, { recursive: true });
           }
-          
+
           // Copy locales
           const localesDir = resolve(distDir, 'locales');
           if (!existsSync(localesDir)) {
             mkdirSync(localesDir, { recursive: true });
           }
-          
+
           // Copy data
           const dataDir = resolve(distDir, 'data');
           if (!existsSync(dataDir)) {
             mkdirSync(dataDir, { recursive: true });
           }
-        }
-      }
+        },
+      },
     ],
     optimizeDeps: {
       include: [
@@ -93,18 +93,17 @@ export default defineConfig(({ mode }) => {
         fileName: (format) => {
           if (isCore) {
             return `media-library-core.${format}.js`;
-          } else if (isSelfContained) {
+          } if (isSelfContained) {
             return `media-library-full.${format}.js`;
-          } else {
-            return `media-library.${format}.js`;
           }
+          return `media-library.${format}.js`;
         },
         formats: isSelfContained ? ['iife'] : ['es', 'umd'],
       },
       rollupOptions: {
-        external: isSelfContained ? [] : ['lit'],
+        external: isSelfContained ? [] : ['lit', 'lit/directives/repeat.js', 'lit/directives/ref.js'],
         output: {
-          globals: isSelfContained ? {} : { lit: 'lit' },
+          globals: isSelfContained ? {} : { lit: 'lit', 'lit/directives/repeat.js': 'lit', 'lit/directives/ref.js': 'lit' },
           assetFileNames: (assetInfo) => {
             if (assetInfo.name && assetInfo.name.endsWith('.css')) {
               return 'style.css';
@@ -143,8 +142,8 @@ export default defineConfig(({ mode }) => {
           target: 'https://cors-anywhere.herokuapp.com/',
           changeOrigin: true,
           rewrite: (path) => path.replace(/^\/api\/proxy/, ''),
-          configure: (proxy, options) => {
-            proxy.on('proxyReq', (proxyReq, req, res) => {
+          configure: (proxy) => {
+            proxy.on('proxyReq', (proxyReq) => {
               // Add CORS headers
               proxyReq.setHeader('Origin', 'https://cors-anywhere.herokuapp.com');
             });

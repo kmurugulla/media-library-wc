@@ -368,7 +368,6 @@ export function detectCategory(
   for (const categoryName of detectionOrder) {
     const categoryData = patterns.categories[categoryName];
     if (!categoryData) {
-      // eslint-disable-next-line no-continue
       continue;
     }
 

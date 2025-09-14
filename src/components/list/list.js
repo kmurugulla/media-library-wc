@@ -1,6 +1,7 @@
 // src/components/list/list.js
 import { html } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
+import { ref, createRef } from 'lit/directives/ref.js';
 import LocalizableElement from '../base-localizable.js';
 import getSvg from '../../utils/get-svg.js';
 import { getMediaType, isImage } from '../../utils/utils.js';
@@ -28,6 +29,8 @@ class MediaList extends LocalizableElement {
     this.visibleStart = 0;
     this.visibleEnd = 50;
 
+    this.containerRef = createRef();
+
     this.virtualScroll = new ListVirtualScrollManager({
       onRangeChange: (range) => {
         this.visibleStart = range.start;
@@ -50,6 +53,14 @@ class MediaList extends LocalizableElement {
     window.addEventListener('resize', () => {
       this.virtualScroll.updateContainerDimensions();
     });
+  }
+
+  shouldUpdate(changedProperties) {
+    return changedProperties.has('mediaData')
+           || changedProperties.has('searchQuery')
+           || changedProperties.has('visibleStart')
+           || changedProperties.has('visibleEnd')
+           || changedProperties.has('locale');
   }
 
   willUpdate(changedProperties) {
@@ -86,7 +97,7 @@ class MediaList extends LocalizableElement {
 
   setupScrollListener() {
     requestAnimationFrame(() => {
-      const container = this.shadowRoot.querySelector('.list-content');
+      const container = this.containerRef.value;
       if (container) {
         this.virtualScroll.init(container, this.mediaData?.length || 0);
         this.virtualScroll.calculateVisibleRange();
@@ -105,8 +116,14 @@ class MediaList extends LocalizableElement {
     ];
 
     const existingIcons = this.shadowRoot.querySelectorAll('svg[id]');
-    if (existingIcons.length === 0) {
-      await getSvg({ parent: this.shadowRoot, paths: ICONS });
+    const loadedIconIds = Array.from(existingIcons).map((icon) => icon.id);
+    const missingIcons = ICONS.filter((iconPath) => {
+      const iconId = iconPath.split('/').pop().replace('.svg', '');
+      return !loadedIconIds.includes(iconId);
+    });
+
+    if (missingIcons.length > 0) {
+      await getSvg({ parent: this.shadowRoot, paths: missingIcons });
     }
   }
 
@@ -136,7 +153,7 @@ class MediaList extends LocalizableElement {
           <div class="header-cell">Alt Text</div>
           <div class="header-cell">Actions</div>
         </div>
-        <div class="list-content">
+        <div class="list-content" ${ref(this.containerRef)}>
           <div class="list-grid" style="height: ${totalHeight}px;">
             ${repeat(visibleItems, (media) => media.url, (media, i) => {
     const index = this.visibleStart + i;

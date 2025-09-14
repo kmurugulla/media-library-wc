@@ -49,6 +49,12 @@ class MediaLibrary extends LocalizableElement {
     this.storageManager = null;
     this.contentParser = null;
     this._processedData = null;
+
+    this._filteredDataCache = null;
+    this._lastFilterParams = null;
+
+    this._usageCountCache = null;
+    this._lastUsageCountParams = null;
   }
 
   async connectedCallback() {
@@ -71,7 +77,7 @@ class MediaLibrary extends LocalizableElement {
     this.storageManager = new BrowserStorage(this.storage);
     this.contentParser = new ContentParser({
       enableImageAnalysis: this._imageAnalysisEnabled,
-      enableCategorization: true, // Always enabled by default
+      enableCategorization: true,
       analysisConfig: {
         extractEXIF: true,
         extractDimensions: true,
@@ -88,6 +94,17 @@ class MediaLibrary extends LocalizableElement {
     await this.loadMediaData();
   }
 
+  shouldUpdate(changedProperties) {
+    return changedProperties.has('_mediaData')
+           || changedProperties.has('_searchQuery')
+           || changedProperties.has('_selectedFilterType')
+           || changedProperties.has('_currentView')
+           || changedProperties.has('_isScanning')
+           || changedProperties.has('_scanProgress')
+           || changedProperties.has('_error')
+           || changedProperties.has('locale');
+  }
+
   async updated(changedProperties) {
     if (changedProperties.has('locale')) {
       await i18n.loadLocale(this.locale);
@@ -101,14 +118,12 @@ class MediaLibrary extends LocalizableElement {
       await this.loadMediaData();
     } catch (error) {
       this._error = error.message;
-      // Failed to initialize media library
     }
   }
 
   async loadMediaData(siteKey = null) {
     try {
       if (!this.storageManager) {
-        // Storage manager not initialized yet
         return;
       }
 
@@ -121,14 +136,21 @@ class MediaLibrary extends LocalizableElement {
         this._mediaData = [];
         this._processedData = processMediaData([]);
       }
-    } catch (error) {
-      // Failed to load media data
 
+      this._filteredDataCache = null;
+      this._lastFilterParams = null;
+      this._usageCountCache = null;
+      this._lastUsageCountParams = null;
+
+      this.requestUpdate();
+    } catch (error) {
       this._mediaData = [];
       this._processedData = processMediaData([]);
       if (error.name !== 'NotFoundError' && !error.message.includes('object store')) {
         this._error = this.t('errors.loadFailed');
       }
+
+      this.requestUpdate();
     }
   }
 
@@ -200,6 +222,11 @@ class MediaLibrary extends LocalizableElement {
       this._isScanning = false;
       this._scanProgress = null;
       this._lastScanDuration = durationSeconds;
+
+      this._filteredDataCache = null;
+      this._lastFilterParams = null;
+      this._usageCountCache = null;
+      this._lastUsageCountParams = null;
 
       this._scanStats = {
         pagesScanned: pageList.length,
@@ -277,26 +304,54 @@ class MediaLibrary extends LocalizableElement {
   }
 
   get filteredMediaData() {
-    return calculateFilteredMediaData(
+    const currentParams = {
+      filterType: this._selectedFilterType,
+      searchQuery: this._searchQuery,
+      selectedDocument: this.selectedDocument,
+      dataLength: this._mediaData?.length || 0,
+    };
+
+    if (this._filteredDataCache
+        && this._lastFilterParams
+        && JSON.stringify(this._lastFilterParams) === JSON.stringify(currentParams)) {
+      return this._filteredDataCache;
+    }
+
+    const filteredData = calculateFilteredMediaData(
       this._mediaData,
       this._selectedFilterType,
       this._searchQuery,
       this.selectedDocument,
     );
+
+    this._filteredDataCache = filteredData;
+    this._lastFilterParams = currentParams;
+
+    return filteredData;
   }
 
   addUsageCountToMedia(mediaData) {
     if (!mediaData) return [];
 
+    const currentParams = {
+      dataLength: mediaData.length,
+      firstUrl: mediaData[0]?.url || '',
+      lastUrl: mediaData[mediaData.length - 1]?.url || '',
+    };
+
+    if (this._usageCountCache
+        && this._lastUsageCountParams
+        && JSON.stringify(this._lastUsageCountParams) === JSON.stringify(currentParams)) {
+      return this._usageCountCache;
+    }
+
     const usageCounts = {};
     const urlGroups = {};
 
-    // Group items by matching URLs
     mediaData.forEach((item) => {
       if (item.url) {
         let groupKey = null;
 
-        // Find existing group for this URL
         for (const existingKey of Object.keys(urlGroups)) {
           if (urlsMatch(item.url, existingKey)) {
             groupKey = existingKey;
@@ -304,7 +359,6 @@ class MediaLibrary extends LocalizableElement {
           }
         }
 
-        // If no existing group found, create new one
         if (!groupKey) {
           groupKey = item.url;
           urlGroups[groupKey] = [];
@@ -315,7 +369,6 @@ class MediaLibrary extends LocalizableElement {
       }
     });
 
-    // Create unique media items using the first item from each group
     const uniqueMedia = {};
     Object.keys(urlGroups).forEach((groupKey) => {
       const group = urlGroups[groupKey];
@@ -327,7 +380,12 @@ class MediaLibrary extends LocalizableElement {
       };
     });
 
-    return Object.values(uniqueMedia);
+    const result = Object.values(uniqueMedia);
+
+    this._usageCountCache = result;
+    this._lastUsageCountParams = currentParams;
+
+    return result;
   }
 
   get selectedDocument() {
@@ -492,27 +550,25 @@ class MediaLibrary extends LocalizableElement {
 
     const mediaWithUsageCount = this.addUsageCountToMedia(this.filteredMediaData);
 
-    if (this._currentView === 'list') {
-      return html`
-        <media-list
-          .mediaData=${mediaWithUsageCount}
-          .searchQuery=${this._searchQuery}
-          .locale=${this.locale}
-          @mediaClick=${this.handleMediaClick}
-          @mediaAction=${this.handleMediaAction}
-        ></media-list>
-      `;
-    }
-
-    return html`
-      <media-grid
-        .mediaData=${mediaWithUsageCount}
-        .searchQuery=${this._searchQuery}
-        .locale=${this.locale}
-        @mediaClick=${this.handleMediaClick}
-        @mediaAction=${this.handleMediaAction}
-      ></media-grid>
-    `;
+    return this._currentView === 'list'
+      ? html`
+          <media-list
+            .mediaData=${mediaWithUsageCount}
+            .searchQuery=${this._searchQuery}
+            .locale=${this.locale}
+            @mediaClick=${this.handleMediaClick}
+            @mediaAction=${this.handleMediaAction}
+          ></media-list>
+        `
+      : html`
+          <media-grid
+            .mediaData=${mediaWithUsageCount}
+            .searchQuery=${this._searchQuery}
+            .locale=${this.locale}
+            @mediaClick=${this.handleMediaClick}
+            @mediaAction=${this.handleMediaAction}
+          ></media-grid>
+        `;
   }
 }
 

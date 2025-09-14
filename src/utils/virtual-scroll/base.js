@@ -9,6 +9,10 @@ export const SCROLL_CONSTANTS = {
   BUFFER_SIZE: 5,
   SCROLL_THROTTLE: 16,
   MAX_VISIBLE_ITEMS: 50,
+
+  MIN_BUFFER_SIZE: 3,
+  MAX_BUFFER_SIZE: 10,
+  FAST_SCROLL_THRESHOLD: 100,
 };
 
 /**
@@ -53,6 +57,10 @@ export class VirtualScrollManager {
     this.totalItems = 0;
     this.containerHeight = 0;
     this.containerWidth = 0;
+
+    this.lastScrollTop = 0;
+    this.lastScrollTime = 0;
+    this.scrollSpeed = 0;
 
     this.onRangeChange = options.onRangeChange || null;
     this.onColCountChange = options.onColCountChange || null;
@@ -115,16 +123,36 @@ export class VirtualScrollManager {
   }
 
   /**
-   * Handle scroll events
+   * Handle scroll events with requestAnimationFrame for smooth 60fps scrolling
    */
   onScroll() {
     if (this.scrollTimeout) {
       clearTimeout(this.scrollTimeout);
     }
 
+    const currentTime = performance.now();
+    const currentScrollTop = this.container.scrollTop;
+
+    if (this.lastScrollTime > 0) {
+      const timeDelta = currentTime - this.lastScrollTime;
+      const scrollDelta = Math.abs(currentScrollTop - this.lastScrollTop);
+      this.scrollSpeed = timeDelta > 0 ? scrollDelta / timeDelta : 0;
+
+      if (this.scrollSpeed > SCROLL_CONSTANTS.FAST_SCROLL_THRESHOLD) {
+        this.bufferSize = Math.min(SCROLL_CONSTANTS.MAX_BUFFER_SIZE, this.bufferSize + 1);
+      } else {
+        this.bufferSize = Math.max(SCROLL_CONSTANTS.MIN_BUFFER_SIZE, this.bufferSize - 1);
+      }
+    }
+
+    this.lastScrollTop = currentScrollTop;
+    this.lastScrollTime = currentTime;
+
     this.scrollTimeout = setTimeout(() => {
-      this.calculateVisibleRange();
-      this.onVisibleRangeChange();
+      requestAnimationFrame(() => {
+        this.calculateVisibleRange();
+        this.onVisibleRangeChange();
+      });
     }, this.scrollThrottle);
   }
 

@@ -81,7 +81,6 @@ class BrowserStorage {
         });
         saveRequest.onsuccess = () => resolve();
         saveRequest.onerror = () => {
-          // Failed to save to IndexedDB
           reject(saveRequest.error);
         };
       });
@@ -192,7 +191,6 @@ class BrowserStorage {
           };
 
           clearRequest.onerror = () => {
-            // Failed to clear store
             reject(clearRequest.error);
           };
         });
@@ -215,17 +213,14 @@ class BrowserStorage {
         const deleteRequest = indexedDB.deleteDatabase(this.dbName);
 
         deleteRequest.onsuccess = () => {
-          // Database deleted successfully
           resolve();
         };
 
         deleteRequest.onerror = () => {
-          // Failed to delete database
           reject(deleteRequest.error);
         };
 
         deleteRequest.onblocked = () => {
-          // Database deletion blocked, please close other tabs
           reject(new Error('Database deletion blocked'));
         };
       });
@@ -254,7 +249,6 @@ class BrowserStorage {
     try {
       const db = await this.ensureDatabase();
 
-      // Check if the object store exists
       if (!db.objectStoreNames.contains('media')) {
         return null;
       }
@@ -388,7 +382,6 @@ class BrowserStorage {
 
         deleteRequest.onsuccess = () => resolve();
         deleteRequest.onerror = () => {
-          // Failed to delete site from IndexedDB
           reject(deleteRequest.error);
         };
       });
@@ -448,7 +441,6 @@ class BrowserStorage {
         });
         saveRequest.onsuccess = () => resolve();
         saveRequest.onerror = () => {
-          // Failed to save scan metadata to IndexedDB
           reject(saveRequest.error);
         };
       });

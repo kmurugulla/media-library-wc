@@ -87,6 +87,10 @@ body {
     width: 100%;
 }
 
+.option-col input {
+    width: 100%;
+}
+
 .control-group input:focus,
 .control-group select:focus {
     border-color: #3b82f6;
@@ -128,6 +132,141 @@ body {
 
 .notification.info {
     background: #3b82f6;
+}
+
+/* Field sections and control groups */
+.field-section {
+    align-items: end;
+    background-color: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    display: flex;
+    gap: 12px;
+    padding: 8px;
+}
+
+.field-section .control-group {
+    display: flex;
+    flex-direction: column;
+    min-width: 120px;
+}
+
+.field-section .control-group label {
+    color: #374151;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-bottom: 4px;
+}
+
+.field-section .control-group input,
+.field-section .control-group select {
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    padding: 6px 8px;
+}
+
+/* Button groups */
+.button-group {
+    align-items: end;
+    display: flex;
+    gap: 8px;
+}
+
+.button-group button {
+    white-space: nowrap;
+}
+
+/* Button styles */
+.btn {
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 10px 20px;
+    transition: background-color 0.2s ease;
+}
+
+.btn-primary {
+    background: #2563eb;
+    color: #fff;
+}
+
+.btn-primary:hover {
+    background: #1d4ed8;
+}
+
+.btn-secondary {
+    background: #6b7280;
+    color: #fff;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+}
+
+.btn-danger {
+    background: #dc2626;
+    color: #fff;
+}
+
+.btn-danger:hover {
+    background: #b91c1c;
+}
+
+/* Help text */
+.help-text {
+    color: #666;
+    display: block;
+    font-size: 0.9em;
+    margin-top: 4px;
+}
+
+/* Option groups */
+.option-group,
+#website-url-group,
+#sitemap-specific-group,
+#or-divider {
+    display: none;
+}
+
+.option-group.show,
+#website-url-group.show,
+#sitemap-specific-group.show,
+#or-divider.show {
+    display: block;
+}
+
+.or-divider {
+    align-items: center;
+    color: #6b7280;
+    display: flex;
+    font-size: 0.75rem;
+    font-style: italic;
+    justify-content: center;
+    padding: 8px 0;
+}
+
+#or-divider {
+    flex: none;
+    min-width: auto;
+    width: auto;
+}
+
+.option-row {
+    display: flex;
+    gap: 15px;
+}
+
+.option-col {
+    flex: 1;
+}
+
+
+/* Status */
+.status {
+    margin-top: 15px;
 }
 
 @media (max-width: 768px) {

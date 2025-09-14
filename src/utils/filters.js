@@ -393,13 +393,15 @@ export function createSearchSuggestion(item) {
 /**
  * Generate search suggestions based on query and media data
  */
-export function generateSearchSuggestions(mediaData, query, createSuggestionFn) {
+export function generateSearchSuggestions(mediaData, query, createSuggestionFn, maxResults = 10) {
   if (!query || !query.trim() || !mediaData) {
     return [];
   }
 
   const suggestions = [];
   const matchingDocs = new Set();
+  let processedCount = 0;
+  const maxProcessItems = 1000;
 
   const colonSyntax = parseColonSyntax(query);
 
@@ -410,7 +412,10 @@ export function generateSearchSuggestions(mediaData, query, createSuggestionFn) 
       return generateFolderSuggestions(mediaData, value);
     }
 
-    mediaData.forEach((item) => {
+    for (const item of mediaData) {
+      if (processedCount >= maxProcessItems) break;
+      processedCount++;
+
       switch (field) {
         case 'doc': {
           if (item.doc && item.doc.toLowerCase().includes(value)) {
@@ -421,25 +426,28 @@ export function generateSearchSuggestions(mediaData, query, createSuggestionFn) 
         case 'alt': {
           if (item.alt && item.alt.toLowerCase().includes(value) && !isSvgFile(item)) {
             suggestions.push(createSuggestionFn(item));
+            if (suggestions.length >= maxResults) break;
           }
           break;
         }
         case 'name': {
           if (item.name && item.name.toLowerCase().includes(value) && !isSvgFile(item)) {
             suggestions.push(createSuggestionFn(item));
+            if (suggestions.length >= maxResults) break;
           }
           break;
         }
         case 'url': {
           if (item.url && item.url.toLowerCase().includes(value) && !isSvgFile(item)) {
             suggestions.push(createSuggestionFn(item));
+            if (suggestions.length >= maxResults) break;
           }
           break;
         }
         default:
           break;
       }
-    });
+    }
 
     const docSuggestions = Array.from(matchingDocs).map((doc) => ({
       type: 'doc',
@@ -447,21 +455,25 @@ export function generateSearchSuggestions(mediaData, query, createSuggestionFn) 
       display: doc,
     }));
 
-    return [...docSuggestions, ...suggestions].slice(0, 10);
+    return [...docSuggestions, ...suggestions].slice(0, maxResults);
   }
 
   const q = query.toLowerCase().trim();
 
   if (q === '/') {
-    mediaData.forEach((item) => {
+    for (const item of mediaData) {
+      if (suggestions.length >= maxResults) break;
       if (item.doc && !item.doc.includes('/', 1)) {
         suggestions.push(createSuggestionFn(item));
       }
-    });
-    return suggestions.slice(0, 10);
+    }
+    return suggestions.slice(0, maxResults);
   }
 
-  mediaData.forEach((item) => {
+  for (const item of mediaData) {
+    if (processedCount >= maxProcessItems) break;
+    processedCount++;
+
     if (item.doc && item.doc.toLowerCase().includes(q)) {
       matchingDocs.add(item.doc);
     }
@@ -472,8 +484,9 @@ export function generateSearchSuggestions(mediaData, query, createSuggestionFn) 
         || (item.url && item.url.toLowerCase().includes(q))
     )) {
       suggestions.push(createSuggestionFn(item));
+      if (suggestions.length >= maxResults) break;
     }
-  });
+  }
 
   const docSuggestions = Array.from(matchingDocs).map((doc) => ({
     type: 'doc',
@@ -481,54 +494,84 @@ export function generateSearchSuggestions(mediaData, query, createSuggestionFn) 
     display: doc,
   }));
 
-  return [...docSuggestions, ...suggestions].slice(0, 10);
+  return [...docSuggestions, ...suggestions].slice(0, maxResults);
+}
+
+let processedDataCache = null;
+let lastProcessedDataHash = null;
+
+function createDataHash(mediaData) {
+  if (!mediaData || mediaData.length === 0) return '';
+
+  const { length } = mediaData;
+  const firstItem = mediaData[0];
+  const lastItem = mediaData[length - 1];
+
+  return `${length}-${firstItem?.url || ''}-${lastItem?.url || ''}`;
 }
 
 export function processMediaData(mediaData) {
   if (!mediaData || mediaData.length === 0) {
-    return {
+    processedDataCache = {
       filterCounts: {},
       totalCount: 0,
     };
+    return processedDataCache;
+  }
+
+  const currentHash = createDataHash(mediaData);
+  if (processedDataCache && lastProcessedDataHash === currentHash) {
+    return processedDataCache;
   }
 
   const filterCounts = {};
-
   const uniqueMediaUrls = new Set();
+  const uniqueNonSvgUrls = new Set();
+
+  const filterUrlSets = {};
+  Object.keys(FILTER_CONFIG).forEach((filterName) => {
+    if (!filterName.startsWith('document')) {
+      filterUrlSets[filterName] = new Set();
+    }
+  });
+
   mediaData.forEach((item) => {
     if (item.url) {
       uniqueMediaUrls.add(item.url);
-    }
-  });
 
-  Object.keys(FILTER_CONFIG).forEach((filterName) => {
-    if (filterName.startsWith('document')) {
-      return;
-    }
-    const matchingUrls = new Set();
-    mediaData.forEach((item) => {
-      try {
-        if (FILTER_CONFIG[filterName](item) && item.url) {
-          matchingUrls.add(item.url);
-        }
-      } catch {
-        // Ignore errors during filtering
+      if (!isSvgFile(item)) {
+        uniqueNonSvgUrls.add(item.url);
       }
-    });
 
-    filterCounts[filterName] = matchingUrls.size;
+      Object.keys(filterUrlSets).forEach((filterName) => {
+        try {
+          if (FILTER_CONFIG[filterName](item)) {
+            filterUrlSets[filterName].add(item.url);
+          }
+        } catch {
+        }
+      });
+    }
   });
 
-  const uniqueNonSvgUrls = new Set();
-  mediaData.forEach((item) => {
-    if (item.url && !isSvgFile(item)) {
-      uniqueNonSvgUrls.add(item.url);
-    }
+  Object.keys(filterUrlSets).forEach((filterName) => {
+    filterCounts[filterName] = filterUrlSets[filterName].size;
   });
   filterCounts.all = uniqueNonSvgUrls.size;
 
-  return {
+  processedDataCache = {
     filterCounts,
     totalCount: uniqueMediaUrls.size,
   };
+  lastProcessedDataHash = currentHash;
+
+  return processedDataCache;
+}
+
+/**
+ * Clear the processed data cache - call this when media data changes
+ */
+export function clearProcessedDataCache() {
+  processedDataCache = null;
+  lastProcessedDataHash = null;
 }

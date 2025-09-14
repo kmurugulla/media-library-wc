@@ -13,7 +13,7 @@ class ContentParser {
     this.throttleDelay = 50;
     this.maxConcurrency = 20;
     this.enableImageAnalysis = options.enableImageAnalysis || false;
-    this.enableCategorization = options.enableCategorization !== false; // Default to true
+    this.enableCategorization = options.enableCategorization !== false;
     this.analysisConfig = options.analysisConfig || {};
     this.categorizationConfig = options.categorizationConfig || {};
 
@@ -66,7 +66,6 @@ class ContentParser {
     skipped = urls.length - urlsToScan.length;
 
     if (skipped > 0) {
-      // URLs were skipped due to no changes
     }
     const callback = async (url) => {
       try {
@@ -112,19 +111,16 @@ class ContentParser {
 
       const baseTag = doc.querySelector('base');
       if (baseTag) {
-        // Base tag found but not used in current implementation
       }
 
       const title = doc.querySelector('title');
       if (title) {
-        // Title found but not used in current implementation
       }
 
       const metaTags = doc.querySelectorAll(
         'meta[name*="env"], meta[name*="environment"], meta[property*="env"]',
       );
       if (metaTags.length > 0) {
-        // Environment meta tags found but not used in current implementation
       }
 
       const mediaItems = [];
@@ -133,7 +129,6 @@ class ContentParser {
       const images = doc.querySelectorAll('img');
 
       if (images.length > 0) {
-        // Images found, processing below
       }
 
       for (let index = 0; index < images.length; index += 1) {
@@ -172,7 +167,6 @@ class ContentParser {
               lastUsedAt: timestamp,
             };
 
-            // Run categorization independently of image analysis
             if (this.enableCategorization) {
               try {
                 const categoryResult = detectCategory(
@@ -180,8 +174,8 @@ class ContentParser {
                   mediaItem.ctx,
                   mediaItem.alt,
                   '',
-                  0, // width - will be 0 without image analysis
-                  0, // height - will be 0 without image analysis
+                  0,
+                  0,
                 );
 
                 mediaItem.category = categoryResult.category;
@@ -189,7 +183,6 @@ class ContentParser {
                 mediaItem.categoryScore = categoryResult.score;
                 mediaItem.categorySource = categoryResult.source;
               } catch (error) {
-                // Categorization failed, use default
                 mediaItem.category = 'other';
                 mediaItem.categoryConfidence = 'none';
                 mediaItem.categoryScore = 0;
@@ -197,7 +190,6 @@ class ContentParser {
               }
             }
 
-            // Run full image analysis if enabled
             if (this.enableImageAnalysis) {
               try {
                 const analysis = await analyzeImage(fixedUrl, null, mediaItem.ctx);
@@ -209,7 +201,6 @@ class ContentParser {
                 mediaItem.exifDate = analysis.exifDate;
                 mediaItem.analysisConfidence = analysis.confidence;
 
-                // Override categorization with analysis results if available
                 if (analysis.category) {
                   mediaItem.category = analysis.category;
                   mediaItem.categoryConfidence = analysis.categoryConfidence;
@@ -228,7 +219,6 @@ class ContentParser {
                   }
                 }
               } catch (error) {
-                // Image analysis failed
               }
             }
 

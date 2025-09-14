@@ -64,6 +64,10 @@ dataFiles.forEach(dataFile => {
   }
 });
 
+// Note: Sources and utils are NOT copied to dist
+// Sources should be provided by the host system
+// Utils are bundled into the main media-library.es.js file
+
 // Examples are kept at root level for development
 // They are not copied to dist as dist only contains core WC files
 

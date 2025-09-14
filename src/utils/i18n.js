@@ -42,7 +42,6 @@ class I18nManager extends EventTarget {
 
       return this.translations.get(this.fallbackLocale) || {};
     } catch (error) {
-      // Failed to load locale
       return this.translations.get(this.fallbackLocale) || {};
     }
   }
@@ -57,13 +56,11 @@ class I18nManager extends EventTarget {
     let translation = this.getNestedValue(translations, key);
 
     if (!translation) {
-      // Fallback to English
       const fallbackTranslations = this.translations.get(this.fallbackLocale) || {};
       translation = this.getNestedValue(fallbackTranslations, key);
     }
 
     if (!translation) {
-      // Translation missing for key
       return key;
     }
 

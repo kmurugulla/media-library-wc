@@ -77,14 +77,12 @@ class ModalManager extends LocalizableElement {
   }
 
   shouldShowPreviewEditButtons() {
-    // Domains that should show Preview and Edit buttons
     const previewEditDomains = [
       'content.da.live',
     ];
 
     const source = this.modalData?.data?.source || '';
 
-    // Check if source matches any of the whitelisted domains
     return previewEditDomains.some((domain) => source.includes(domain));
   }
 

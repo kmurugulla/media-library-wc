@@ -199,7 +199,7 @@
                     >
                 </div>
                 <div class="control-group">
-                    <label for="sitemap-specific">Specific Sitemap URL (Optional):</label>
+                    <label for="sitemap-specific">Specific Sitemap URL:</label>
                     <input 
                         type="url" 
                         id="sitemap-specific" 
@@ -374,10 +374,15 @@
                 const url = sitemapUrlInput.value.trim();
                 const specific = sitemapSpecificInput.value.trim();
                 
-                if (!url) throw new Error('Please enter a website URL');
+                // Require either website URL or sitemap URL
+                if (!url && !specific) {
+                    throw new Error('Please enter either a Website URL or Sitemap URL');
+                }
                 
-                const pageList = await sitemapSource.getPageList(url, specific || null);
-                const siteKey = mediaLibrary.generateSiteKey(url);
+                // Use sitemap URL if provided, otherwise use website URL
+                const primaryUrl = specific || url;
+                const pageList = await sitemapSource.getPageList(primaryUrl, specific ? null : null);
+                const siteKey = mediaLibrary.generateSiteKey(primaryUrl);
                 
                 return await mediaLibrary.loadFromPageList(pageList, (completed, total, found) => {
                     showStatus(`Sitemap scan: ${completed}/${total} pages, ${found} media items`, 'info');

@@ -8,8 +8,8 @@ class ListVirtualScrollManager extends VirtualScrollManager {
   constructor(options = {}) {
     super({
       itemHeight: 80,
-      itemWidth: 0, // Not used for list layout
-      cardSpacing: 0, // Not used for list layout
+      itemWidth: 0,
+      cardSpacing: 0,
       ...options,
     });
   }
@@ -31,7 +31,6 @@ class ListVirtualScrollManager extends VirtualScrollManager {
     this.visibleStart = Math.max(0, startIndex - this.bufferSize);
     this.visibleEnd = Math.min(this.totalItems, endIndex + this.bufferSize);
 
-    // Limit visible items to prevent performance issues
     if (this.visibleEnd - this.visibleStart > this.maxVisibleItems) {
       const center = Math.floor((this.visibleStart + this.visibleEnd) / 2);
       this.visibleStart = Math.max(0, center - Math.floor(this.maxVisibleItems / 2));

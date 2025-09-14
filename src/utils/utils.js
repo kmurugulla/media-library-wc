@@ -29,7 +29,6 @@ function extractFileExtension(filePath) {
 
     return extension;
   } catch (error) {
-    // Error extracting file extension from URL
     return '';
   }
 }
@@ -202,7 +201,6 @@ export function extractMediaLocation(mediaUrl) {
       fullUrl: mediaUrl,
     };
   } catch (error) {
-    // If it's not a valid URL, treat it as a relative path
     return {
       origin: '',
       path: mediaUrl,
@@ -358,7 +356,6 @@ export async function copyMediaToClipboard(media) {
     await navigator.clipboard.writeText(mediaUrl);
     return { heading: 'Copied', message: 'Media URL copied to clipboard.' };
   } catch (error) {
-    // Failed to copy to clipboard
     return { heading: 'Error', message: 'Failed to copy to clipboard.' };
   }
 }

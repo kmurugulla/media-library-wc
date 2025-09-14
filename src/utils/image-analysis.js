@@ -43,13 +43,10 @@ async function getImageDimensions(imageUrl) {
 
 async function extractEXIFData(imageUrl) {
   try {
-    // Dynamic import to avoid loading if not needed
     const exifr = await import('exifr');
 
-    // Fetch the image as a blob to extract EXIF data
     const response = await fetch(imageUrl);
     if (!response.ok) {
-      // Capture HTTP error details
       return {
         error: true,
         errorType: response.status === 404 ? '404' : 'http_error',
@@ -111,7 +108,7 @@ async function hasContentChanged(imageUrl, existingAnalysis) {
     return currentETag !== existingAnalysis.etag
            || currentLastModified !== existingAnalysis.lastModified;
   } catch (error) {
-    return true; // Assume changed if we can't check
+    return true;
   }
 }
 
@@ -168,7 +165,7 @@ async function getImageContentHash(imageUrl) {
     const hashArray = Array.from(new Uint8Array(hashBuffer));
     return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
   } catch (error) {
-    return imageUrl; // Fallback to URL
+    return imageUrl;
   }
 }
 
@@ -189,7 +186,6 @@ export async function analyzeImage(imageUrl, existingAnalysis = null, context = 
 
     return analysis;
   } catch (error) {
-    // Image analysis failed
     return getBasicAnalysis(imageUrl);
   }
 }

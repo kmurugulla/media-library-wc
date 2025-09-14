@@ -1,6 +1,7 @@
 // src/components/grid/grid.js
 import { html } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
+import { ref, createRef } from 'lit/directives/ref.js';
 import LocalizableElement from '../base-localizable.js';
 import { getMediaType, isImage } from '../../utils/utils.js';
 import { getStyles } from '../../utils/get-styles.js';
@@ -30,6 +31,10 @@ class MediaGrid extends LocalizableElement {
     this.visibleEnd = 50;
     this.colCount = 4;
 
+    this.iconsLoaded = false;
+
+    this.containerRef = createRef();
+
     this.virtualScroll = new GridVirtualScrollManager({
       onRangeChange: (range) => {
         this.visibleStart = range.start;
@@ -58,6 +63,15 @@ class MediaGrid extends LocalizableElement {
     });
   }
 
+  shouldUpdate(changedProperties) {
+    return changedProperties.has('mediaData')
+           || changedProperties.has('searchQuery')
+           || changedProperties.has('visibleStart')
+           || changedProperties.has('visibleEnd')
+           || changedProperties.has('colCount')
+           || changedProperties.has('locale');
+  }
+
   willUpdate(changedProperties) {
     if (changedProperties.has('mediaData')) {
       if (this.mediaData && this.mediaData.length > 0) {
@@ -70,8 +84,10 @@ class MediaGrid extends LocalizableElement {
   }
 
   updated(changedProperties) {
-    // Load icons if they haven't been loaded yet
-    this.loadIcons();
+    if (changedProperties.has('mediaData') && this.mediaData?.length > 0 && !this.iconsLoaded) {
+      this.loadIcons();
+      this.iconsLoaded = true;
+    }
 
     if (changedProperties.has('mediaData')) {
       this.updateComplete.then(() => {
@@ -103,14 +119,20 @@ class MediaGrid extends LocalizableElement {
     ];
 
     const existingIcons = this.shadowRoot.querySelectorAll('svg[id]');
-    if (existingIcons.length === 0) {
-      await getSvg({ parent: this.shadowRoot, paths: ICONS });
+    const loadedIconIds = Array.from(existingIcons).map((icon) => icon.id);
+    const missingIcons = ICONS.filter((iconPath) => {
+      const iconId = iconPath.split('/').pop().replace('.svg', '');
+      return !loadedIconIds.includes(iconId);
+    });
+
+    if (missingIcons.length > 0) {
+      await getSvg({ parent: this.shadowRoot, paths: missingIcons });
     }
   }
 
   setupScrollListener() {
     requestAnimationFrame(() => {
-      const container = this.shadowRoot.querySelector('.media-main');
+      const container = this.containerRef.value;
       if (container) {
         this.virtualScroll.init(container, this.mediaData?.length || 0);
         this.virtualScroll.updateColCount();
@@ -137,7 +159,7 @@ class MediaGrid extends LocalizableElement {
     const visibleItems = this.mediaData.slice(this.visibleStart, this.visibleEnd);
 
     return html`
-      <main class="media-main">
+      <main class="media-main" ${ref(this.containerRef)}>
         <div class="media-grid" style="height: ${totalHeight}px;">
           ${repeat(visibleItems, (media) => media.url, (media, i) => {
     const index = this.visibleStart + i;
