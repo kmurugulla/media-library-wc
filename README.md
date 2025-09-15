@@ -57,6 +57,64 @@ npm install media-library
 | `storage` | String | `'indexeddb'` | Storage type: `'indexeddb'`, `'local'` |
 | `locale` | String | `'en'` | Language locale (currently supports `'en'`) |
 
+### Query Parameters
+
+The media library supports URL query parameters for deep linking, bookmarking, and automated configuration. This allows you to pre-configure the component and optionally trigger automatic scanning.
+
+#### Supported Parameters
+
+| Parameter | Description | Example Values |
+|-----------|-------------|----------------|
+| `source` | Data source type | `sitemap`, `wordpress`, `aem`, `adobe-da` |
+| `url` | Website URL | `https://example.com` |
+| `sitemap` | Direct sitemap URL | `https://example.com/sitemap.xml` |
+| `org` | Organization (AEM/Adobe DA) | `mycompany` |
+| `repo` | Repository (AEM/Adobe DA) | `website` |
+| `storage` | Storage type | `indexeddb`, `local` |
+| `locale` | Language locale | `en`, `es`, `de`, `fr` |
+| `load` | Load existing site from storage | `site-key-name` |
+| `autoscan` | Auto-start scanning | `true`, `false` |
+
+#### Example URLs
+
+**Sitemap with Auto-Scan:**
+```
+index.html?source=sitemap&url=https://example.com&autoscan=true
+```
+
+**WordPress with Custom Settings:**
+```
+index.html?source=wordpress&url=https://myblog.com&storage=local&locale=es&autoscan=true
+```
+
+**AEM/EDS Configuration:**
+```
+index.html?source=aem&org=mycompany&repo=website&autoscan=true
+```
+
+**Adobe DA Configuration:**
+```
+index.html?source=adobe-da&org=mycompany&repo=assets&autoscan=true
+```
+
+**Load Existing Site:**
+```
+index.html?load=example-com&storage=indexeddb
+```
+
+**Direct Sitemap URL:**
+```
+index.html?source=sitemap&sitemap=https://example.com/sitemap.xml&autoscan=true
+```
+
+#### Use Cases
+
+- **Bookmarking**: Save frequently used configurations as bookmarks
+- **Sharing**: Share pre-configured URLs with team members
+- **Automation**: Trigger scans from external systems or dashboards
+- **Deep Linking**: Direct access to specific site configurations
+- **Embedding**: Use in iframes with pre-configured settings
+
 ### Storage Options
 
 - **`indexeddb`** (default): Uses browser's IndexedDB for large datasets
@@ -248,6 +306,13 @@ MIT License - see [LICENSE](LICENSE) file for details.
 - **Discussions**: [GitHub Discussions](https://github.com/your-org/media-library/discussions)
 
 ## Changelog
+
+### v1.1.0
+- **Query Parameter Support**: Added comprehensive URL parameter support for deep linking and bookmarking
+- **Auto-Scan Feature**: Added `autoscan` parameter for automatic scanning on page load
+- **Multi-Source Configuration**: Support for sitemap, WordPress, AEM/EDS, and Adobe DA sources via URL parameters
+- **Form Auto-Population**: Automatic form filling from URL parameters
+- **Enhanced User Experience**: Improved workflow for sharing and bookmarking configurations
 
 ### v1.0.0
 - Initial release

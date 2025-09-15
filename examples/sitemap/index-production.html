@@ -166,6 +166,9 @@
             
             setupControls();
             setupNotifications();
+            
+            // Parse and apply URL parameters
+            applyURLParameters();
         });
         
         async function waitForMediaLibraryInit() {
@@ -478,6 +481,130 @@
                 showNotification(`Failed to clear data: ${error.message}`, 'error');
             }
         };
+
+        // URL Parameter Support Functions
+        function parseURLParameters() {
+            const urlParams = new URLSearchParams(window.location.search);
+            const params = {};
+            
+            // Parse all possible parameters
+            for (const [key, value] of urlParams.entries()) {
+                params[key] = decodeURIComponent(value);
+            }
+            
+            return params;
+        }
+        
+        function applyURLParameters() {
+            const params = parseURLParameters();
+            
+            if (Object.keys(params).length === 0) {
+                return; // No parameters to apply
+            }
+            
+            try {
+                // Apply data source
+                if (params.source) {
+                    const dataSourceSelect = document.getElementById('data-source');
+                    if (dataSourceSelect) {
+                        dataSourceSelect.value = params.source;
+                        updateDataSourceOptions(params.source);
+                    }
+                }
+                
+                // Apply website URL
+                if (params.url) {
+                    const websiteUrlInput = document.getElementById('website-url');
+                    if (websiteUrlInput) {
+                        websiteUrlInput.value = params.url;
+                    }
+                }
+                
+                // Apply sitemap URL
+                if (params.sitemap) {
+                    const sitemapUrlInput = document.getElementById('sitemap-url');
+                    if (sitemapUrlInput) {
+                        sitemapUrlInput.value = params.sitemap;
+                    }
+                }
+                
+                // Apply AEM parameters
+                if (params.org) {
+                    const aemOrgInput = document.getElementById('aem-org');
+                    if (aemOrgInput) {
+                        aemOrgInput.value = params.org;
+                    }
+                }
+                
+                if (params.repo) {
+                    const aemRepoInput = document.getElementById('aem-repo');
+                    if (aemRepoInput) {
+                        aemRepoInput.value = params.repo;
+                    }
+                }
+                
+                // Apply Adobe DA parameters (reuse AEM inputs since they're the same)
+                if (params.org) {
+                    const adobeOrgInput = document.getElementById('adobe-org');
+                    if (adobeOrgInput) {
+                        adobeOrgInput.value = params.org;
+                    }
+                }
+                
+                if (params.repo) {
+                    const adobeRepoInput = document.getElementById('adobe-repo');
+                    if (adobeRepoInput) {
+                        adobeRepoInput.value = params.repo;
+                    }
+                }
+                
+                // Apply storage type
+                if (params.storage) {
+                    const storageSelect = document.getElementById('storage-type');
+                    if (storageSelect) {
+                        storageSelect.value = params.storage;
+                        // Trigger storage change event
+                        storageSelect.dispatchEvent(new Event('change'));
+                    }
+                }
+                
+                // Apply locale
+                if (params.locale) {
+                    const localeSelect = document.getElementById('locale');
+                    if (localeSelect) {
+                        localeSelect.value = params.locale;
+                        // Trigger locale change event
+                        localeSelect.dispatchEvent(new Event('change'));
+                    }
+                }
+                
+                // Handle load parameter for loading existing site
+                if (params.load) {
+                    const siteSelector = document.getElementById('site-selector');
+                    if (siteSelector) {
+                        // Wait for sites to load, then select the specified site
+                        setTimeout(() => {
+                            siteSelector.value = params.load;
+                            siteSelector.dispatchEvent(new Event('change'));
+                        }, 500);
+                    }
+                }
+                
+                // Auto-scan if requested
+                if (params.autoscan === 'true') {
+                    // Small delay to ensure form is fully populated
+                    setTimeout(() => {
+                        performScan();
+                    }, 1000);
+                }
+                
+                showNotification('Configuration loaded from URL parameters', 'info');
+                
+            } catch (error) {
+                console.error('Error applying URL parameters:', error);
+                showNotification(`Error loading URL parameters: ${error.message}`, 'error');
+            }
+        }
 
     </script>
 </body>
