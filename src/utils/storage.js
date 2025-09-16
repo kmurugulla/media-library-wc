@@ -1,4 +1,3 @@
-// src/utils/storage.js
 import logger from './logger.js';
 
 class BrowserStorage {
@@ -42,8 +41,9 @@ class BrowserStorage {
     switch (this.type) {
       case 'indexeddb':
         return this.saveToIndexedDB(data, siteKey);
-      case 'local':
-        return this.saveToLocalStorage(data, siteKey);
+      case 'none':
+        // No-op for 'none' storage type
+        return Promise.resolve();
       default:
         throw new Error(`Unsupported storage type: ${this.type}`);
     }
@@ -53,8 +53,9 @@ class BrowserStorage {
     switch (this.type) {
       case 'indexeddb':
         return this.loadFromIndexedDB(siteKey);
-      case 'local':
-        return this.loadFromLocalStorage(siteKey);
+      case 'none':
+        // Return empty array for 'none' storage type
+        return [];
       default:
         throw new Error(`Unsupported storage type: ${this.type}`);
     }
@@ -120,37 +121,13 @@ class BrowserStorage {
     }
   }
 
-  async saveToLocalStorage(data, siteKey = 'media-data') {
-    try {
-      localStorage.setItem(`media-library-${siteKey}`, JSON.stringify({
-        data,
-        timestamp: Date.now(),
-        siteKey,
-      }));
-    } catch (error) {
-      throw new Error(`Failed to save to localStorage: ${error.message}`);
-    }
-  }
-
-  async loadFromLocalStorage(siteKey = 'media-data') {
-    try {
-      const stored = localStorage.getItem(`media-library-${siteKey}`);
-      if (!stored) return [];
-
-      const parsed = JSON.parse(stored);
-      return parsed.data || [];
-    } catch (error) {
-      logger.warn('Failed to load from localStorage:', error);
-      return [];
-    }
-  }
-
   async clear() {
     switch (this.type) {
       case 'indexeddb':
         return this.clearIndexedDB();
-      case 'local':
-        return this.clearLocalStorage();
+      case 'none':
+        // No-op for 'none' storage type
+        return Promise.resolve();
       default:
         throw new Error(`Unsupported storage type: ${this.type}`);
     }
@@ -230,16 +207,12 @@ class BrowserStorage {
     }
   }
 
-  async clearLocalStorage() {
-    localStorage.removeItem('media-library-data');
-  }
-
   async getLastModified() {
     switch (this.type) {
       case 'indexeddb':
         return this.getLastModifiedFromIndexedDB();
-      case 'local':
-        return this.getLastModifiedFromLocalStorage();
+      case 'none':
+        return null;
       default:
         return null;
     }
@@ -274,24 +247,13 @@ class BrowserStorage {
     }
   }
 
-  async getLastModifiedFromLocalStorage() {
-    try {
-      const stored = localStorage.getItem('media-library-data');
-      if (!stored) return null;
-
-      const parsed = JSON.parse(stored);
-      return parsed.timestamp || null;
-    } catch (error) {
-      return null;
-    }
-  }
-
   async getAllSites() {
     switch (this.type) {
       case 'indexeddb':
         return this.getAllSitesFromIndexedDB();
-      case 'local':
-        return this.getAllSitesFromLocalStorage();
+      case 'none':
+        // Return empty array for 'none' storage type
+        return [];
       default:
         return [];
     }
@@ -331,37 +293,13 @@ class BrowserStorage {
     }
   }
 
-  async getAllSitesFromLocalStorage() {
-    try {
-      const sites = [];
-      for (let i = 0; i < localStorage.length; i += 1) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith('media-library-')) {
-          const siteKey = key.replace('media-library-', '');
-          const stored = localStorage.getItem(key);
-          if (stored) {
-            const parsed = JSON.parse(stored);
-            sites.push({
-              siteKey,
-              timestamp: parsed.timestamp,
-              itemCount: parsed.data ? parsed.data.length : 0,
-            });
-          }
-        }
-      }
-      return sites;
-    } catch (error) {
-      logger.warn('Failed to get all sites from localStorage:', error);
-      return [];
-    }
-  }
-
   async deleteSite(siteKey) {
     switch (this.type) {
       case 'indexeddb':
         return this.deleteSiteFromIndexedDB(siteKey);
-      case 'local':
-        return this.deleteSiteFromLocalStorage(siteKey);
+      case 'none':
+        // No-op for 'none' storage type
+        return Promise.resolve();
       default:
         throw new Error(`Unsupported storage type: ${this.type}`);
     }
@@ -391,20 +329,13 @@ class BrowserStorage {
     }
   }
 
-  async deleteSiteFromLocalStorage(siteKey) {
-    try {
-      localStorage.removeItem(`media-library-${siteKey}`);
-    } catch (error) {
-      throw new Error(`Failed to delete site from localStorage: ${error.message}`);
-    }
-  }
-
   async saveScanMetadata(siteKey, metadata) {
     switch (this.type) {
       case 'indexeddb':
         return this.saveScanMetadataToIndexedDB(siteKey, metadata);
-      case 'local':
-        return this.saveScanMetadataToLocalStorage(siteKey, metadata);
+      case 'none':
+        // No-op for 'none' storage type
+        return Promise.resolve();
       default:
         throw new Error(`Unsupported storage type: ${this.type}`);
     }
@@ -414,8 +345,9 @@ class BrowserStorage {
     switch (this.type) {
       case 'indexeddb':
         return this.loadScanMetadataFromIndexedDB(siteKey);
-      case 'local':
-        return this.loadScanMetadataFromLocalStorage(siteKey);
+      case 'none':
+        // Return null for 'none' storage type
+        return null;
       default:
         return null;
     }
@@ -475,30 +407,6 @@ class BrowserStorage {
       });
     } catch (error) {
       logger.warn('Failed to load scan metadata from IndexedDB:', error);
-      return null;
-    }
-  }
-
-  async saveScanMetadataToLocalStorage(siteKey, metadata) {
-    try {
-      localStorage.setItem(`scan-metadata-${siteKey}`, JSON.stringify({
-        siteKey,
-        ...metadata,
-        timestamp: Date.now(),
-      }));
-    } catch (error) {
-      throw new Error(`Failed to save scan metadata to localStorage: ${error.message}`);
-    }
-  }
-
-  async loadScanMetadataFromLocalStorage(siteKey) {
-    try {
-      const stored = localStorage.getItem(`scan-metadata-${siteKey}`);
-      if (!stored) return null;
-
-      return JSON.parse(stored);
-    } catch (error) {
-      logger.warn('Failed to load scan metadata from localStorage:', error);
       return null;
     }
   }

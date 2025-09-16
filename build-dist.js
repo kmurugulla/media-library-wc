@@ -2,9 +2,7 @@ import { build } from 'vite';
 import { copyFileSync, mkdirSync, existsSync, cpSync } from 'fs';
 import { join } from 'path';
 
-// This function only copies assets - the main build is handled by vite build command
 
-// Copy icons to dist
 const distDir = 'dist';
 const iconsDir = join(distDir, 'icons');
 
@@ -16,7 +14,6 @@ if (!existsSync(iconsDir)) {
   mkdirSync(iconsDir);
 }
 
-// Copy all icons
 const icons = [
   'close.svg', 'photo.svg', 'video.svg', 'pdf.svg', 
   'external-link.svg', 'copy.svg', 'search.svg', 
@@ -32,7 +29,6 @@ icons.forEach(icon => {
   }
 });
 
-// Copy locales
 const localesDir = join(distDir, 'locales');
 if (!existsSync(localesDir)) {
   mkdirSync(localesDir);
@@ -48,7 +44,6 @@ locales.forEach(locale => {
   }
 });
 
-// Copy data directory (category patterns)
 const dataDir = join(distDir, 'data');
 if (!existsSync(dataDir)) {
   mkdirSync(dataDir);
@@ -64,20 +59,11 @@ dataFiles.forEach(dataFile => {
   }
 });
 
-// Note: Sources and utils are NOT copied to dist
-// Sources should be provided by the host system
-// Utils are bundled into the main media-library.es.js file
-
-// Examples are kept at root level for development
-// They are not copied to dist as dist only contains core WC files
-
-// Fix asset paths in the built JavaScript file
 import { readFileSync, writeFileSync } from 'fs';
 
 const jsFile = join(distDir, 'media-library-full.iife.js');
 if (existsSync(jsFile)) {
   let content = readFileSync(jsFile, 'utf8');
-  // Replace /src/icons/ with ./icons/ for proper distribution paths
   content = content.replace(/\/src\/icons\//g, './icons/');
   writeFileSync(jsFile, content);
   console.log('Fixed asset paths in media-library-full.iife.js');

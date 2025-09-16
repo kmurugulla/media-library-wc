@@ -1,4 +1,3 @@
-// src/utils/filters.js
 import { getAvailableCategories } from './category-detector.js';
 
 function extractFileExtension(filePath) {
@@ -145,18 +144,11 @@ export function getAvailableFilters() {
   return Object.keys(FILTER_CONFIG);
 }
 
-/**
- * Get category-based filters only
- * @returns {Array} Array of category filter names
- */
 export function getCategoryFilters() {
   const categories = getAvailableCategories();
   return categories.filter((category) => category !== 'other');
 }
 
-/**
- * Parse colon syntax from search query (e.g., "doc:path", "name:value")
- */
 export function parseColonSyntax(query) {
   if (!query) return null;
 
@@ -322,9 +314,6 @@ export function calculateFilteredMediaData(
   return filteredData;
 }
 
-/**
- * Generate folder suggestions from media data
- */
 function generateFolderSuggestions(mediaData, value) {
   const folderPaths = new Set();
 
@@ -369,9 +358,6 @@ function generateFolderSuggestions(mediaData, value) {
   return folderSuggestions.slice(0, 10);
 }
 
-/**
- * Create a search suggestion object for a media item
- */
 export function createSearchSuggestion(item) {
   if (!item.name && !item.url && !item.doc) return null;
 
@@ -390,9 +376,6 @@ export function createSearchSuggestion(item) {
   };
 }
 
-/**
- * Generate search suggestions based on query and media data
- */
 export function generateSearchSuggestions(mediaData, query, createSuggestionFn, maxResults = 10) {
   if (!query || !query.trim() || !mediaData) {
     return [];
@@ -414,7 +397,7 @@ export function generateSearchSuggestions(mediaData, query, createSuggestionFn, 
 
     for (const item of mediaData) {
       if (processedCount >= maxProcessItems) break;
-      processedCount++;
+      processedCount += 1;
 
       switch (field) {
         case 'doc': {
@@ -472,7 +455,7 @@ export function generateSearchSuggestions(mediaData, query, createSuggestionFn, 
 
   for (const item of mediaData) {
     if (processedCount >= maxProcessItems) break;
-    processedCount++;
+    processedCount += 1;
 
     if (item.doc && item.doc.toLowerCase().includes(q)) {
       matchingDocs.add(item.doc);
@@ -548,7 +531,7 @@ export function processMediaData(mediaData) {
           if (FILTER_CONFIG[filterName](item)) {
             filterUrlSets[filterName].add(item.url);
           }
-        } catch {
+        } catch (error) {
         }
       });
     }
@@ -568,9 +551,6 @@ export function processMediaData(mediaData) {
   return processedDataCache;
 }
 
-/**
- * Clear the processed data cache - call this when media data changes
- */
 export function clearProcessedDataCache() {
   processedDataCache = null;
   lastProcessedDataHash = null;

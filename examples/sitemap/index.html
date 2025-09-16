@@ -3,32 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Media Library - Decoupled Architecture Test</title>
+    <title>Media Library - Sitemap Source</title>
     <link rel="stylesheet" href="index.css">
 </head>
 <body>
     <div class="test-container">
-        <h1>Media Library - Decoupled Architecture</h1>
+        <h1>Media Library - Sitemap Source</h1>
         
         <div class="test-section">
-            <h2>Data Source Integration</h2>
-            <p>This test page demonstrates the new decoupled architecture where data sources are external to the Media Library component. Choose a data source and configure it to scan for media files.</p>
-            
+            <h2>Sitemap Integration</h2>
+            <p>This example demonstrates scanning websites by parsing their sitemap.xml files. The sitemap source automatically discovers all pages and extracts media files from them.</p>
             
             <div class="controls">
-                <!-- Data Source Section -->
+                <!-- Sitemap Configuration Section -->
                 <div class="field-section source-section">
                     <div class="control-group">
-                        <label for="data-source">Source:</label>
-                        <select id="data-source">
-                            <option value="sitemap">Sitemap</option>
-                            <option value="wordpress">WordPress</option>
-                            <option value="aem">EDS</option>
-                            <option value="adobe-da">DA</option>
-                        </select>
-                    </div>
-                    
-                    <div class="control-group" id="website-url-group">
                         <label for="website-url">Website URL:</label>
                         <input 
                             type="url" 
@@ -42,55 +31,13 @@
                         <div class="or-divider">(or)</div>
                     </div>
                     
-                    <div class="control-group" id="sitemap-specific-group">
-                        <label for="sitemap-url">Sitemap URL:</label>
+                    <div class="control-group">
+                        <label for="sitemap-url">Direct Sitemap URL:</label>
                         <input 
                             type="url" 
                             id="sitemap-url" 
                             placeholder="https://example.com/sitemap.xml"
                         >
-                    </div>
-                    
-                    <div class="control-group option-group" id="aem-options-group">
-                        <div class="option-row">
-                            <div class="option-col">
-                                <label for="aem-org">Org:</label>
-                                <input 
-                                    type="text" 
-                                    id="aem-org" 
-                                    placeholder="your-org"
-                                >
-                            </div>
-                            <div class="option-col">
-                                <label for="aem-repo">Repo:</label>
-                                <input 
-                                    type="text" 
-                                    id="aem-repo" 
-                                    placeholder="your-repo"
-                                >
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="control-group option-group" id="adobe-options-group">
-                        <div class="option-row">
-                            <div class="option-col">
-                                <label for="adobe-org">Org:</label>
-                                <input 
-                                    type="text" 
-                                    id="adobe-org" 
-                                    placeholder="your-org"
-                                >
-                            </div>
-                            <div class="option-col">
-                                <label for="adobe-repo">Repo:</label>
-                                <input 
-                                    type="text" 
-                                    id="adobe-repo" 
-                                    placeholder="your-repo"
-                                >
-                            </div>
-                        </div>
                     </div>
                 </div>
                 
@@ -99,8 +46,8 @@
                     <div class="control-group">
                         <label for="storage-type">Storage:</label>
                         <select id="storage-type">
-                            <option value="indexeddb">IndexedDB</option>
-                            <option value="local">Local Storage</option>
+                            <option value="none">None</option>
+                            <option value="indexeddb">Local IndexDB</option>
                         </select>
                     </div>
                     
@@ -126,7 +73,7 @@
                 <div class="field-section actions-section">
                     <div class="button-group">
                         <button id="scan-btn" class="btn btn-primary">
-                            Scan
+                            Scan Sitemap
                         </button>
                         <button id="clear-btn" class="btn btn-secondary">
                             Clear Display
@@ -143,7 +90,7 @@
             <div class="media-library-container">
                 <media-library 
                     id="media-library"
-                    storage="indexeddb"
+                    storage="none"
                     locale="en">
                 </media-library>
             </div>
@@ -151,364 +98,6 @@
 
     </div>
 
-    <script type="module">
-        import '/src/index.js';
-        import { SitemapSource, WordPressSource, AEMSource, AdobeDASource } from '/sources/index.js';
-        
-        let mediaLibrary;
-        let currentDataSource = null;
-        
-        document.addEventListener('DOMContentLoaded', () => {
-            mediaLibrary = document.getElementById('media-library');
-            
-            setupControls();
-            setupNotifications();
-        });
-        
-        function setupControls() {
-            const dataSourceSelect = document.getElementById('data-source');
-            const sourceInput = document.getElementById('website-url');
-            const sitemapInput = document.getElementById('sitemap-url');
-            const storageSelect = document.getElementById('storage-type');
-            const localeSelect = document.getElementById('locale');
-            const siteSelector = document.getElementById('site-selector');
-            const scanBtn = document.getElementById('scan-btn');
-            const clearBtn = document.getElementById('clear-btn');
-            
-            // Data source selection handler
-            dataSourceSelect.addEventListener('change', (e) => {
-                updateDataSourceOptions(e.target.value);
-            });
-            
-            // Storage type change handler
-            storageSelect.addEventListener('change', (e) => {
-                mediaLibrary.storage = e.target.value;
-                mediaLibrary.clearData();
-                showNotification('Content cleared - storage type changed', 'info');
-                loadAvailableSites();
-            });
-            
-            // Locale change handler
-            localeSelect.addEventListener('change', (e) => {
-                mediaLibrary.locale = e.target.value;
-            });
-            
-            // Site selector handler
-            siteSelector.addEventListener('change', async (e) => {
-                const selectedSite = e.target.value;
-                if (selectedSite) {
-                    await mediaLibrary.loadFromStorage(selectedSite);
-                    showNotification(`Loaded data for site: ${selectedSite}`, 'success');
-                } else {
-                    mediaLibrary.clearData();
-                    showNotification('Content cleared', 'info');
-                }
-            });
-            
-            // Scan button handler
-            scanBtn.addEventListener('click', async () => {
-                await performScan();
-            });
-            
-            // Clear button handler
-            clearBtn.addEventListener('click', () => {
-                mediaLibrary.clearData();
-                showNotification('Display cleared', 'info');
-            });
-            
-            // Initialize - hide all fields first
-            const sitemapGroup = document.getElementById('sitemap-specific-group');
-            const aemGroup = document.getElementById('aem-options-group');
-            const adobeGroup = document.getElementById('adobe-options-group');
-            const websiteGroup = document.getElementById('website-url-group');
-            const orDivider = document.getElementById('or-divider');
-            
-            sitemapGroup.style.display = 'none';
-            aemGroup.style.display = 'none';
-            adobeGroup.style.display = 'none';
-            websiteGroup.style.display = 'none';
-            orDivider.style.display = 'none';
-            
-            updateDataSourceOptions(dataSourceSelect.value);
-            loadAvailableSites();
-        }
-        
-        function updateDataSourceOptions(dataSourceType) {
-            console.log('Updating data source options for:', dataSourceType);
-            
-            // Hide all option groups first
-            const sitemapGroup = document.getElementById('sitemap-specific-group');
-            const aemGroup = document.getElementById('aem-options-group');
-            const adobeGroup = document.getElementById('adobe-options-group');
-            const websiteGroup = document.getElementById('website-url-group');
-            const orDivider = document.getElementById('or-divider');
-            
-            sitemapGroup.classList.remove('show');
-            sitemapGroup.style.display = 'none';
-            
-            aemGroup.classList.remove('show');
-            aemGroup.style.display = 'none';
-            
-            adobeGroup.classList.remove('show');
-            adobeGroup.style.display = 'none';
-            
-            websiteGroup.classList.remove('show');
-            websiteGroup.style.display = 'none';
-            
-            orDivider.classList.remove('show');
-            orDivider.style.display = 'none';
-            
-            console.log('Hidden all groups');
-            
-            // Show relevant fields based on data source
-            switch (dataSourceType) {
-                case 'sitemap':
-                    websiteGroup.classList.add('show');
-                    websiteGroup.style.display = 'block';
-                    orDivider.classList.add('show');
-                    orDivider.style.display = 'block';
-                    sitemapGroup.classList.add('show');
-                    sitemapGroup.style.display = 'block';
-                    console.log('Showing sitemap fields');
-                    break;
-                case 'wordpress':
-                    websiteGroup.classList.add('show');
-                    websiteGroup.style.display = 'block';
-                    console.log('Showing wordpress fields');
-                    // WordPress doesn't need additional options - just Website URL
-                    break;
-                case 'aem':
-                    aemGroup.classList.add('show');
-                    aemGroup.style.display = 'block';
-                    console.log('Showing AEM fields');
-                    // AEM uses org/repo, not website URL
-                    break;
-                case 'adobe-da':
-                    adobeGroup.classList.add('show');
-                    adobeGroup.style.display = 'block';
-                    console.log('Showing Adobe DA fields');
-                    // Adobe DA uses org/repo, not website URL
-                    break;
-            }
-            
-            // Update placeholder text
-            const sourceInput = document.getElementById('website-url');
-            switch (dataSourceType) {
-                case 'sitemap':
-                    sourceInput.placeholder = 'https://example.com';
-                    break;
-                case 'wordpress':
-                    sourceInput.placeholder = 'https://your-wordpress-site.com';
-                    break;
-                case 'aem':
-                    sourceInput.placeholder = 'https://your-aem-site.com';
-                    break;
-                case 'adobe-da':
-                    sourceInput.placeholder = 'https://your-company.scene7.com';
-                    break;
-            }
-        }
-        
-        async function performScan() {
-            const dataSourceType = document.getElementById('data-source').value;
-            const websiteUrlElement = document.getElementById('website-url');
-            const sourceUrl = websiteUrlElement ? websiteUrlElement.value.trim() : '';
-            const sitemapUrlElement = document.getElementById('sitemap-url');
-            const sitemapUrl = sitemapUrlElement ? sitemapUrlElement.value.trim() : '';
-            
-            // Validation logic for different data sources
-            if (dataSourceType === 'sitemap') {
-                // For sitemap source, require either website URL or sitemap URL
-                if (!sourceUrl && !sitemapUrl) {
-                    showNotification('Please enter either a Website URL or Sitemap URL', 'error');
-                    return;
-                }
-            } else if (dataSourceType === 'wordpress' && !sourceUrl) {
-                // WordPress requires website URL
-                showNotification('Please enter a website URL', 'error');
-                return;
-            }
-            
-            try {
-                const scanBtn = document.getElementById('scan-btn');
-                scanBtn.disabled = true;
-                scanBtn.textContent = 'Scanning...';
-                
-                
-                // Create data source instance
-                let dataSource;
-                let options = {};
-                
-                switch (dataSourceType) {
-                    case 'sitemap':
-                        dataSource = new SitemapSource();
-                        // For sitemap, prioritize sitemap URL if both are provided
-                        // If only website URL is provided, it will auto-detect the sitemap
-                        if (sitemapUrl) {
-                            // Use sitemap URL directly
-                            options.sitemapUrl = sitemapUrl;
-                        }
-                        // If no sitemap URL but website URL exists, it will auto-detect
-                        break;
-                    case 'wordpress':
-                        dataSource = new WordPressSource();
-                        // Automatically include all content types
-                        const postTypes = ['posts', 'pages', 'media'];
-                        options = { postTypes, perPage: 100, maxPages: 10 };
-                        break;
-                    case 'aem':
-                        dataSource = new AEMSource();
-                        const aemOrgElement = document.getElementById('aem-org');
-                        const aemRepoElement = document.getElementById('aem-repo');
-                        const aemOrg = aemOrgElement ? aemOrgElement.value.trim() : '';
-                        const aemRepo = aemRepoElement ? aemRepoElement.value.trim() : '';
-                        if (!aemOrg || !aemRepo) {
-                            throw new Error('Org and Repo are required for EDS');
-                        }
-                        options = { org: aemOrg, repo: aemRepo, maxResults: 1000 };
-                        break;
-                    case 'adobe-da':
-                        dataSource = new AdobeDASource();
-                        const adobeOrgElement = document.getElementById('adobe-org');
-                        const adobeRepoElement = document.getElementById('adobe-repo');
-                        const adobeOrg = adobeOrgElement ? adobeOrgElement.value.trim() : '';
-                        const adobeRepo = adobeRepoElement ? adobeRepoElement.value.trim() : '';
-                        if (!adobeOrg || !adobeRepo) {
-                            throw new Error('Org and Repo are required for DA');
-                        }
-                        options = { org: adobeOrg, repo: adobeRepo, maxResults: 1000 };
-                        break;
-                }
-                
-                // Get page list from data source
-                // EDS and DA sources don't use sourceUrl, they use org/repo from options
-                let pageList;
-                if (dataSourceType === 'sitemap') {
-                    // For sitemap, prioritize sitemap URL if provided, otherwise use website URL
-                    const primaryUrl = sitemapUrl || sourceUrl;
-                    const secondaryUrl = sitemapUrl ? null : null; // No secondary URL needed
-                    pageList = await dataSource.getPageList(primaryUrl, secondaryUrl);
-                } else if (dataSourceType === 'aem' || dataSourceType === 'adobe-da') {
-                    pageList = await dataSource.getPageList(null, options);
-                } else {
-                    pageList = await dataSource.getPageList(sourceUrl, options);
-                }
-                
-                
-                // Generate site key
-                // For EDS and DA, use org-repo format; for others use the primary URL
-                const primaryUrl = (dataSourceType === 'sitemap') ? (sitemapUrl || sourceUrl) : sourceUrl;
-                const siteKey = (dataSourceType === 'aem' || dataSourceType === 'adobe-da') 
-                    ? `${options.org}-${options.repo}` 
-                    : mediaLibrary.generateSiteKey(primaryUrl);
-                
-                // Clear existing data before loading new data
-                mediaLibrary.clearData();
-                
-                // Load pages into media library
-                const mediaData = await mediaLibrary.loadFromPageList(pageList, null, siteKey);
-                
-                showNotification(`Scan complete! Found ${mediaData.length} media items`, 'success');
-                loadAvailableSites();
-                
-            } catch (error) {
-                let errorMessage = error.message;
-                
-                // Provide more helpful error messages for CORS issues
-                if (error.message.includes('CORS') || error.message.includes('cross-origin')) {
-                    errorMessage = `CORS Error: ${error.message}. This is common when testing against external sites. The application will try to use proxy services to work around this limitation.`;
-                } else if (error.message.includes('proxy')) {
-                    errorMessage = `Proxy Error: ${error.message}. All proxy services failed. Try using a different website or contact the site owner about CORS policies.`;
-                }
-                
-                showNotification(`Scan failed: ${errorMessage}`, 'error');
-                console.error('Scan error:', error);
-            } finally {
-                const scanBtn = document.getElementById('scan-btn');
-                scanBtn.disabled = false;
-                scanBtn.textContent = 'Scan';
-            }
-        }
-        
-        async function loadAvailableSites() {
-            try {
-                const storageType = document.getElementById('storage-type').value;
-                const BrowserStorage = (await import('/src/utils/storage.js')).default;
-                const storage = new BrowserStorage(storageType);
-                const sites = await storage.getAllSites();
-                
-                const siteSelector = document.getElementById('site-selector');
-                siteSelector.innerHTML = '<option value="">Select a site...</option>';
-                
-                sites.forEach(site => {
-                    const option = document.createElement('option');
-                    option.value = site.siteKey;
-                    option.textContent = `${site.siteKey} (${site.itemCount} items) - ${new Date(site.timestamp).toLocaleString()}`;
-                    siteSelector.appendChild(option);
-                });
-                
-                if (sites.length === 0) {
-                    const option = document.createElement('option');
-                    option.value = '';
-                    option.textContent = 'No sites found';
-                    option.disabled = true;
-                    siteSelector.appendChild(option);
-                }
-            } catch (error) {
-                console.error('Failed to load available sites:', error);
-                showNotification(`Failed to load sites: ${error.message}`, 'error');
-            }
-        }
-        
-        function setupNotifications() {
-            window.addEventListener('show-notification', (e) => {
-                const { heading, message, type } = e.detail;
-                showNotification(`${heading}: ${message}`, type);
-            });
-        }
-        
-        function showNotification(message, type = 'info') {
-            const notification = document.createElement('div');
-            notification.className = `notification ${type}`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            
-            setTimeout(() => notification.classList.add('show'), 100);
-            setTimeout(() => {
-                notification.classList.remove('show');
-                setTimeout(() => document.body.removeChild(notification), 300);
-            }, 3000);
-        }
-        
-        
-        window.refreshSites = loadAvailableSites;
-        
-        window.clearOldData = async () => {
-            try {
-                const storageType = document.getElementById('storage-type').value;
-                const BrowserStorage = (await import('/src/utils/storage.js')).default;
-                const storage = new BrowserStorage(storageType);
-                
-                const oldData = await storage.load('media-data');
-                if (oldData && oldData.length > 0) {
-                    const shouldMigrate = confirm(`Found ${oldData.length} items in old format. Would you like to migrate them to 'legacy-data' site before clearing?`);
-                    if (shouldMigrate) {
-                        await storage.save(oldData, 'legacy-data');
-                        showNotification(`Migrated ${oldData.length} items to 'legacy-data' site`, 'success');
-                    }
-                }
-                
-                await storage.clear();
-                
-                await loadAvailableSites();
-                
-                showNotification('Old data cleared successfully', 'success');
-            } catch (error) {
-                console.error('Failed to clear old data:', error);
-                showNotification(`Failed to clear data: ${error.message}`, 'error');
-            }
-        };
-
-    </script>
+    <script type="module" src="scripts.js"></script>
 </body>
 </html>

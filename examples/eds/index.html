@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Library - EDS Source</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="test-container">
+        <h1>Media Library - EDS Source</h1>
+        
+        <div class="test-section">
+            <h2>EDS Integration</h2>
+            <p>This example demonstrates scanning Adobe Experience Manager (AEM) sites using the EDS (Experience Data Sources) API. The EDS source discovers content and media files from your AEM instance with proper authentication.</p>
+            
+            <div class="controls">
+                <!-- EDS Configuration Section -->
+                <div class="field-section source-section">
+                    <div class="control-group">
+                        <label for="eds-org">Organization:</label>
+                        <input 
+                            type="text" 
+                            id="eds-org" 
+                            placeholder="your-org"
+                        >
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="eds-repo">Repository:</label>
+                        <input 
+                            type="text" 
+                            id="eds-repo" 
+                            placeholder="your-repo"
+                        >
+                    </div>
+                    
+                </div>
+                
+                <!-- Settings Section -->
+                <div class="field-section settings-section">
+                    <div class="control-group">
+                        <label for="storage-type">Storage:</label>
+                        <select id="storage-type">
+                            <option value="none">None</option>
+                            <option value="indexeddb">Local IndexDB</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="locale">Locale:</label>
+                        <select id="locale">
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                            <option value="de">German</option>
+                            <option value="fr">French</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="site-selector">Loaded Sites:</label>
+                        <select id="site-selector">
+                            <option value="">Select a site...</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Actions Section -->
+                <div class="field-section actions-section">
+                    <div class="button-group">
+                        <button id="scan-btn" class="btn btn-primary">
+                            Scan EDS Site
+                        </button>
+                        <button id="clear-btn" class="btn btn-secondary">
+                            Clear Display
+                        </button>
+                        <button onclick="clearOldData()" class="btn btn-danger">
+                            Clear Storage
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="status" class="status"></div>
+            </div>
+            
+            <div class="media-library-container">
+                <media-library 
+                    id="media-library"
+                    storage="none"
+                    locale="en">
+                </media-library>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module" src="scripts.js"></script>
+</body>
+</html>

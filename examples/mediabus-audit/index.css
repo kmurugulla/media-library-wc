@@ -1,0 +1,265 @@
+/* Media-Bus Audit Log Source Example Styles */
+
+.test-container {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0 auto;
+    max-width: 1200px;
+    padding: 20px;
+}
+
+.test-section {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
+    margin-bottom: 24px;
+    padding: 24px;
+}
+
+.test-section h1 {
+    color: #1e293b;
+    font-size: 2rem;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
+.test-section h2 {
+    color: #374151;
+    font-size: 1.5rem;
+    font-weight: 500;
+    margin-bottom: 12px;
+}
+
+.test-section p {
+    color: #6b7280;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+.controls {
+    display: grid;
+    gap: 24px;
+    margin-bottom: 24px;
+}
+
+.field-section {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+    padding: 20px;
+}
+
+.control-group {
+    display: grid;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.control-group:last-child {
+    margin-bottom: 0;
+}
+
+.control-group label {
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 500;
+}
+
+.control-group input,
+.control-group select {
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 4px;
+    color: #374151;
+    font-size: 0.875rem;
+    padding: 8px 12px;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+
+.control-group input:focus,
+.control-group select:focus {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 3px rgb(59 130 246 / 0.1);
+    outline: none;
+}
+
+.control-group small {
+    color: #6b7280;
+    font-size: 0.75rem;
+}
+
+.load-button {
+    background: #3b82f6;
+    border: none;
+    border-radius: 6px;
+    color: #fff;
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    padding: 12px 24px;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.load-button:hover {
+    background: #2563eb;
+}
+
+.load-button:disabled {
+    background: #9ca3af;
+    cursor: not-allowed;
+}
+
+.config-toggle {
+    margin-bottom: 16px;
+}
+
+.config-toggle-btn {
+    align-items: center;
+    background: #f3f4f6;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    color: #374151;
+    cursor: pointer;
+    display: flex;
+    font-size: 0.875rem;
+    font-weight: 500;
+    gap: 8px;
+    padding: 8px 16px;
+    transition: background-color 0.15s ease-in-out;
+}
+
+.config-toggle-btn:hover {
+    background: #e5e7eb;
+}
+
+.config-toggle-icon {
+    transition: transform 0.15s ease-in-out;
+}
+
+/* Media Library Component Styles */
+media-library {
+    --ml-primary-color: #3b82f6;
+    --ml-secondary-color: #6b7280;
+    --ml-background-color: #fff;
+    --ml-border-color: #e5e7eb;
+    --ml-text-color: #374151;
+    --ml-text-secondary: #6b7280;
+    --ml-hover-color: #f3f4f6;
+    --ml-active-color: #dbeafe;
+    --ml-error-color: #ef4444;
+    --ml-success-color: #10b981;
+    --ml-warning-color: #f59e0b;
+    --ml-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+    --ml-shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --ml-radius: 6px;
+    --ml-radius-lg: 8px;
+    --ml-spacing-xs: 4px;
+    --ml-spacing-sm: 8px;
+    --ml-spacing-md: 16px;
+    --ml-spacing-lg: 24px;
+    --ml-spacing-xl: 32px;
+    --ml-font-size-xs: 0.75rem;
+    --ml-font-size-sm: 0.875rem;
+    --ml-font-size-base: 1rem;
+    --ml-font-size-lg: 1.125rem;
+    --ml-font-size-xl: 1.25rem;
+    --ml-font-weight-normal: 400;
+    --ml-font-weight-medium: 500;
+    --ml-font-weight-semibold: 600;
+    --ml-font-weight-bold: 700;
+    --ml-line-height-tight: 1.25;
+    --ml-line-height-normal: 1.5;
+    --ml-line-height-relaxed: 1.75;
+    --ml-transition: all 0.15s ease-in-out;
+    --ml-transition-fast: all 0.1s ease-in-out;
+    --ml-transition-slow: all 0.3s ease-in-out;
+    --ml-z-dropdown: 1000;
+    --ml-z-modal: 1050;
+    --ml-z-tooltip: 1100;
+    --ml-z-notification: 1150;
+    --ml-z-max: 9999;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .test-container {
+        padding: 16px;
+    }
+    
+    .test-section {
+        padding: 16px;
+    }
+    
+    .test-section h1 {
+        font-size: 1.5rem;
+    }
+    
+    .test-section h2 {
+        font-size: 1.25rem;
+    }
+    
+    .field-section {
+        padding: 16px;
+    }
+    
+    .control-group {
+        margin-bottom: 12px;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .test-container {
+        background: #0f172a;
+        color: #e2e8f0;
+    }
+    
+    .test-section {
+        background: #1e293b;
+        border: 1px solid #334155;
+    }
+    
+    .test-section h1,
+    .test-section h2 {
+        color: #f1f5f9;
+    }
+    
+    .test-section p {
+        color: #94a3b8;
+    }
+    
+    .field-section {
+        background: #334155;
+        border-color: #475569;
+    }
+    
+    .control-group label {
+        color: #e2e8f0;
+    }
+    
+    .control-group input,
+    .control-group select {
+        background: #1e293b;
+        border-color: #475569;
+        color: #e2e8f0;
+    }
+    
+    .control-group input:focus,
+    .control-group select:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgb(59 130 246 / 0.2);
+    }
+    
+    .control-group small {
+        color: #94a3b8;
+    }
+    
+    .config-toggle-btn {
+        background: #334155;
+        border-color: #475569;
+        color: #e2e8f0;
+    }
+    
+    .config-toggle-btn:hover {
+        background: #475569;
+    }
+}

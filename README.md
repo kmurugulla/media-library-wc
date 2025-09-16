@@ -47,6 +47,57 @@ npm install media-library
 <link rel="stylesheet" href="https://unpkg.com/media-library/dist/style.css">
 ```
 
+## Examples
+
+The project includes comprehensive examples for each data source type:
+
+### Source-Specific Examples
+
+- **`examples/sitemap/`** - Sitemap source integration
+- **`examples/wordpress/`** - WordPress REST API integration  
+- **`examples/aem/`** - Adobe Experience Manager (AEM/EDS) integration
+- **`examples/adobe-da/`** - Adobe Dynamic Media (DA) integration
+- **`examples/multi-source/`** - All sources in a single interface
+
+### Example Structure
+
+Each example folder contains:
+- **`index.html`** - Source-specific HTML interface
+- **`index.css`** - Styled components and layout
+- **`scripts.js`** - Source-specific JavaScript logic
+
+### Running Examples
+
+```bash
+# Serve the examples directory
+npx serve examples/
+
+# Or use any static file server
+python -m http.server 8000
+```
+
+### Example URLs
+
+**Sitemap Source:**
+```
+examples/sitemap/index.html?url=https://example.com&autoscan=true
+```
+
+**WordPress Source:**
+```
+examples/wordpress/index.html?url=https://myblog.com&autoscan=true
+```
+
+**AEM/EDS Source:**
+```
+examples/aem/index.html?org=mycompany&repo=website&autoscan=true
+```
+
+**Adobe DA Source:**
+```
+examples/adobe-da/index.html?org=mycompany&repo=assets&autoscan=true
+```
+
 ## Configuration
 
 ### Properties

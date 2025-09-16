@@ -72,8 +72,11 @@ class ModalManager extends LocalizableElement {
   };
 
   getUsageCount() {
-    if (!this.modalData?.data?.usageData) return 0;
-    return this.modalData.data.usageData.length;
+    const usageCount = this.modalData?.data?.media?.usageCount || 0;
+    const usageDataLength = this.modalData?.data?.usageData?.length || 0;
+    
+    
+    return usageCount;
   }
 
   shouldShowPreviewEditButtons() {
@@ -253,6 +256,7 @@ class ModalManager extends LocalizableElement {
   renderUsageTab() {
     const { usageData } = this.modalData.data;
 
+
     if (!usageData || usageData.length === 0) {
       return html`
         <div class="no-usage">
@@ -351,10 +355,6 @@ class ModalManager extends LocalizableElement {
                 <td class="metadata-label">Type</td>
                 <td class="metadata-value">${media.type}</td>
               </tr>
-              <tr class="metadata-row">
-                <td class="metadata-label">Usage Count</td>
-                <td class="metadata-value">${media.usageCount || 0}</td>
-              </tr>
               
               ${this.renderAnalysisMetadata(media)}
             </tbody>
@@ -380,7 +380,7 @@ class ModalManager extends LocalizableElement {
     return html`
       <tr class="metadata-row analysis-section">
         <td class="metadata-label">Analysis</td>
-        <td class="metadata-value">-</td>
+        <td class="metadata-value"></td>
       </tr>
       ${media.orientation ? html`
         <tr class="metadata-row analysis-subrow">

@@ -1,11 +1,3 @@
-// src/utils/image-analysis.js
-/**
- * Image Analysis Utilities
- *
- * This module provides image analysis capabilities using exifr for EXIF data extraction.
- * Focused on lightweight metadata extraction without heavy ML dependencies.
- * Now includes JSON-based image categorization with confidence scoring.
- */
 
 import { detectCategory } from './category-detector.js';
 
@@ -19,13 +11,6 @@ export const ANALYSIS_CONFIG = {
 
 const analysisCache = new Map();
 
-/**
- * Main analysis function - orchestrates all analysis steps
- * @param {string} imageUrl - URL of the image to analyze
- * @param {Object} existingAnalysis - Previous analysis results (for change detection)
- * @param {string} context - Context information about the image
- * @returns {Promise<Object>} Analysis results
- */
 
 async function getImageDimensions(imageUrl) {
   return new Promise((resolve) => {
@@ -43,7 +28,7 @@ async function getImageDimensions(imageUrl) {
 
 async function extractEXIFData(imageUrl) {
   try {
-    const exifr = await import('exifr');
+    const exifr = await import(/* @vite-ignore */ 'exifr');
 
     const response = await fetch(imageUrl);
     if (!response.ok) {
@@ -190,37 +175,15 @@ export async function analyzeImage(imageUrl, existingAnalysis = null, context = 
   }
 }
 
-/**
- * Legacy categorization function - now deprecated in favor of JSON-based detection
- * @param {string} imageUrl - URL of the image
- * @param {string} context - Context information about the image
- * @returns {string} Category
- * @deprecated Use detectCategory from category-detector.js instead
- */
-// function _categorizeFromFilename(imageUrl, context = '') {
-//   const categoryResult = detectCategory(imageUrl, context, '', '');
-//   return categoryResult.category;
-// }
 
-/**
- * Update analysis configuration
- * @param {Object} config - New configuration
- */
 export function updateAnalysisConfig(config) {
   Object.assign(ANALYSIS_CONFIG, config);
 }
 
-/**
- * Get current analysis configuration
- * @returns {Object} Current configuration
- */
 export function getAnalysisConfig() {
   return { ...ANALYSIS_CONFIG };
 }
 
-/**
- * Clear analysis cache
- */
 export function clearAnalysisCache() {
   analysisCache.clear();
 }

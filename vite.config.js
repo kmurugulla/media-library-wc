@@ -1,10 +1,6 @@
-// eslint-disable-next-line import/no-extraneous-dependencies
 import { defineConfig } from 'vite';
-// eslint-disable-next-line import/no-extraneous-dependencies
 import litCss from 'vite-plugin-lit-css';
-// eslint-disable-next-line import/no-extraneous-dependencies
 import { mkdirSync, existsSync } from 'fs';
-// eslint-disable-next-line import/no-extraneous-dependencies
 import { resolve } from 'path';
 
 export default defineConfig(({ mode }) => {
@@ -14,50 +10,40 @@ export default defineConfig(({ mode }) => {
   return {
     plugins: [
       litCss({
-        // Enable CSS imports in Lit components
         include: ['**/*.css'],
-        // Ensure proper scoping for Lit components
         exclude: ['**/node_modules/**'],
-        // Enable HMR for CSS files
         hmr: true,
       }),
-      // Custom plugin to copy data sources and examples
       {
         name: 'copy-data-sources',
         writeBundle() {
           const distDir = resolve(__dirname, 'dist');
 
-          // Copy data sources
           const sourcesDir = resolve(distDir, 'sources');
           if (!existsSync(sourcesDir)) {
             mkdirSync(sourcesDir, { recursive: true });
           }
 
-          // Copy examples
           const examplesDir = resolve(distDir, 'examples');
           if (!existsSync(examplesDir)) {
             mkdirSync(examplesDir, { recursive: true });
           }
 
-          // Copy docs
           const docsDir = resolve(distDir, 'docs');
           if (!existsSync(docsDir)) {
             mkdirSync(docsDir, { recursive: true });
           }
 
-          // Copy assets
           const assetsDir = resolve(distDir, 'assets');
           if (!existsSync(assetsDir)) {
             mkdirSync(assetsDir, { recursive: true });
           }
 
-          // Copy locales
           const localesDir = resolve(distDir, 'locales');
           if (!existsSync(localesDir)) {
             mkdirSync(localesDir, { recursive: true });
           }
 
-          // Copy data
           const dataDir = resolve(distDir, 'data');
           if (!existsSync(dataDir)) {
             mkdirSync(dataDir, { recursive: true });
@@ -76,14 +62,10 @@ export default defineConfig(({ mode }) => {
       stringify: false,
     },
     css: {
-      // Enable CSS modules-like behavior for Lit components
       modules: {
-        // Generate scoped class names for Lit components
         generateScopedName: '[name]__[local]___[hash:base64:5]',
-        // Handle CSS imports properly
         localsConvention: 'camelCase',
       },
-      // Ensure CSS is processed correctly
       postcss: { plugins: [] },
     },
     build: {
@@ -112,10 +94,9 @@ export default defineConfig(({ mode }) => {
           },
         },
       },
-      // Ensure assets are copied and accessible
-      assetsInlineLimit: 0, // Don't inline assets, keep them as separate files
+      assetsInlineLimit: 0,
       cssCodeSplit: false,
-      sourcemap: false, // Disable source maps for production
+      sourcemap: false,
       minify: 'terser',
       terserOptions: {
         compress: {
@@ -132,11 +113,9 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 3000,
-      strictPort: true, // Don't try other ports if 3000 is busy
+      strictPort: true,
       open: '/examples/sitemap/index.html',
-      // Enable HMR for CSS files
       hmr: { overlay: true },
-      // CORS proxy configuration for development
       proxy: {
         '/api/proxy': {
           target: 'https://cors-anywhere.herokuapp.com/',
@@ -144,17 +123,14 @@ export default defineConfig(({ mode }) => {
           rewrite: (path) => path.replace(/^\/api\/proxy/, ''),
           configure: (proxy) => {
             proxy.on('proxyReq', (proxyReq) => {
-              // Add CORS headers
               proxyReq.setHeader('Origin', 'https://cors-anywhere.herokuapp.com');
             });
           },
         },
-        // Alternative proxy using allorigins.win
         '/api/cors': {
           target: 'https://api.allorigins.win',
           changeOrigin: true,
           rewrite: (path) => {
-            // Extract the encoded URL from the path and convert to query parameter
             const encodedUrl = path.replace(/^\/api\/cors\//, '');
             return `/raw?url=${encodedUrl}`;
           },

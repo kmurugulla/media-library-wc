@@ -1,9 +1,5 @@
-// src/utils/virtual-scroll/grid.js
 import { VirtualScrollManager } from './base.js';
 
-/**
- * Virtual scroll manager specifically for grid layouts
- */
 class GridVirtualScrollManager extends VirtualScrollManager {
   constructor(options = {}) {
     super({
@@ -14,9 +10,6 @@ class GridVirtualScrollManager extends VirtualScrollManager {
     });
   }
 
-  /**
-   * Calculate which items should be visible for grid layout
-   */
   calculateVisibleRange() {
     if (!this.container || this.totalItems === 0) {
       this.visibleStart = 0;
@@ -41,38 +34,20 @@ class GridVirtualScrollManager extends VirtualScrollManager {
     }
   }
 
-  /**
-   * Get items per row based on current container width
-   * @returns {number} Number of items per row
-   */
   getItemsPerRow() {
     return Math.floor(this.containerWidth / (this.itemWidth + this.cardSpacing));
   }
 
-  /**
-   * Get total number of rows
-   * @returns {number} Total number of rows
-   */
   getTotalRows() {
     const itemsPerRow = this.getItemsPerRow();
     return Math.ceil(this.totalItems / itemsPerRow);
   }
 
-  /**
-   * Get row for a specific item index
-   * @param {number} index - Item index
-   * @returns {number} Row number
-   */
   getRowForItem(index) {
     const itemsPerRow = this.getItemsPerRow();
     return Math.floor(index / itemsPerRow);
   }
 
-  /**
-   * Get column for a specific item index
-   * @param {number} index - Item index
-   * @returns {number} Column number
-   */
   getColumnForItem(index) {
     const itemsPerRow = this.getItemsPerRow();
     return index % itemsPerRow;

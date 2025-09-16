@@ -1,4 +1,3 @@
-// src/utils/category-detector.js
 
 import categoryPatterns from '../data/category-patterns.json';
 
@@ -367,39 +366,37 @@ export function detectCategory(
 
   for (const categoryName of detectionOrder) {
     const categoryData = patterns.categories[categoryName];
-    if (!categoryData) {
-      continue;
-    }
+    if (categoryData) {
+      const score = calculateCategoryScore(
+        categoryName,
+        categoryData,
+        filename,
+        contextLower,
+        altLower,
+        positionLower,
+        width,
+        height,
+      );
 
-    const score = calculateCategoryScore(
-      categoryName,
-      categoryData,
-      filename,
-      contextLower,
-      altLower,
-      positionLower,
-      width,
-      height,
-    );
+      const confidence = getConfidenceLevel(score, categoryData.confidence);
 
-    const confidence = getConfidenceLevel(score, categoryData.confidence);
+      if (confidence === 'high') {
+        return {
+          category: categoryName,
+          confidence,
+          score,
+          source: 'hierarchical-detection',
+        };
+      }
 
-    if (confidence === 'high') {
-      return {
-        category: categoryName,
-        confidence,
-        score,
-        source: 'hierarchical-detection',
-      };
-    }
-
-    if (confidence === 'medium' && score > 0) {
-      return {
-        category: categoryName,
-        confidence,
-        score,
-        source: 'hierarchical-detection',
-      };
+      if (confidence === 'medium' && score > 0) {
+        return {
+          category: categoryName,
+          confidence,
+          score,
+          source: 'hierarchical-detection',
+        };
+      }
     }
   }
 

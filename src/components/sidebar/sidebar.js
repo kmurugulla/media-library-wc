@@ -1,4 +1,3 @@
-// src/components/sidebar/sidebar.js
 import { html } from 'lit';
 import LocalizableElement from '../base-localizable.js';
 import { getStyles } from '../../utils/get-styles.js';

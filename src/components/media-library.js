@@ -1,4 +1,3 @@
-// src/components/media-library.js
 import { html } from 'lit';
 import LocalizableElement from './base-localizable.js';
 import i18n from '../utils/i18n.js';
@@ -14,6 +13,8 @@ import './list/list.js';
 import './modal-manager/modal-manager.js';
 import getSvg from '../utils/get-svg.js';
 import mediaLibraryStyles from './media-library.css?inline';
+
+import { waitForMediaLibraryReady, createMediaLibrary, initializeMediaLibrary } from '../utils/initializer.js';
 
 class MediaLibrary extends LocalizableElement {
   static properties = {
@@ -35,7 +36,7 @@ class MediaLibrary extends LocalizableElement {
 
   constructor() {
     super();
-    this.storage = 'indexeddb';
+    this.storage = 'none';
     this.locale = 'en';
     this._mediaData = [];
     this._error = null;
@@ -55,11 +56,34 @@ class MediaLibrary extends LocalizableElement {
 
     this._usageCountCache = null;
     this._lastUsageCountParams = null;
+
+    this._readyPromise = null;
+    this._isReady = false;
   }
 
   async connectedCallback() {
     super.connectedCallback();
 
+    this._readyPromise = this._initialize();
+
+    try {
+      await this._readyPromise;
+      this._isReady = true;
+
+      this.dispatchEvent(new CustomEvent('media-library-ready', {
+        detail: { mediaLibrary: this },
+        bubbles: true,
+      }));
+    } catch (error) {
+      this._error = `Initialization failed: ${error.message}`;
+      this.dispatchEvent(new CustomEvent('media-library-error', {
+        detail: { error },
+        bubbles: true,
+      }));
+    }
+  }
+
+  async _initialize() {
     const ICONS = [
       '/src/icons/close.svg',
       '/src/icons/photo.svg',
@@ -91,7 +115,7 @@ class MediaLibrary extends LocalizableElement {
       },
     });
 
-    await this.loadMediaData();
+    await this.loadMediaDataFromStorage();
   }
 
   shouldUpdate(changedProperties) {
@@ -115,13 +139,13 @@ class MediaLibrary extends LocalizableElement {
   async initialize() {
     try {
       this._error = null;
-      await this.loadMediaData();
+      await this.loadMediaDataFromStorage();
     } catch (error) {
       this._error = error.message;
     }
   }
 
-  async loadMediaData(siteKey = null) {
+  async loadMediaDataFromStorage(siteKey = null) {
     try {
       if (!this.storageManager) {
         return;
@@ -129,6 +153,7 @@ class MediaLibrary extends LocalizableElement {
 
       const key = siteKey || 'media-data';
       const data = await this.storageManager.load(key);
+
       if (data && data.length > 0) {
         this._mediaData = data;
         this._processedData = processMediaData(data);
@@ -154,14 +179,7 @@ class MediaLibrary extends LocalizableElement {
     }
   }
 
-  /**
-   * Load media data from a list of pages
-   * @param {Array} pageList - Array of page objects with url, lastmod, etc.
-   * @param {Function} onProgress - Progress callback function
-   * @param {string} siteKey - Optional site key for storage
-   * @returns {Promise<Array>} Array of media data
-   */
-  async loadFromPageList(pageList, onProgress = null, siteKey = null) {
+  async loadFromPageList(pageList, onProgress = null, siteKey = null, saveToStorage = true) {
     if (!pageList || pageList.length === 0) {
       this._error = 'No pages provided to scan';
       return [];
@@ -205,17 +223,19 @@ class MediaLibrary extends LocalizableElement {
       const scanDuration = Date.now() - this._scanStartTime;
       const durationSeconds = (scanDuration / 1000).toFixed(1);
 
-      await this.storageManager.save(mediaData, storageKey);
-      const pageLastModified = {};
-      pageList.forEach((page) => {
-        pageLastModified[page.loc || page.url] = page.lastmod;
-      });
+      if (saveToStorage) {
+        await this.storageManager.save(mediaData, storageKey);
+        const pageLastModified = {};
+        pageList.forEach((page) => {
+          pageLastModified[page.loc || page.url] = page.lastmod;
+        });
 
-      await this.storageManager.saveScanMetadata(storageKey, {
-        totalPages: pageList.length,
-        pageLastModified,
-        scanDuration,
-      });
+        await this.storageManager.saveScanMetadata(storageKey, {
+          totalPages: pageList.length,
+          pageLastModified,
+          scanDuration,
+        });
+      }
 
       this._mediaData = mediaData;
       this._processedData = processMediaData(mediaData);
@@ -247,19 +267,84 @@ class MediaLibrary extends LocalizableElement {
     }
   }
 
-  /**
-   * Load media data from storage
-   * @param {string} siteKey - Site key to load data for
-   * @returns {Promise<Array>} Array of media data
-   */
   async loadFromStorage(siteKey) {
-    await this.loadMediaData(siteKey);
-    return this._mediaData;
+    const originalStorageType = this.storageManager.type;
+    this.storageManager.type = 'indexeddb';
+
+    try {
+      await this.loadMediaDataFromStorage(siteKey);
+      return this._mediaData;
+    } finally {
+      this.storageManager.type = originalStorageType;
+    }
   }
 
-  /**
-   * Clear all media data
-   */
+  async loadMediaData(mediaData, siteKey = null, saveToStorage = false) {
+    if (!mediaData || !Array.isArray(mediaData)) {
+      this._error = 'No media data provided';
+      return [];
+    }
+
+    try {
+      this._isScanning = true;
+      this._error = null;
+      this._searchQuery = '';
+      this._selectedFilterType = 'all';
+      this._scanStartTime = Date.now();
+      this._scanProgress = { current: 0, total: 1, found: mediaData.length };
+      this._lastScanDuration = null;
+      this._scanStats = null;
+
+      window.dispatchEvent(new CustomEvent('clear-search'));
+      window.dispatchEvent(new CustomEvent('clear-filters'));
+
+      this.requestUpdate();
+
+      this._mediaData = mediaData;
+      this._processedData = processMediaData(mediaData);
+
+      const loadDuration = Date.now() - this._scanStartTime;
+      const durationSeconds = (loadDuration / 1000).toFixed(1);
+
+      if (saveToStorage && siteKey) {
+        await this.storageManager.save(mediaData, siteKey);
+        await this.storageManager.saveScanMetadata(siteKey, {
+          totalPages: 0,
+          pageLastModified: {},
+          scanDuration: loadDuration,
+          source: 'direct-load',
+        });
+      }
+
+      this._isScanning = false;
+      this._scanProgress = null;
+      this._lastScanDuration = durationSeconds;
+
+      this._filteredDataCache = null;
+      this._lastFilterParams = null;
+      this._usageCountCache = null;
+      this._lastUsageCountParams = null;
+
+      this._scanStats = {
+        pagesScanned: 0,
+        mediaFound: mediaData.length,
+        duration: durationSeconds,
+        source: 'direct-load',
+      };
+
+      if (typeof window.refreshSites === 'function') {
+        window.refreshSites();
+      }
+
+      return mediaData;
+    } catch (error) {
+      this._isScanning = false;
+      this._scanProgress = null;
+      this._error = `Load failed: ${error.message}`;
+      throw error;
+    }
+  }
+
   clearData() {
     this._mediaData = [];
     this._processedData = processMediaData([]);
@@ -271,11 +356,6 @@ class MediaLibrary extends LocalizableElement {
     this.requestUpdate();
   }
 
-  /**
-   * Generate a site key from a source URL
-   * @param {string} source - Source URL or identifier
-   * @returns {string} Generated site key
-   */
   generateSiteKey(source) {
     if (!source) return 'media-data';
 
@@ -424,16 +504,15 @@ class MediaLibrary extends LocalizableElement {
     const { media } = e.detail;
     if (!media) return;
 
-    const usageData = this._mediaData
-      ?.filter((item) => item.url === media.url && item.doc && item.doc.trim())
-      .map((item) => ({
-        doc: item.doc,
-        alt: item.alt,
-        type: item.type,
-        ctx: item.ctx,
-        firstUsedAt: item.firstUsedAt,
-        lastUsedAt: item.lastUsedAt,
-      })) || [];
+    const filteredItems = this._mediaData?.filter((item) => urlsMatch(item.url, media.url)) || [];
+    const usageData = filteredItems.map((item) => ({
+      doc: item.doc || 'Unknown Document',
+      alt: item.alt,
+      type: item.type,
+      ctx: item.ctx,
+      firstUsedAt: item.firstUsedAt,
+      lastUsedAt: item.lastUsedAt,
+    }));
 
     window.dispatchEvent(new CustomEvent('open-modal', {
       detail: {
@@ -530,6 +609,33 @@ class MediaLibrary extends LocalizableElement {
   clearError() {
     this._error = null;
   }
+
+  get ready() {
+    return this._readyPromise || Promise.resolve(this);
+  }
+
+  get isReady() {
+    return this._isReady;
+  }
+
+  static async create(options = {}) {
+    const element = document.createElement('media-library');
+
+    if (options.storage) element.storage = options.storage;
+    if (options.locale) element.locale = options.locale;
+
+    document.body.appendChild(element);
+
+    await element.ready;
+
+    return element;
+  }
+
+  static waitForReady = waitForMediaLibraryReady;
+
+  static createInstance = createMediaLibrary;
+
+  static initialize = initializeMediaLibrary;
 
   renderCurrentView() {
     if (this._isScanning) {

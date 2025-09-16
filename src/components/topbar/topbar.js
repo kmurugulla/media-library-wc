@@ -1,4 +1,3 @@
-// src/components/topbar/topbar.js
 import { html } from 'lit';
 import { ref, createRef } from 'lit/directives/ref.js';
 import LocalizableElement from '../base-localizable.js';

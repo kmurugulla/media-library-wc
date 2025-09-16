@@ -1,4 +1,3 @@
-// src/components/list/list.js
 import { html } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { ref, createRef } from 'lit/directives/ref.js';

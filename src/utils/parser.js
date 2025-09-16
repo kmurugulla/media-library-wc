@@ -1,4 +1,3 @@
-// src/utils/parser.js
 import {
   analyzeImage,
   updateAnalysisConfig,
@@ -25,11 +24,6 @@ class ContentParser {
     }
   }
 
-  /**
-   * Enable or disable image analysis
-   * @param {boolean} enabled - Whether to enable image analysis
-   * @param {Object} config - Analysis configuration options
-   */
   setImageAnalysis(enabled, config = {}) {
     this.enableImageAnalysis = enabled;
     this.analysisConfig = config;
@@ -44,10 +38,6 @@ class ContentParser {
     }
   }
 
-  /**
-   * Get current image analysis configuration
-   * @returns {Object} Current configuration
-   */
   getImageAnalysisConfig() {
     return {
       enabled: this.enableImageAnalysis,

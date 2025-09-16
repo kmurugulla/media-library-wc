@@ -1,4 +1,3 @@
-// src/components/grid/grid.js
 import { html } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { ref, createRef } from 'lit/directives/ref.js';
@@ -195,9 +194,6 @@ class MediaGrid extends LocalizableElement {
         <div class="media-info">
           <div class="media-details">
             <h4 class="media-name" title=${media.name} .innerHTML=${this.highlightSearchTerm(this.truncateText(media.name, 35), this.searchQuery)}></h4>
-            <div class="media-meta">
-              ${this.renderMediaMeta(media)}
-            </div>
           </div>
           
           <div class="media-actions">
@@ -277,25 +273,6 @@ class MediaGrid extends LocalizableElement {
     return `${text.substring(0, maxLength)}...`;
   }
 
-  renderMediaMeta(media) {
-    const metaElements = [];
-
-    if (media.doc) {
-      const docName = media.doc.split('/').pop() || media.doc;
-      metaElements.push(html`<span class="media-used-text">${docName}</span>`);
-    }
-
-    if (media.alt && media.alt !== 'null') {
-      const altText = media.alt.length > 30 ? `${media.alt.substring(0, 30)}...` : media.alt;
-      metaElements.push(html`<span class="media-used-text">Alt: ${altText}</span>`);
-    }
-
-    if (metaElements.length === 0) {
-      metaElements.push(html`<span class="media-used-text">${this.t('media.notUsed')}</span>`);
-    }
-
-    return metaElements;
-  }
 
   getUsageCount(media) {
     return media.usageCount || 0;

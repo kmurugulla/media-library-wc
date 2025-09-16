@@ -1,8 +1,3 @@
-// src/utils/utils.js
-
-// ============================================================================
-// MEDIA TYPE CONSTANTS AND UTILITIES
-// ============================================================================
 
 export const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif'];
 export const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'avi'];
@@ -110,15 +105,7 @@ export function isMediaFile(ext) {
 
 export { isSvgFile, extractFileExtension };
 
-// ============================================================================
-// SORTING UTILITIES
-// ============================================================================
 
-/**
- * Sort media data by lastUsedAt (recent first) then alphabetically by name
- * @param {Array} mediaData - Media data to sort
- * @returns {Array} Sorted media data
- */
 export function sortMediaData(mediaData) {
   return [...mediaData].sort((a, b) => {
     const lastUsedA = new Date(a.lastUsedAt || 0);
@@ -133,9 +120,6 @@ export function sortMediaData(mediaData) {
   });
 }
 
-// ============================================================================
-// VIDEO UTILITIES
-// ============================================================================
 
 export function getVideoThumbnail(videoUrl) {
   if (!videoUrl) return null;
@@ -165,9 +149,6 @@ export function isExternalVideoUrl(url) {
   return supportedPatterns.some((pattern) => pattern.test(url));
 }
 
-// ============================================================================
-// CORE UTILITIES
-// ============================================================================
 
 export function createHash(str) {
   let hash = 0;

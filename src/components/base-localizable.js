@@ -1,4 +1,3 @@
-// src/components/base-localizable.js
 import { LitElement } from 'lit';
 import i18n from '../utils/i18n.js';
 

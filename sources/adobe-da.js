@@ -1,13 +1,14 @@
-// dist/sources/adobe-da.js
 /**
  * Adobe Dynamic Media (Dynamic Assets) Data Source
- * Provides asset lists from Adobe Dynamic Media API for the Media Library component
+ * Provides asset lists from Adobe Dynamic Media API with authentication
  */
 
 class AdobeDASource {
   constructor() {
     this.name = 'Adobe Dynamic Assets Source';
-    this.description = 'Discovers assets via Adobe Dynamic Media API';
+    this.description = 'Discovers assets via Adobe Dynamic Media API with authentication';
+    this.requireAuth = true;
+    this.daOrigin = 'https://admin.da.live';
   }
 
   /**
@@ -17,54 +18,49 @@ class AdobeDASource {
    */
   canHandle(url) {
     if (!url) return false;
-    
-    // Check for Adobe Dynamic Media patterns
+
     const adobePatterns = [
       /\/is\/image\//,
       /\/is\/video\//,
       /\/is\/content\//,
       /\/dynamicmedia\//,
       /\.scene7\.com/,
-      /\.adobedtm\.com/
+      /\.adobedtm\.com/,
     ];
-    
-    return adobePatterns.some(pattern => pattern.test(url));
+
+    return adobePatterns.some((pattern) => pattern.test(url));
   }
 
   /**
-   * Get asset list from Adobe Dynamic Media
-   * @param {string} baseUrl - Adobe Dynamic Media base URL
+   * Get page list from Adobe DA using authenticated API
+   * @param {string} baseUrl - Adobe DA base URL (can be org/repo format)
    * @param {Object} options - Configuration options
-   * @returns {Promise<Array>} Array of asset objects
+   * @returns {Promise<Array>} Array of page objects
    */
-  async getAssetList(baseUrl, options = {}) {
-    if (!this.canHandle(baseUrl)) {
-      throw new Error('Invalid Adobe Dynamic Media URL');
-    }
-
+  async getPageList(baseUrl, options = {}) {
     const {
-      apiKey,
-      companyId,
-      maxResults = 1000,
-      assetTypes = ['image', 'video']
+      org,
+      repo,
+      requireAuth = true,
     } = options;
 
-    if (!apiKey || !companyId) {
-      throw new Error('API key and company ID are required for Adobe Dynamic Media');
+    if (org && repo) {
+      return this.getPageListFromDA(org, repo);
     }
 
-    try {
-      const assets = [];
-      
-      for (const assetType of assetTypes) {
-        const typeAssets = await this.fetchAssetsByType(baseUrl, apiKey, companyId, assetType, maxResults);
-        assets.push(...typeAssets);
+    if (!this.canHandle(baseUrl)) {
+      throw new Error('Invalid Adobe DA URL');
+    }
+
+    if (requireAuth) {
+      try {
+        return this.getPageListFromDADiscovery(baseUrl);
+      } catch (error) {
+        console.warn('DA discovery failed, falling back to sitemap:', error.message);
       }
-
-      return assets;
-    } catch (error) {
-      throw new Error(`Failed to get asset list from Adobe Dynamic Media: ${error.message}`);
     }
+
+    return this.getPageListFromSitemap(baseUrl);
   }
 
   /**
@@ -81,16 +77,16 @@ class AdobeDASource {
     const params = new URLSearchParams({
       api_key: apiKey,
       type: assetType,
-      limit: Math.min(maxResults, 100), // API limit
-      format: 'json'
+      limit: Math.min(maxResults, 100),
+      format: 'json',
     });
 
     try {
       const response = await fetch(`${apiUrl}/assets?${params}`, {
         headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'MediaLibrary/1.0'
-        }
+          Accept: 'application/json',
+          'User-Agent': 'MediaLibrary/1.0',
+        },
       });
 
       if (!response.ok) {
@@ -98,12 +94,12 @@ class AdobeDASource {
       }
 
       const data = await response.json();
-      
+
       if (!data.assets) {
         return [];
       }
 
-      return data.assets.map(asset => this.convertAssetToPageObject(asset, baseUrl));
+      return data.assets.map((asset) => this.convertAssetToPageObject(asset, baseUrl));
     } catch (error) {
       console.error(`Error fetching ${assetType} assets:`, error);
       return [];
@@ -118,15 +114,13 @@ class AdobeDASource {
    */
   getApiUrl(baseUrl, companyId) {
     const cleanUrl = baseUrl.replace(/\/$/, '');
-    
-    // Handle different Adobe Dynamic Media URL formats
+
     if (cleanUrl.includes('.scene7.com')) {
       return `${cleanUrl}/is/image/${companyId}`;
-    } else if (cleanUrl.includes('.adobedtm.com')) {
-      return `${cleanUrl}/api/v1/companies/${companyId}`;
-    } else {
+    } if (cleanUrl.includes('.adobedtm.com')) {
       return `${cleanUrl}/api/v1/companies/${companyId}`;
     }
+    return `${cleanUrl}/api/v1/companies/${companyId}`;
   }
 
   /**
@@ -137,7 +131,7 @@ class AdobeDASource {
    */
   convertAssetToPageObject(asset, baseUrl) {
     const assetUrl = this.generateAssetUrl(asset, baseUrl);
-    
+
     return {
       url: assetUrl,
       loc: assetUrl,
@@ -149,7 +143,7 @@ class AdobeDASource {
       size: asset.size,
       mimeType: asset.mimeType,
       id: asset.id,
-      path: asset.path
+      path: asset.path,
     };
   }
 
@@ -161,39 +155,54 @@ class AdobeDASource {
    */
   generateAssetUrl(asset, baseUrl) {
     const cleanUrl = baseUrl.replace(/\/$/, '');
-    
+
     if (asset.type === 'image') {
       return `${cleanUrl}/is/image/${asset.path}`;
-    } else if (asset.type === 'video') {
+    } if (asset.type === 'video') {
       return `${cleanUrl}/is/video/${asset.path}`;
-    } else {
-      return `${cleanUrl}/is/content/${asset.path}`;
     }
+    return `${cleanUrl}/is/content/${asset.path}`;
   }
 
   /**
-   * Get page list (for compatibility with Media Library)
-   * This method converts assets to page format
-   * @param {string} baseUrl - Adobe Dynamic Media base URL
+   * Get page list from Adobe DA using authenticated API
+   * @param {string} org - Adobe DA organization
+   * @param {string} repo - Adobe DA repository
    * @param {Object} options - Configuration options
    * @returns {Promise<Array>} Array of page objects
    */
-  async getPageList(baseUrl, options = {}) {
-    const assets = await this.getAssetList(baseUrl, options);
-    
-    // Convert assets to page objects
-    return assets.map(asset => ({
-      url: asset.url,
-      loc: asset.loc,
-      lastmod: asset.lastmod,
-      title: asset.title,
-      type: 'asset',
-      assetType: asset.type,
-      width: asset.width,
-      height: asset.height,
-      size: asset.size,
-      mimeType: asset.mimeType
-    }));
+  async getPageListFromDA(org, repo) {
+    try {
+      const isAuthenticated = await this.checkAuthentication();
+      if (!isAuthenticated) {
+        throw new Error('Authentication required. Please authenticate with Adobe DA first.');
+      }
+
+      const existingData = await this.loadExistingMediaData(org, repo);
+      if (existingData && existingData.length > 0) {
+        return existingData.map((item) => ({
+          url: item.url,
+          loc: item.url,
+          lastmod: item.lastUsedAt || new Date().toISOString(),
+          title: item.name,
+          type: item.type,
+          alt: item.alt,
+          doc: item.doc,
+        }));
+      }
+
+      const urls = await this.discoverDAContent(org, repo);
+
+      return urls.map((url) => ({
+        url,
+        loc: url,
+        lastmod: new Date().toISOString(),
+        title: url.split('/').pop(),
+        type: 'page',
+      }));
+    } catch (error) {
+      throw new Error(`Adobe DA scan failed: ${error.message}`);
+    }
   }
 
   /**
@@ -202,10 +211,10 @@ class AdobeDASource {
    * @param {Object} options - Configuration options
    * @returns {Promise<Object>} Asset metadata
    */
-  async getAssetMetadata(assetUrl, options = {}) {
+  async getAssetMetadata(assetUrl) {
     try {
       const response = await fetch(assetUrl, { method: 'HEAD' });
-      
+
       if (!response.ok) {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`);
       }
@@ -215,7 +224,7 @@ class AdobeDASource {
         lastmod: response.headers.get('last-modified'),
         contentType: response.headers.get('content-type'),
         contentLength: response.headers.get('content-length'),
-        etag: response.headers.get('etag')
+        etag: response.headers.get('etag'),
       };
     } catch (error) {
       throw new Error(`Failed to get asset metadata: ${error.message}`);
@@ -234,11 +243,11 @@ class AdobeDASource {
       height,
       quality = 80,
       format = 'auto',
-      fit = 'constrain'
+      fit = 'constrain',
     } = params;
 
     const url = new URL(assetUrl);
-    
+
     if (width) url.searchParams.set('wid', width);
     if (height) url.searchParams.set('hei', height);
     if (quality) url.searchParams.set('qlt', quality);
@@ -246,6 +255,189 @@ class AdobeDASource {
     if (fit) url.searchParams.set('fit', fit);
 
     return url.toString();
+  }
+
+  /**
+   * Check if user is authenticated for Adobe DA
+   * @returns {Promise<boolean>} True if authenticated
+   */
+  async checkAuthentication() {
+    try {
+      if (localStorage.getItem('nx-ims')) {
+        return true;
+      }
+
+      const testUrl = `${this.daOrigin}/source/test`;
+      const response = await this.daFetch(testUrl, { method: 'HEAD' });
+
+      return response.ok || response.status === 404;
+    } catch (error) {
+      console.warn('Authentication check failed:', error.message);
+      return false;
+    }
+  }
+
+  /**
+   * Load existing media data from Adobe DA
+   * @param {string} org - Organization
+   * @param {string} repo - Repository
+   * @returns {Promise<Array>} Array of media data
+   */
+  async loadExistingMediaData(org, repo) {
+    try {
+      const mediaSheetPath = `/${org}/${repo}/.da/mediaindex/media.json`;
+      const response = await this.daFetch(`${this.daOrigin}/source${mediaSheetPath}`);
+
+      if (response.ok) {
+        const data = await response.json();
+        return data.data || data || [];
+      }
+    } catch (error) {
+      console.warn('Failed to load existing media data:', error.message);
+    }
+    return [];
+  }
+
+  /**
+   * Discover Adobe DA content using crawl API
+   * @param {string} org - Organization
+   * @param {string} repo - Repository
+   * @returns {Promise<Array>} Array of URLs
+   */
+  async discoverDAContent(org, repo) {
+    const crawlPath = `/${org}/${repo}`;
+    const urls = [];
+
+    try {
+      const crawlUrl = `${this.daOrigin}/source${crawlPath}`;
+      const response = await this.daFetch(crawlUrl);
+
+      if (response.ok) {
+        const data = await response.json();
+
+        if (data.children) {
+          this.extractHtmlFiles(data.children, urls, crawlPath);
+        }
+      }
+    } catch (error) {
+      console.warn('Crawl API failed, using fallback method:', error.message);
+      urls.push(`${crawlPath}/index.html`);
+    }
+
+    return urls;
+  }
+
+  /**
+   * Extract HTML files from crawl results
+   * @param {Array} children - Children items from crawl
+   * @param {Array} urls - URLs array to populate
+   * @param {string} basePath - Base path
+   */
+  extractHtmlFiles(children, urls, basePath) {
+    children.forEach((child) => {
+      if (child.type === 'file' && child.name.endsWith('.html')) {
+        urls.push(`${basePath}/${child.name}`);
+      } else if (child.type === 'directory' && child.children) {
+        this.extractHtmlFiles(child.children, urls, `${basePath}/${child.name}`);
+      }
+    });
+  }
+
+  /**
+   * Get page list from DA discovery for direct URLs
+   * @param {string} baseUrl - Base URL
+   * @param {Object} options - Configuration options
+   * @returns {Promise<Array>} Array of page objects
+   */
+  async getPageListFromDADiscovery(baseUrl) {
+    const urlMatch = baseUrl.match(/https?:\/\/main--([^--]+)--([^.]+)\.da\.page/);
+    if (urlMatch) {
+      const [, repo, org] = urlMatch;
+      return this.getPageListFromDA(org, repo);
+    }
+
+    throw new Error('Cannot extract org/repo from URL for DA discovery');
+  }
+
+  /**
+   * Fallback method to get page list from sitemap
+   * @param {string} baseUrl - Base URL
+   * @returns {Promise<Array>} Array of page objects
+   */
+  async getPageListFromSitemap(baseUrl) {
+    const sitemapUrl = `${baseUrl}/sitemap.xml`;
+
+    try {
+      const response = await fetch(sitemapUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch sitemap: ${response.status}`);
+      }
+
+      const xmlText = await response.text();
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(xmlText, 'text/xml');
+
+      const pages = [];
+      const urlElements = xmlDoc.querySelectorAll('url > loc');
+
+      for (const urlElement of urlElements) {
+        const url = urlElement.textContent.trim();
+        const urlElementParent = urlElement.parentElement;
+
+        const lastmodElement = urlElementParent.querySelector('lastmod');
+        const lastmod = lastmodElement ? lastmodElement.textContent.trim() : null;
+
+        pages.push({
+          url,
+          loc: url,
+          lastmod,
+        });
+      }
+
+      return pages;
+    } catch (error) {
+      throw new Error(`Failed to get page list from Adobe DA: ${error.message}`);
+    }
+  }
+
+  /**
+   * Authenticated fetch wrapper (similar to daFetch from Franklin)
+   * @param {string} url - URL to fetch
+   * @param {Object} options - Fetch options
+   * @returns {Promise<Response>} Fetch response
+   */
+  async daFetch(url, options = {}) {
+    options.headers ||= {};
+
+    if (localStorage.getItem('nx-ims')) {
+      try {
+        const token = await this.getIMSToken();
+        if (token) {
+          options.headers.Authorization = `Bearer ${token}`;
+        }
+      } catch (error) {
+        console.warn('Failed to get IMS token:', error.message);
+      }
+    }
+
+    const response = await fetch(url, options);
+
+    if (response.status === 401) {
+      throw new Error('Authentication required. Please sign in to Adobe DA.');
+    }
+
+    return response;
+  }
+
+  /**
+   * Get IMS token (simplified version)
+   * @returns {Promise<string|null>} IMS token or null
+   */
+  async getIMSToken() {
+    if (window.adobeIMS && window.adobeIMS.getAccessToken) {
+      return window.adobeIMS.getAccessToken()?.token;
+    }
+    return null;
   }
 }
 

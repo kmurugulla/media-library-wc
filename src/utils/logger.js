@@ -1,4 +1,3 @@
-// src/utils/logger.js
 
 class Logger {
   constructor() {

@@ -1,7 +1,3 @@
-// src/utils/queue.js
-/**
- * Queue class for managing concurrent operations
- */
 class Queue {
   constructor(callback, maxConcurrent = 20, onError = null) {
     this.queue = [];

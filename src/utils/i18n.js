@@ -1,4 +1,3 @@
-// src/utils/i18n.js
 import enTranslations from '../locales/en.json';
 import esTranslations from '../locales/es.json';
 import deTranslations from '../locales/de.json';

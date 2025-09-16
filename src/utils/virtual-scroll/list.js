@@ -1,9 +1,5 @@
-// src/utils/virtual-scroll/list.js
 import { VirtualScrollManager } from './base.js';
 
-/**
- * Virtual scroll manager specifically for list layouts
- */
 class ListVirtualScrollManager extends VirtualScrollManager {
   constructor(options = {}) {
     super({
@@ -14,9 +10,6 @@ class ListVirtualScrollManager extends VirtualScrollManager {
     });
   }
 
-  /**
-   * Calculate which items should be visible for list layout
-   */
   calculateVisibleRange() {
     if (!this.container || this.totalItems === 0) {
       this.visibleStart = 0;
@@ -38,10 +31,6 @@ class ListVirtualScrollManager extends VirtualScrollManager {
     }
   }
 
-  /**
-   * Scroll to specific item in list
-   * @param {number} index - Item index to scroll to
-   */
   scrollToItem(index) {
     if (!this.container || index < 0 || index >= this.totalItems) return;
 
@@ -49,19 +38,10 @@ class ListVirtualScrollManager extends VirtualScrollManager {
     this.container.scrollTop = scrollTop;
   }
 
-  /**
-   * Get total height of all items
-   * @returns {number} Total height in pixels
-   */
   getTotalHeight() {
     return this.totalItems * this.itemHeight;
   }
 
-  /**
-   * Get offset for a specific item
-   * @param {number} index - Item index
-   * @returns {number} Offset in pixels
-   */
   getItemOffset(index) {
     return index * this.itemHeight;
   }

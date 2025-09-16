@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Library - Adobe DA Source</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="test-container">
+        <h1>Media Library - Adobe DA Source</h1>
+        
+        <div class="test-section">
+            <h2>Adobe Dynamic Media (DA) Integration</h2>
+            <p>This example demonstrates scanning Adobe Dynamic Media assets using the DA (Dynamic Media) API with authentication. The Adobe DA source discovers media assets from your Adobe Dynamic Media instance using authenticated requests.</p>
+            
+            <div class="controls">
+                <!-- Adobe DA Configuration Section -->
+                <div class="field-section source-section">
+                    <div class="control-group">
+                        <label for="adobe-org">Organization:</label>
+                        <input 
+                            type="text" 
+                            id="adobe-org" 
+                            placeholder="your-org"
+                        >
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="adobe-repo">Repository:</label>
+                        <input 
+                            type="text" 
+                            id="adobe-repo" 
+                            placeholder="your-repo"
+                        >
+                    </div>
+                    
+                </div>
+                
+                <!-- Settings Section -->
+                <div class="field-section settings-section">
+                    <div class="control-group">
+                        <label for="storage-type">Storage:</label>
+                        <select id="storage-type">
+                            <option value="none">None</option>
+                            <option value="indexeddb">Local IndexDB</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="locale">Locale:</label>
+                        <select id="locale">
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                            <option value="de">German</option>
+                            <option value="fr">French</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="site-selector">Loaded Sites:</label>
+                        <select id="site-selector">
+                            <option value="">Select a site...</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Actions Section -->
+                <div class="field-section actions-section">
+                    <div class="button-group">
+                        <button id="scan-btn" class="btn btn-primary">
+                            Scan Adobe DA Assets
+                        </button>
+                        <button id="auth-btn" class="btn btn-secondary">
+                            Authenticate
+                        </button>
+                        <button id="clear-btn" class="btn btn-secondary">
+                            Clear Display
+                        </button>
+                        <button onclick="clearOldData()" class="btn btn-danger">
+                            Clear Storage
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="status" class="status"></div>
+            </div>
+            
+            <div class="media-library-container">
+                <media-library 
+                    id="media-library"
+                    storage="none"
+                    locale="en">
+                </media-library>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module" src="scripts.js"></script>
+</body>
+</html>

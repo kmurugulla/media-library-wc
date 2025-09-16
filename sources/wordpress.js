@@ -1,4 +1,3 @@
-// dist/sources/wordpress.js
 /**
  * WordPress Data Source
  * Provides page lists from WordPress REST API for the Media Library component
@@ -17,16 +16,15 @@ class WordPressSource {
    */
   canHandle(url) {
     if (!url) return false;
-    
-    // Check if it's a WordPress site by looking for common WordPress paths
+
     const wordpressPatterns = [
       /\/wp-json\/wp\/v2\//,
       /\/wp-admin\//,
       /\/wp-content\//,
-      /\/wp-includes\//
+      /\/wp-includes\//,
     ];
-    
-    return wordpressPatterns.some(pattern => pattern.test(url));
+
+    return wordpressPatterns.some((pattern) => pattern.test(url));
   }
 
   /**
@@ -43,7 +41,7 @@ class WordPressSource {
     const {
       postTypes = ['posts', 'pages'],
       perPage = 100,
-      maxPages = 10
+      maxPages = 10,
     } = options;
 
     const pages = [];
@@ -54,7 +52,6 @@ class WordPressSource {
         const typePages = await this.fetchPostTypePages(baseApiUrl, postType, perPage, maxPages);
         pages.push(...typePages);
       } catch (error) {
-        console.warn(`Failed to fetch ${postType}:`, error.message);
       }
     }
 
@@ -68,12 +65,11 @@ class WordPressSource {
    */
   getApiBaseUrl(baseUrl) {
     const cleanUrl = baseUrl.replace(/\/$/, '');
-    
-    // Check if it's already an API URL
+
     if (cleanUrl.includes('/wp-json/wp/v2')) {
       return cleanUrl.replace(/\/wp-json\/wp\/v2.*$/, '/wp-json/wp/v2');
     }
-    
+
     return `${cleanUrl}/wp-json/wp/v2`;
   }
 
@@ -93,40 +89,36 @@ class WordPressSource {
       try {
         const url = `${apiBaseUrl}/${postType}?per_page=${perPage}&page=${currentPage}&_fields=id,link,modified,title,type`;
         const response = await fetch(url);
-        
+
         if (!response.ok) {
           if (response.status === 404) {
-            // Post type doesn't exist, skip it
             break;
           }
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
-        
+
         if (!Array.isArray(data) || data.length === 0) {
-          break; // No more pages
+          break;
         }
 
-        // Convert WordPress posts to page objects
-        const typePages = data.map(post => ({
+        const typePages = data.map((post) => ({
           url: post.link,
           loc: post.link,
           lastmod: post.modified,
           title: post.title?.rendered || post.title,
           type: post.type,
-          id: post.id
+          id: post.id,
         }));
 
         pages.push(...typePages);
-        currentPage++;
+        currentPage += 1;
 
-        // If we got fewer items than requested, we've reached the end
         if (data.length < perPage) {
           break;
         }
       } catch (error) {
-        console.error(`Error fetching ${postType} page ${currentPage}:`, error);
         break;
       }
     }
@@ -143,7 +135,7 @@ class WordPressSource {
   async getMediaList(baseUrl, options = {}) {
     const {
       perPage = 100,
-      maxPages = 10
+      maxPages = 10,
     } = options;
 
     const mediaItems = [];
@@ -154,19 +146,18 @@ class WordPressSource {
       try {
         const url = `${apiBaseUrl}/media?per_page=${perPage}&page=${currentPage}&_fields=id,link,source_url,title,alt_text,media_type,mime_type,date_modified`;
         const response = await fetch(url);
-        
+
         if (!response.ok) {
           throw new Error(`HTTP ${response.status}: ${response.statusText}`);
         }
 
         const data = await response.json();
-        
+
         if (!Array.isArray(data) || data.length === 0) {
           break;
         }
 
-        // Convert WordPress media to media objects
-        const items = data.map(media => ({
+        const items = data.map((media) => ({
           url: media.source_url,
           link: media.link,
           title: media.title?.rendered || media.title,
@@ -174,17 +165,16 @@ class WordPressSource {
           type: media.media_type,
           mimeType: media.mime_type,
           lastmod: media.date_modified,
-          id: media.id
+          id: media.id,
         }));
 
         mediaItems.push(...items);
-        currentPage++;
+        currentPage += 1;
 
         if (data.length < perPage) {
           break;
         }
       } catch (error) {
-        console.error(`Error fetching media page ${currentPage}:`, error);
         break;
       }
     }

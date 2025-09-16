@@ -1,4 +1,3 @@
-// dist/sources/index.js
 /**
  * Data Sources Index
  * Exports all available data sources for the Media Library component
@@ -6,8 +5,10 @@
 
 import SitemapSource from './sitemap.js';
 import WordPressSource from './wordpress.js';
-import AEMSource from './eds.js';
+import EDSSource from './eds.js';
+import AEMSource from './aem.js';
 import AdobeDASource from './adobe-da.js';
+import MediaBusAuditSource from './mediabus-audit.js';
 
 /**
  * Data Sources Registry
@@ -19,40 +20,37 @@ export const dataSources = {
     name: 'Sitemap Source',
     description: 'Discovers and parses XML sitemaps to extract page lists',
     supportedTypes: ['website', 'sitemap'],
-    defaultOptions: {}
   },
   wordpress: {
     class: WordPressSource,
     name: 'WordPress Source',
     description: 'Discovers pages and posts via WordPress REST API',
     supportedTypes: ['wordpress', 'wp-api'],
-    defaultOptions: {
-      postTypes: ['posts', 'pages'],
-      perPage: 100,
-      maxPages: 10
-    }
+  },
+  eds: {
+    class: EDSSource,
+    name: 'EDS Source',
+    description: 'Discovers pages and assets via AEM EDS API with authentication',
+    supportedTypes: ['eds', 'aem', 'adobe-experience-manager'],
   },
   aem: {
     class: AEMSource,
-    name: 'AEM Source',
-    description: 'Discovers pages and assets via AEM GraphQL API',
+    name: 'AEM Source (Legacy)',
+    description: 'Legacy AEM source - use EDS source for new implementations',
     supportedTypes: ['aem', 'adobe-experience-manager'],
-    defaultOptions: {
-      graphqlEndpoint: '/content/cq:graphql/endpoint.json',
-      maxResults: 1000,
-      contentPath: '/content'
-    }
   },
   'adobe-da': {
     class: AdobeDASource,
     name: 'Adobe Dynamic Assets Source',
     description: 'Discovers assets via Adobe Dynamic Media API',
     supportedTypes: ['adobe-dynamic-media', 'scene7'],
-    defaultOptions: {
-      maxResults: 1000,
-      assetTypes: ['image', 'video']
-    }
-  }
+  },
+  'mediabus-audit': {
+    class: MediaBusAuditSource,
+    name: 'Media-Bus Audit Source',
+    description: 'Loads media data from AEM Media-Bus audit logs via Admin API',
+    supportedTypes: ['mediabus', 'audit-log', 'aem-audit'],
+  },
 };
 
 /**
@@ -90,8 +88,9 @@ export function createDataSource(name) {
   if (!sourceConfig) {
     return null;
   }
-  
-  return new sourceConfig.class();
+
+  const SourceClass = sourceConfig.class;
+  return new SourceClass();
 }
 
 /**
@@ -101,14 +100,15 @@ export function createDataSource(name) {
  */
 export function detectDataSource(url) {
   if (!url) return null;
-  
+
   for (const [name, config] of Object.entries(dataSources)) {
-    const instance = new config.class();
+    const SourceClass = config.class;
+    const instance = new SourceClass();
     if (instance.canHandle && instance.canHandle(url)) {
       return name;
     }
   }
-  
+
   return null;
 }
 
@@ -119,37 +119,42 @@ export function detectDataSource(url) {
  */
 export function getDataSourceRecommendations(url) {
   if (!url) return [];
-  
+
   const recommendations = [];
-  
+
   for (const [name, config] of Object.entries(dataSources)) {
-    const instance = new config.class();
+    const SourceClass = config.class;
+    const instance = new SourceClass();
     if (instance.canHandle && instance.canHandle(url)) {
       recommendations.push({
         name,
         config,
         score: 1.0,
-        reason: 'Direct URL match'
+        reason: 'Direct URL match',
       });
     }
   }
-  
-  // Add sitemap as fallback recommendation
+
   if (recommendations.length === 0) {
     const sitemapConfig = dataSources.sitemap;
     recommendations.push({
       name: 'sitemap',
       config: sitemapConfig,
       score: 0.5,
-      reason: 'Fallback option - may work with sitemap discovery'
+      reason: 'Fallback option - may work with sitemap discovery',
     });
   }
-  
+
   return recommendations.sort((a, b) => b.score - a.score);
 }
 
-// Export individual data sources
-export { SitemapSource, WordPressSource, AEMSource, AdobeDASource };
+export {
+  SitemapSource,
+  WordPressSource,
+  EDSSource,
+  AEMSource,
+  AdobeDASource,
+  MediaBusAuditSource,
+};
 
-// Export default as the registry
 export default dataSources;

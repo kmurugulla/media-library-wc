@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Library - Multi-Source Integration</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="test-container">
+        <h1>Media Library - Multi-Source Integration</h1>
+        
+        <div class="test-section">
+            <h2>All Data Sources</h2>
+            <p>This example demonstrates all available data sources in a single interface. Choose from sitemap, WordPress, AEM/EDS, or Adobe DA sources to scan for media files.</p>
+            
+            <div class="controls">
+                <!-- Data Source Section -->
+                <div class="field-section source-section">
+                    <div class="control-group">
+                        <label for="data-source">Source:</label>
+                        <select id="data-source">
+                            <option value="sitemap">Sitemap</option>
+                            <option value="wordpress">WordPress</option>
+                            <option value="aem">AEM/EDS</option>
+                            <option value="adobe-da">Adobe DA</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group" id="website-url-group">
+                        <label for="website-url">Website URL:</label>
+                        <input 
+                            type="url" 
+                            id="website-url" 
+                            placeholder="https://example.com"
+                        >
+                    </div>
+                    
+                    <div class="control-group" id="or-divider">
+                        <label>&nbsp;</label>
+                        <div class="or-divider">(or)</div>
+                    </div>
+                    
+                    <div class="control-group" id="sitemap-specific-group">
+                        <label for="sitemap-url">Sitemap URL:</label>
+                        <input 
+                            type="url" 
+                            id="sitemap-url" 
+                            placeholder="https://example.com/sitemap.xml"
+                        >
+                    </div>
+                    
+                    <div class="control-group option-group" id="aem-options-group">
+                        <div class="option-row">
+                            <div class="option-col">
+                                <label for="aem-org">Org:</label>
+                                <input 
+                                    type="text" 
+                                    id="aem-org" 
+                                    placeholder="your-org"
+                                >
+                            </div>
+                            <div class="option-col">
+                                <label for="aem-repo">Repo:</label>
+                                <input 
+                                    type="text" 
+                                    id="aem-repo" 
+                                    placeholder="your-repo"
+                                >
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="control-group option-group" id="adobe-options-group">
+                        <div class="option-row">
+                            <div class="option-col">
+                                <label for="adobe-org">Org:</label>
+                                <input 
+                                    type="text" 
+                                    id="adobe-org" 
+                                    placeholder="your-org"
+                                >
+                            </div>
+                            <div class="option-col">
+                                <label for="adobe-repo">Repo:</label>
+                                <input 
+                                    type="text" 
+                                    id="adobe-repo" 
+                                    placeholder="your-repo"
+                                >
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Settings Section -->
+                <div class="field-section settings-section">
+                    <div class="control-group">
+                        <label for="storage-type">Storage:</label>
+                        <select id="storage-type">
+                            <option value="none">None</option>
+                            <option value="indexeddb">Local IndexDB</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="locale">Locale:</label>
+                        <select id="locale">
+                            <option value="en">English</option>
+                            <option value="es">Spanish</option>
+                            <option value="de">German</option>
+                            <option value="fr">French</option>
+                        </select>
+                    </div>
+                    
+                    <div class="control-group">
+                        <label for="site-selector">Loaded Sites:</label>
+                        <select id="site-selector">
+                            <option value="">Select a site...</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Actions Section -->
+                <div class="field-section actions-section">
+                    <div class="button-group">
+                        <button id="scan-btn" class="btn btn-primary">
+                            Scan
+                        </button>
+                        <button id="clear-btn" class="btn btn-secondary">
+                            Clear Display
+                        </button>
+                        <button onclick="clearOldData()" class="btn btn-danger">
+                            Clear Storage
+                        </button>
+                    </div>
+                </div>
+                
+                <div id="status" class="status"></div>
+            </div>
+            
+            <div class="media-library-container">
+                <media-library 
+                    id="media-library"
+                    storage="none"
+                    locale="en">
+                </media-library>
+            </div>
+        </div>
+
+    </div>
+
+    <script type="module" src="scripts.js"></script>
+</body>
+</html>

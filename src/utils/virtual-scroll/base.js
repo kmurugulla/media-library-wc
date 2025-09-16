@@ -1,4 +1,3 @@
-// src/utils/virtual-scroll-base.js
 export const SCROLL_CONSTANTS = {
   GRID_ITEM_WIDTH: 410,
   GRID_ITEM_HEIGHT: 400,
@@ -15,13 +14,7 @@ export const SCROLL_CONSTANTS = {
   FAST_SCROLL_THRESHOLD: 100,
 };
 
-/**
- * Virtual scroll manager for handling scroll-based rendering
- */
 export class VirtualScrollManager {
-  /**
-   * Calculate responsive item width based on viewport
-   */
   getResponsiveItemWidth() {
     if (typeof window === 'undefined') return SCROLL_CONSTANTS.GRID_ITEM_WIDTH;
 
@@ -69,11 +62,6 @@ export class VirtualScrollManager {
     this.onResize = this.onResize.bind(this);
   }
 
-  /**
-   * Initialize the virtual scroll manager
-   * @param {HTMLElement} container - The scrollable container
-   * @param {number} totalItems - Total number of items
-   */
   init(container, totalItems) {
     this.container = container;
     this.totalItems = totalItems;
@@ -84,9 +72,6 @@ export class VirtualScrollManager {
     this.attachResizeListener();
   }
 
-  /**
-   * Update container dimensions
-   */
   updateContainerDimensions() {
     if (!this.container) return;
 
@@ -95,9 +80,6 @@ export class VirtualScrollManager {
     this.containerWidth = rect.width;
   }
 
-  /**
-   * Calculate which items should be visible
-   */
   calculateVisibleRange() {
     if (!this.container || this.totalItems === 0) {
       this.visibleStart = 0;
@@ -122,9 +104,6 @@ export class VirtualScrollManager {
     }
   }
 
-  /**
-   * Handle scroll events with requestAnimationFrame for smooth 60fps scrolling
-   */
   onScroll() {
     if (this.scrollTimeout) {
       clearTimeout(this.scrollTimeout);
@@ -156,9 +135,6 @@ export class VirtualScrollManager {
     }, this.scrollThrottle);
   }
 
-  /**
-   * Handle resize events
-   */
   onResize() {
     this.updateContainerDimensions();
     this.itemWidth = this.getResponsiveItemWidth();
@@ -166,9 +142,6 @@ export class VirtualScrollManager {
     this.onVisibleRangeChange();
   }
 
-  /**
-   * Called when visible range changes - should be overridden by subclasses
-   */
   onVisibleRangeChange() {
     if (this.onRangeChange) {
       this.onRangeChange({
@@ -178,9 +151,6 @@ export class VirtualScrollManager {
     }
   }
 
-  /**
-   * Attach scroll listener
-   */
   attachScrollListener() {
     if (this.scrollListenerAttached || !this.container) return;
 
@@ -188,9 +158,6 @@ export class VirtualScrollManager {
     this.scrollListenerAttached = true;
   }
 
-  /**
-   * Detach scroll listener
-   */
   detachScrollListener() {
     if (!this.scrollListenerAttached || !this.container) return;
 
@@ -198,38 +165,24 @@ export class VirtualScrollManager {
     this.scrollListenerAttached = false;
   }
 
-  /**
-   * Attach resize listener
-   */
   attachResizeListener() {
     if (typeof window === 'undefined') return;
 
     window.addEventListener('resize', this.onResize, { passive: true });
   }
 
-  /**
-   * Detach resize listener
-   */
   detachResizeListener() {
     if (typeof window === 'undefined') return;
 
     window.removeEventListener('resize', this.onResize);
   }
 
-  /**
-   * Update total items count
-   * @param {number} totalItems - New total items count
-   */
   updateTotalItems(totalItems) {
     this.totalItems = totalItems;
     this.calculateVisibleRange();
     this.onVisibleRangeChange();
   }
 
-  /**
-   * Reset the virtual scroll state with new total items
-   * @param {number} totalItems - New total items count
-   */
   resetState(totalItems) {
     this.totalItems = totalItems;
     this.visibleStart = 0;
@@ -238,9 +191,6 @@ export class VirtualScrollManager {
     this.onVisibleRangeChange();
   }
 
-  /**
-   * Update column count (for grid layouts)
-   */
   updateColCount() {
     this.updateContainerDimensions();
     this.itemWidth = this.getResponsiveItemWidth();
@@ -253,11 +203,6 @@ export class VirtualScrollManager {
     }
   }
 
-  /**
-   * Calculate total height needed for all items
-   * @param {number} totalItems - Total number of items
-   * @returns {number} Total height in pixels
-   */
   calculateTotalHeight(totalItems) {
     if (totalItems === 0) return 0;
 
@@ -266,11 +211,6 @@ export class VirtualScrollManager {
     return totalRows * (this.itemHeight + this.cardSpacing);
   }
 
-  /**
-   * Calculate position for a specific item in the grid
-   * @param {number} index - Item index
-   * @returns {Object} Object with top and left positions
-   */
   calculateItemPosition(index) {
     const itemsPerRow = Math.floor(this.containerWidth / (this.itemWidth + this.cardSpacing));
     const row = Math.floor(index / itemsPerRow);
@@ -282,10 +222,6 @@ export class VirtualScrollManager {
     };
   }
 
-  /**
-   * Setup scroll listener (alias for attachScrollListener)
-   * @param {HTMLElement} container - The scrollable container
-   */
   setupScrollListener(container) {
     this.container = container;
     this.updateContainerDimensions();
@@ -294,25 +230,14 @@ export class VirtualScrollManager {
     this.attachResizeListener();
   }
 
-  /**
-   * Clean up resources (alias for destroy)
-   */
   cleanup() {
     this.destroy();
   }
 
-  /**
-   * Get total items count
-   * @returns {number} Total number of items
-   */
   getTotalItems() {
     return this.totalItems;
   }
 
-  /**
-   * Get current visible range
-   * @returns {Object} Object with start and end indices
-   */
   getVisibleRange() {
     return {
       start: this.visibleStart,
@@ -320,20 +245,11 @@ export class VirtualScrollManager {
     };
   }
 
-  /**
-   * Get visible items from data array
-   * @param {Array} data - Full data array
-   * @returns {Array} Visible items slice
-   */
   getVisibleItems(data) {
     if (!data || data.length === 0) return [];
     return data.slice(this.visibleStart, this.visibleEnd);
   }
 
-  /**
-   * Scroll to specific item
-   * @param {number} index - Item index to scroll to
-   */
   scrollToItem(index) {
     if (!this.container || index < 0 || index >= this.totalItems) return;
 
@@ -344,9 +260,6 @@ export class VirtualScrollManager {
     this.container.scrollTop = scrollTop;
   }
 
-  /**
-   * Clean up resources
-   */
   destroy() {
     this.detachScrollListener();
     this.detachResizeListener();

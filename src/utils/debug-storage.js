@@ -1,4 +1,3 @@
-// src/utils/debug-storage.js
 import BrowserStorage from './storage.js';
 import logger from './logger.js';
 

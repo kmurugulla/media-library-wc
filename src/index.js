@@ -8,6 +8,8 @@ export { default as i18n } from './utils/i18n.js';
 export * from './utils/filters.js';
 export * from './utils/utils.js';
 
+export { waitForMediaLibraryReady, createMediaLibrary, initializeMediaLibrary } from './utils/initializer.js';
+
 if (import.meta.env.DEV) {
-  import('./utils/debug-storage.js');
+  import(/* @vite-ignore */ './utils/debug-storage.js');
 }
