@@ -20,6 +20,8 @@ class MediaTopbar extends LocalizableElement {
     imageAnalysisEnabled: { type: Boolean },
     showAnalysisToggle: { type: Boolean },
     mediaData: { type: Array },
+    totalPages: { type: Number },
+    isActuallyScanning: { type: Boolean },
     _suggestions: { state: true },
     _activeIndex: { state: true },
     _originalQuery: { state: true },
@@ -42,6 +44,8 @@ class MediaTopbar extends LocalizableElement {
     this.imageAnalysisEnabled = false;
     this.showAnalysisToggle = true;
     this.mediaData = [];
+    this.totalPages = 0;
+    this.isActuallyScanning = false;
     this._suggestions = [];
     this._activeIndex = -1;
     this._originalQuery = '';
@@ -115,8 +119,9 @@ class MediaTopbar extends LocalizableElement {
             <input 
               class="search-input"
               type="text"
-              placeholder=${this.t('mediaLibrary.searchPlaceholder')}
+              placeholder=${this.isScanning ? this.t('mediaLibrary.searchDisabledDuringScan') : this.t('mediaLibrary.searchPlaceholder')}
               .value=${this.searchQuery || ''}
+              ?disabled=${this.isScanning}
               @input=${this.handleSearchInput}
               @keydown=${this.handleKeyDown}
             />
@@ -154,14 +159,16 @@ class MediaTopbar extends LocalizableElement {
           ` : ''}
         </div>
 
-        ${this.isScanning ? html`
+        ${this.isActuallyScanning ? html`
           <div class="scan-stats">
             <div class="stat-item">
-              <span class="stat-label">Found:</span>
+              <span class="stat-label">Found</span>
               <span class="stat-value stat-number">${this.realTimeStats.images}</span>
               <span class="stat-text">media in</span>
               <span class="stat-value stat-number">${this.realTimeStats.pages}</span>
-              <span class="stat-text">Pages in</span>
+              <span class="stat-text">/</span>
+              <span class="stat-value stat-number">${this.totalPages}</span>
+              <span class="stat-text">pages in</span>
               <span class="stat-value stat-number">${this.realTimeStats.elapsed}</span>
               <span class="stat-text">s</span>
             </div>
@@ -188,6 +195,7 @@ class MediaTopbar extends LocalizableElement {
         <button 
           class="view-toggle-button"
           @click=${this.toggleView}
+          ?disabled=${this.isScanning}
           aria-label=${this.currentView === 'grid' ? this.t('views.list') : this.t('views.grid')}
           title=${this.currentView === 'grid' ? this.t('views.list') : this.t('views.grid')}
         >
@@ -198,14 +206,14 @@ class MediaTopbar extends LocalizableElement {
 
         ${this.showAnalysisToggle ? html`
           <div class="analysis-toggle-container">
-            <span class="analysis-toggle-text">Deep Analysis</span>
+            <span class="analysis-toggle-text">EXIF</span>
             <label class="analysis-toggle-label">
               <input 
                 type="checkbox" 
                 class="analysis-toggle-input"
                 ?checked=${this.imageAnalysisEnabled}
                 @change=${this.toggleImageAnalysis}
-                ?disabled=${this.isScanning}
+                ?disabled=${this.isActuallyScanning}
               />
               <span class="analysis-toggle-slider ${this.imageAnalysisEnabled ? 'enabled' : ''}"></span>
             </label>
@@ -239,7 +247,7 @@ class MediaTopbar extends LocalizableElement {
       this.dispatchEvent(new CustomEvent('search', { detail: { query } }));
     }, 300);
 
-    if (!query || !query.trim() || this._suppressSuggestions) {
+    if (!query || !query.trim() || this._suppressSuggestions || this.isScanning) {
       this._suggestions = [];
       this._suppressSuggestions = false;
     } else {
@@ -372,7 +380,6 @@ class MediaTopbar extends LocalizableElement {
     this._suppressSuggestions = false;
     this.dispatchEvent(new CustomEvent('search', { detail: { query: '' } }));
   }
-
 
   handleViewChange(view) {
     this.dispatchEvent(new CustomEvent('viewChange', { detail: { view } }));

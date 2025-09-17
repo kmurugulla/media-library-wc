@@ -1,4 +1,3 @@
-
 import { detectCategory } from './category-detector.js';
 
 export const ANALYSIS_CONFIG = {
@@ -10,7 +9,6 @@ export const ANALYSIS_CONFIG = {
 };
 
 const analysisCache = new Map();
-
 
 async function getImageDimensions(imageUrl) {
   return new Promise((resolve) => {
@@ -174,7 +172,6 @@ export async function analyzeImage(imageUrl, existingAnalysis = null, context = 
     return getBasicAnalysis(imageUrl);
   }
 }
-
 
 export function updateAnalysisConfig(config) {
   Object.assign(ANALYSIS_CONFIG, config);

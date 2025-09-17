@@ -19,6 +19,7 @@
   "mediaLibrary": {
     "title": "Media Library",
     "searchPlaceholder": "Search media, doc:path, folder:path, or / for root files...",
+    "searchDisabledDuringScan": "Search disabled during scan...",
     "noResults": "No media found",
     "loadingMedia": "Loading media...",
     "scanProgress": "Scanning {{current}} of {{total}} pages...",
@@ -30,7 +31,7 @@
     "sitemapPlaceholder": "Enter sitemap URL manually",
     "analysisEnabled": "Analysis ON",
     "analysisDisabled": "Analysis OFF",
-    "analysisTooltip": "Toggle image analysis (orientation, categorization, EXIF data) - ON by default for better categorization"
+    "analysisTooltip": "Toggle EXIF data extraction (camera info, date taken, natural dimensions) - OFF for faster scanning"
   },
   "filters": {
     "all": "All Media",
@@ -60,9 +61,9 @@
     "socialImage": "Social Images",
     "ogImage": "OG Images",
     "performanceIssue": "Performance Issues",
-    "screenshots": "Screenshots",
+    "screenshots": "Graphics & UI",
     "logos": "Logos",
-    "people-photos": "People Photos",
+    "people-photos": "People",
     "products": "Products",
     "404-media": "404 Media"
   },

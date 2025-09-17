@@ -56,6 +56,7 @@ class ContentParser {
     skipped = urls.length - urlsToScan.length;
 
     if (skipped > 0) {
+      // URLs were skipped due to no changes detected
     }
 
     for (const url of urlsToScan) {
@@ -187,7 +188,15 @@ class ContentParser {
               }
             }
           } catch (error) {
+            // Image analysis failed, continue without analysis
           }
+        }
+
+        // Set basic orientation from HTML attributes when deep analysis is disabled
+        if (!this.enableImageAnalysis && domWidth > 0 && domHeight > 0) {
+          mediaItem.orientation = domWidth > domHeight ? 'landscape' : 'portrait';
+          mediaItem.width = domWidth;
+          mediaItem.height = domHeight;
         }
 
         return mediaItem;
@@ -278,6 +287,18 @@ class ContentParser {
   captureContext(element, type) {
     const context = [type];
 
+    // Check if element is inside a picture element
+    const pictureElement = element.closest('picture');
+    if (pictureElement) {
+      context.push('picture');
+    }
+
+    // Check for semantic HTML elements
+    const semanticParent = this.findSemanticParent(element);
+    if (semanticParent) {
+      context.push(`In: ${semanticParent}`);
+    }
+
     const containerInfo = this.findContainerClasses(element);
     if (containerInfo) {
       context.push(`In: ${containerInfo}`);
@@ -286,6 +307,14 @@ class ContentParser {
     const nearbyText = this.getNearbyText(element);
     if (nearbyText) {
       context.push(`text: ${nearbyText}`);
+    }
+
+    // If no meaningful context found, try to get paragraph or section context
+    if (context.length === 1) {
+      const paragraphContext = this.getParagraphContext(element);
+      if (paragraphContext) {
+        context.push(`paragraph: ${paragraphContext}`);
+      }
     }
 
     return context.join(' > ');
@@ -323,6 +352,40 @@ class ContentParser {
     return null;
   }
 
+  findSemanticParent(element) {
+    let current = element.parentElement;
+    let depth = 0;
+
+    while (current && depth < 5) {
+      const tagName = current.tagName?.toLowerCase();
+      if (['article', 'section', 'aside', 'header', 'footer', 'nav', 'main'].includes(tagName)) {
+        return tagName;
+      }
+      current = current.parentElement;
+      depth += 1;
+    }
+
+    return null;
+  }
+
+  getParagraphContext(element) {
+    let current = element.parentElement;
+    let depth = 0;
+
+    while (current && depth < 3) {
+      if (current.tagName?.toLowerCase() === 'p') {
+        const text = current.textContent?.trim();
+        if (text && text.length > 20 && text.length < 200) {
+          return text.substring(0, 50) + (text.length > 50 ? '...' : '');
+        }
+      }
+      current = current.parentElement;
+      depth += 1;
+    }
+
+    return null;
+  }
+
   getNearbyText(element) {
     const parent = element.parentElement;
     if (!parent) return null;
@@ -338,8 +401,12 @@ class ContentParser {
     }
 
     const parentText = parent.textContent?.trim();
-    if (parentText && parentText.length > 10 && parentText.length < 200) {
-      return parentText;
+    if (parentText && parentText.length > 10) {
+      if (parentText.length <= 200) {
+        return parentText;
+      }
+      // Return first 20 characters when text is longer than 200 chars
+      return parentText.substring(0, 20);
     }
 
     return null;

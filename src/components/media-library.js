@@ -10,6 +10,7 @@ import './topbar/topbar.js';
 import './sidebar/sidebar.js';
 import './grid/grid.js';
 import './list/list.js';
+import './scan/scan.js';
 import './modal-manager/modal-manager.js';
 import getSvg from '../utils/get-svg.js';
 import mediaLibraryStyles from './media-library.css?inline';
@@ -32,6 +33,8 @@ class MediaLibrary extends LocalizableElement {
     _imageAnalysisEnabled: { state: true },
     _isBatchLoading: { state: true },
     _realTimeStats: { state: true },
+    _progressiveMediaData: { state: true },
+    _progressiveLimit: { state: true },
     showAnalysisToggle: { type: Boolean },
   };
 
@@ -51,6 +54,9 @@ class MediaLibrary extends LocalizableElement {
     this._imageAnalysisEnabled = false;
     this._isBatchLoading = false;
     this._realTimeStats = { images: 0, pages: 0, elapsed: 0 };
+    this._progressiveMediaData = [];
+    this._progressiveLimit = 0;
+    this._totalPages = 0;
     this.showAnalysisToggle = true;
 
     this.storageManager = null;
@@ -201,6 +207,7 @@ class MediaLibrary extends LocalizableElement {
       this._isBatchLoading = true;
       this._error = null;
       this._mediaData = [];
+      this._progressiveMediaData = [];
       this._processedData = null;
       this._searchQuery = '';
       this._selectedFilterType = 'all';
@@ -209,6 +216,7 @@ class MediaLibrary extends LocalizableElement {
       this._lastScanDuration = null;
       this._scanStats = null;
       this._realTimeStats = { images: 0, pages: 0, elapsed: 0 };
+      this._progressiveLimit = this.getProgressiveLimit();
 
       window.dispatchEvent(new CustomEvent('clear-search'));
       window.dispatchEvent(new CustomEvent('clear-filters'));
@@ -216,6 +224,7 @@ class MediaLibrary extends LocalizableElement {
       const storageKey = siteKey || 'media-data';
 
       this._scanProgress = { current: 0, total: pageList.length, found: 0 };
+      this._totalPages = pageList.length;
       this.requestUpdate();
 
       const elapsedInterval = setInterval(() => {
@@ -225,7 +234,6 @@ class MediaLibrary extends LocalizableElement {
       }, 100);
 
       const allMediaData = [];
-
 
       for (let i = 0; i < pageList.length; i += 1) {
         const url = pageList[i];
@@ -247,12 +255,7 @@ class MediaLibrary extends LocalizableElement {
           this._realTimeStats = { ...this._realTimeStats };
 
           this._mediaData = allMediaData;
-          this._processedData = processMediaData(allMediaData);
-
-          this._filteredDataCache = null;
-          this._lastFilterParams = null;
-          this._usageCountCache = null;
-          this._lastUsageCountParams = null;
+          this._progressiveMediaData = [...allMediaData];
 
           this.requestUpdate();
 
@@ -538,6 +541,10 @@ class MediaLibrary extends LocalizableElement {
     return result;
   }
 
+  getProgressiveLimit() {
+    return this._currentView === 'grid' ? 500 : 750;
+  }
+
   get selectedDocument() {
     if (this._mediaData && this._mediaData.length > 0) {
       const indexDoc = this._mediaData.find((media) => media.doc === '/index.html');
@@ -558,15 +565,22 @@ class MediaLibrary extends LocalizableElement {
     return this._processedData?.filterCounts || {};
   }
 
+  get isUIdisabled() {
+    return this._isScanning || !this._mediaData || this._mediaData.length === 0;
+  }
+
   handleSearch(e) {
+    if (this.isUIdisabled) return;
     this._searchQuery = e.detail.query;
   }
 
   handleViewChange(e) {
+    if (this.isUIdisabled) return;
     this._currentView = e.detail.view;
   }
 
   handleFilter(e) {
+    if (this.isUIdisabled) return;
     this._selectedFilterType = e.detail.type;
   }
 
@@ -631,8 +645,9 @@ class MediaLibrary extends LocalizableElement {
             .searchQuery=${this._searchQuery}
             .currentView=${this._currentView}
             .locale=${this.locale}
-            .isScanning=${this._isScanning}
+            .isScanning=${this.isUIdisabled}
             .scanProgress=${this._scanProgress}
+            .isActuallyScanning=${this._isScanning}
             .isBatchLoading=${this._isBatchLoading}
             .realTimeStats=${this._realTimeStats}
             .lastScanDuration=${this._lastScanDuration}
@@ -640,6 +655,7 @@ class MediaLibrary extends LocalizableElement {
             .imageAnalysisEnabled=${this._imageAnalysisEnabled}
             .showAnalysisToggle=${this.showAnalysisToggle}
             .mediaData=${this._mediaData}
+            .totalPages=${this._totalPages}
             @search=${this.handleSearch}
             @viewChange=${this.handleViewChange}
             @toggleImageAnalysis=${this.handleToggleImageAnalysis}
@@ -652,6 +668,7 @@ class MediaLibrary extends LocalizableElement {
             .activeFilter=${this._selectedFilterType}
             .filterCounts=${this.filterCounts}
             .locale=${this.locale}
+            .isScanning=${this.isUIdisabled}
             @filter=${this.handleFilter}
           ></media-sidebar>
         </div>
@@ -713,6 +730,15 @@ class MediaLibrary extends LocalizableElement {
 
   renderCurrentView() {
     if (this._isScanning) {
+      if (this._progressiveMediaData.length > 0) {
+        return html`
+          <media-scan-view
+            .mediaData=${this._progressiveMediaData}
+            .locale=${this.locale}
+          ></media-scan-view>
+        `;
+      }
+
       return html`
         <div class="loading-state">
           <div class="loading-spinner"></div>

@@ -104,7 +104,6 @@ async function performSitemapScan() {
       return;
     }
 
-    showNotification(`Found ${pageList.length} pages, starting scan...`, 'info');
 
     const siteKey = new URL(normalizedWebsiteUrl || normalizedSitemapUrl).hostname;
     const mediaData = await mediaLibrary.loadFromPageList(pageList, null, siteKey, true);

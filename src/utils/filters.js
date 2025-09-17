@@ -532,6 +532,7 @@ export function processMediaData(mediaData) {
             filterUrlSets[filterName].add(item.url);
           }
         } catch (error) {
+          // Filter function failed, skip this item
         }
       });
     }

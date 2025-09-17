@@ -486,8 +486,8 @@
   }
   
   .alt-cell {
-    min-width: 120px;
-    width: 120px;
+    min-width: 200px;
+    width: 200px;
   }
   
   .context-cell {
@@ -575,14 +575,10 @@
     border-radius: 4px;
     color: #64748b;
     font-size: 0.875rem;
-    max-width: 100px;
-    overflow: hidden;
+    max-width: 300px;
     overflow-wrap: break-word;
     padding: 4px 8px;
-    text-overflow: ellipsis;
     white-space: pre-line;
-    white-space: nowrap;
-  
   }
   
   .action-button {

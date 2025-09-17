@@ -1,4 +1,3 @@
-
 export const IMAGE_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg', 'avif'];
 export const VIDEO_EXTENSIONS = ['mp4', 'webm', 'mov', 'avi'];
 export const DOCUMENT_EXTENSIONS = ['pdf'];
@@ -105,7 +104,6 @@ export function isMediaFile(ext) {
 
 export { isSvgFile, extractFileExtension };
 
-
 export function sortMediaData(mediaData) {
   return [...mediaData].sort((a, b) => {
     const lastUsedA = new Date(a.lastUsedAt || 0);
@@ -119,7 +117,6 @@ export function sortMediaData(mediaData) {
     return nameA.localeCompare(nameB);
   });
 }
-
 
 export function getVideoThumbnail(videoUrl) {
   if (!videoUrl) return null;
@@ -148,7 +145,6 @@ export function isExternalVideoUrl(url) {
 
   return supportedPatterns.some((pattern) => pattern.test(url));
 }
-
 
 export function createHash(str) {
   let hash = 0;

@@ -147,6 +147,39 @@
   100% { transform: rotate(360deg); }
 }
 
+.streaming-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.loading-more {
+  align-items: center;
+  background: rgb(255 255 255 / 0.95);
+  border-top: 1px solid #e2e8f0;
+  bottom: 0;
+  color: #64748b;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  justify-content: center;
+  padding: 16px;
+  position: sticky;
+  text-align: center;
+  z-index: 10;
+}
+
+.loading-more .loading-spinner {
+  height: 20px;
+  margin-bottom: 0;
+  width: 20px;
+}
+
+.loading-more p {
+  font-size: 0.875rem;
+  margin: 0;
+}
+
 @media (max-width: 768px) {
   .media-library {
     grid-template:

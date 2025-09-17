@@ -285,7 +285,7 @@ class MediaList extends LocalizableElement {
 
   getShortAlt(alt) {
     if (!alt || alt === 'null') return '—';
-    return alt.length > 20 ? `${alt.substring(0, 20)}...` : alt;
+    return alt;
   }
 
   handleMediaClick(media) {

@@ -1,4 +1,3 @@
-
 import categoryPatterns from '../data/category-patterns.json';
 
 let parsedPatterns = null;
@@ -134,11 +133,25 @@ function detectPeopleInAltText(altText) {
   let score = 0;
   const text = altText.toLowerCase();
 
+  // Strong indicators for people photos
+  const strongPeopleIndicators = [
+    'profile photo', 'headshot', 'portrait', 'team photo', 'staff photo',
+    'person', 'people', 'man', 'woman', 'child', 'baby',
+  ];
+
+  if (strongPeopleIndicators.some((indicator) => text.includes(indicator))) {
+    score += 4;
+  }
+
+  // Name patterns (first name + last name)
   const namePatterns = [
     /^[a-z]+ [a-z]+$/,
     /^(mr|ms|dr|prof)\. [a-z]+/,
     /[a-z]+, (ceo|cto|manager|director|founder|president)/,
     /(ceo|cto|manager|director|founder|president) [a-z]+/,
+    /profile photo for [a-z]+ [a-z]+/i,
+    /photo of [a-z]+ [a-z]+/i,
+    /headshot of [a-z]+ [a-z]+/i,
   ];
 
   if (namePatterns.some((pattern) => pattern.test(text))) {
@@ -155,15 +168,14 @@ function detectPeopleInAltText(altText) {
   }
 
   const peopleIndicators = [
-    'person', 'people', 'man', 'woman', 'child', 'baby',
-    'portrait', 'headshot', 'photo', 'picture', 'image',
+    'photo', 'picture', 'image', 'headshot', 'portrait',
   ];
 
   if (peopleIndicators.some((indicator) => text.includes(indicator))) {
     score += 1;
   }
 
-  return Math.min(score, 5);
+  return Math.min(score, 6);
 }
 
 function detectPeopleInContext(context) {
@@ -419,7 +431,7 @@ export function getAvailableCategories() {
 
 export function getCategoryDisplayName(categoryName) {
   const displayNames = {
-    screenshots: 'Screenshots',
+    screenshots: 'Graphics & UI',
     logos: 'Logos',
     'people-photos': 'People',
     products: 'Products',
@@ -432,7 +444,7 @@ export function getCategoryDisplayName(categoryName) {
 
 export function getCategoryDescription(categoryName) {
   const descriptions = {
-    screenshots: 'App interfaces, software demos, and UI previews',
+    screenshots: 'App interfaces, software demos, UI previews, and graphics',
     logos: 'Brand logos, company symbols, and identity elements',
     'people-photos': 'Team photos, headshots, professional portraits, and testimonials',
     products: 'Product photos, catalog images, and merchandise',

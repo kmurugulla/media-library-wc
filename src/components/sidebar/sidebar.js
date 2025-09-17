@@ -9,6 +9,7 @@ class MediaSidebar extends LocalizableElement {
     activeFilter: { type: String },
     filterCounts: { type: Object },
     locale: { type: String },
+    isScanning: { type: Boolean },
   };
 
   static styles = getStyles(sidebarStyles);
@@ -18,6 +19,7 @@ class MediaSidebar extends LocalizableElement {
     this.activeFilter = 'all';
     this.filterCounts = {};
     this.locale = 'en';
+    this.isScanning = false;
   }
 
   async connectedCallback() {
@@ -69,7 +71,7 @@ class MediaSidebar extends LocalizableElement {
           </div>
         ` : ''}
 
-        ${(counts.landscape > 0 || counts.portrait > 0 || counts.square > 0) ? html`
+        ${(this.isScanning || counts.landscape > 0 || counts.portrait > 0 || counts.square > 0) ? html`
           <div class="filter-section">
             <h3>Orientation</h3>
             <ul class="filter-list">
@@ -86,11 +88,28 @@ class MediaSidebar extends LocalizableElement {
   }
 
   renderFilterItem(filterType, count, customLabel = null) {
-    if (!count || count === 0) return '';
-
     const label = customLabel || this.t(`filters.${filterType}`);
     const categoryFilters = getCategoryFilters();
     const isCategoryFilter = categoryFilters.includes(filterType);
+
+    // During scanning, show all filters but disabled and without counts
+    if (this.isScanning) {
+      return html`
+        <li class="filter-item">
+          <button 
+            class="filter-button disabled"
+            disabled
+            aria-pressed="false"
+            data-category=${isCategoryFilter ? filterType : ''}
+          >
+            <span>${label}</span>
+          </button>
+        </li>
+      `;
+    }
+
+    // After scanning, only show filters with counts > 0
+    if (!count || count === 0) return '';
 
     return html`
       <li class="filter-item">
@@ -111,7 +130,8 @@ class MediaSidebar extends LocalizableElement {
     const categoryFilters = getCategoryFilters();
     const hasCategoryItems = categoryFilters.some((category) => counts[category] > 0);
 
-    if (!hasCategoryItems) return '';
+    // During scanning, show category section even if no counts
+    if (!this.isScanning && !hasCategoryItems) return '';
 
     return html`
       <div class="filter-section">

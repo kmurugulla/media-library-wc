@@ -66,6 +66,18 @@
   color: #64748b;
 }
 
+.search-input:disabled {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.search-input:disabled::placeholder {
+  color: #94a3b8;
+}
+
 .search-icon {
   color: #64748b;
   left: 8px;
@@ -155,6 +167,20 @@
   background: #3b82f6;
   border-color: #3b82f6;
   color: #fff;
+}
+
+.view-toggle-button:disabled {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.view-toggle-button:disabled:hover {
+  background: #f8fafc;
+  border-color: #e2e8f0;
+  color: #94a3b8;
 }
 
 .scan-container {

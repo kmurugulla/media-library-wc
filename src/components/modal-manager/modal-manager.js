@@ -73,9 +73,6 @@ class ModalManager extends LocalizableElement {
 
   getUsageCount() {
     const usageCount = this.modalData?.data?.media?.usageCount || 0;
-    const usageDataLength = this.modalData?.data?.usageData?.length || 0;
-    
-    
     return usageCount;
   }
 
@@ -106,8 +103,8 @@ class ModalManager extends LocalizableElement {
     const contextItems = [];
 
     parts.forEach((part) => {
-      if (part.startsWith('In div:')) {
-        const containerInfo = part.replace('In div:', '').trim();
+      if (part.startsWith('In:')) {
+        const containerInfo = part.replace('In:', '').trim();
         if (containerInfo && containerInfo !== 'undefined' && containerInfo.length > 0) {
           const simplified = this.simplifyContainerInfo(containerInfo);
           contextItems.push(html`
@@ -255,7 +252,6 @@ class ModalManager extends LocalizableElement {
 
   renderUsageTab() {
     const { usageData } = this.modalData.data;
-
 
     if (!usageData || usageData.length === 0) {
       return html`

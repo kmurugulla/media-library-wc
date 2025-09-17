@@ -273,7 +273,6 @@ class MediaGrid extends LocalizableElement {
     return `${text.substring(0, maxLength)}...`;
   }
 
-
   getUsageCount(media) {
     return media.usageCount || 0;
   }
