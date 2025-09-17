@@ -1,79 +1,7 @@
-
-import '../../dist/media-library.es.js';
-import { WordPressSource } from '../../sources/index.js';
 import { waitForMediaLibraryReady } from '../../dist/media-library.es.js';
+import { WordPressSource } from '../../sources/index.js';
 
 let mediaLibrary;
-
-function setupControls() {
-  const storageSelect = document.getElementById('storage-type');
-  const localeSelect = document.getElementById('locale');
-  const siteSelector = document.getElementById('site-selector');
-  const scanBtn = document.getElementById('scan-btn');
-  const clearBtn = document.getElementById('clear-btn');
-
-  storageSelect.addEventListener('change', (e) => {
-    const previousStorage = mediaLibrary.storage;
-    const newStorage = e.target.value;
-    
-    mediaLibrary.storage = newStorage;
-    
-    // Recreate the storage manager with the new type
-    const BrowserStorage = mediaLibrary.storageManager.constructor;
-    mediaLibrary.storageManager = new BrowserStorage(newStorage);
-    
-    mediaLibrary.clearData();
-    
-    // Only show notification when switching to IndexDB (most important change)
-    if (previousStorage !== 'indexdb' && newStorage === 'indexdb') {
-      showNotification('Switched to IndexDB storage - future scans will be saved', 'info');
-    }
-    
-    loadAvailableSites();
-  });
-
-  localeSelect.addEventListener('change', (e) => {
-    mediaLibrary.locale = e.target.value;
-  });
-
-  siteSelector.addEventListener('change', async (e) => {
-    const selectedSite = e.target.value;
-    if (selectedSite) {
-      await mediaLibrary.loadFromStorage(selectedSite);
-      showNotification(`Loaded data for site: ${selectedSite}`, 'success');
-    } else {
-      mediaLibrary.clearData();
-    }
-  });
-
-  scanBtn.addEventListener('click', async () => {
-    await performWordPressScan();
-  });
-
-  clearBtn.addEventListener('click', () => {
-    mediaLibrary.clearData();
-  });
-
-  configToggleBtn.addEventListener('click', () => {
-    const isCollapsed = configSection.classList.contains('collapsed');
-    if (isCollapsed) {
-      configSection.classList.remove('collapsed');
-      configToggleBtn.classList.remove('collapsed');
-    } else {
-      configSection.classList.add('collapsed');
-      configToggleBtn.classList.add('collapsed');
-    }
-  });
-
-  loadAvailableSites();
-}
-
-function setupNotifications() {
-  window.addEventListener('show-notification', (e) => {
-    const { heading, message, type } = e.detail;
-    showNotification(`${heading}: ${message}`, type);
-  });
-}
 
 function showNotification(message, type = 'info') {
   const notification = document.createElement('div');
@@ -90,14 +18,54 @@ function showNotification(message, type = 'info') {
 
 function normalizeUrl(url) {
   if (!url) return url;
-  
+
   let normalizedUrl = url.trim();
-  
+
   if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
     normalizedUrl = `https://${normalizedUrl}`;
   }
-  
+
   return normalizedUrl;
+}
+
+async function loadAvailableSites() {
+  try {
+    // Always create a temporary IndexDB storage manager to check for available sites
+    // This is independent of the current storage setting
+    const BrowserStorage = mediaLibrary.storageManager.constructor;
+    const indexDBStorage = new BrowserStorage('indexeddb');
+
+    const sites = await indexDBStorage.getAllSites();
+
+    const siteSelector = document.getElementById('site-selector');
+    const deleteSiteBtn = document.getElementById('delete-site-btn');
+
+    siteSelector.innerHTML = '<option value="">Select a site...</option>';
+
+    sites.forEach((site) => {
+      const option = document.createElement('option');
+      option.value = site.siteKey;
+      option.textContent = `${site.siteKey} (${site.itemCount} items) - ${new Date(site.timestamp).toLocaleString()}`;
+      siteSelector.appendChild(option);
+    });
+
+    if (sites.length === 0) {
+      const option = document.createElement('option');
+      option.value = '';
+      option.textContent = 'No sites found';
+      option.disabled = true;
+      siteSelector.appendChild(option);
+      // Hide delete button when no sites are available
+      deleteSiteBtn.style.display = 'none';
+    } else {
+      // Hide delete button initially (will show when site is selected)
+      deleteSiteBtn.style.display = 'none';
+    }
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error('Failed to load available sites:', error);
+    showNotification(`Failed to load sites: ${error.message}`, 'error');
+  }
 }
 
 async function performWordPressScan() {
@@ -156,6 +124,7 @@ async function performWordPressScan() {
     }
 
     showNotification(`Scan failed: ${errorMessage}`, 'error');
+    // eslint-disable-next-line no-console
     console.error('Scan error:', error);
   } finally {
     const scanBtn = document.getElementById('scan-btn');
@@ -164,36 +133,110 @@ async function performWordPressScan() {
   }
 }
 
-async function loadAvailableSites() {
-  try {
-    // Always create a temporary IndexDB storage manager to check for available sites
-    // This is independent of the current storage setting
+function setupControls() {
+  const storageSelect = document.getElementById('storage-type');
+  const localeSelect = document.getElementById('locale');
+  const siteSelector = document.getElementById('site-selector');
+  const scanBtn = document.getElementById('scan-btn');
+  const clearBtn = document.getElementById('clear-btn');
+  const deleteSiteBtn = document.getElementById('delete-site-btn');
+  const configToggleBtn = document.getElementById('config-toggle-btn');
+  const configSection = document.getElementById('config-section');
+
+  storageSelect.addEventListener('change', (e) => {
+    const previousStorage = mediaLibrary.storage;
+    const newStorage = e.target.value;
+
+    mediaLibrary.storage = newStorage;
+
+    // Recreate the storage manager with the new type
     const BrowserStorage = mediaLibrary.storageManager.constructor;
-    const indexDBStorage = new BrowserStorage('indexeddb');
+    mediaLibrary.storageManager = new BrowserStorage(newStorage);
 
-    const sites = await indexDBStorage.getAllSites();
+    mediaLibrary.clearData();
 
-    const siteSelector = document.getElementById('site-selector');
-    siteSelector.innerHTML = '<option value="">Select a site...</option>';
-
-    sites.forEach((site) => {
-      const option = document.createElement('option');
-      option.value = site.siteKey;
-      option.textContent = `${site.siteKey} (${site.itemCount} items) - ${new Date(site.timestamp).toLocaleString()}`;
-      siteSelector.appendChild(option);
-    });
-
-    if (sites.length === 0) {
-      const option = document.createElement('option');
-      option.value = '';
-      option.textContent = 'No sites found';
-      option.disabled = true;
-      siteSelector.appendChild(option);
+    // Only show notification when switching to IndexDB (most important change)
+    if (previousStorage !== 'indexdb' && newStorage === 'indexdb') {
+      showNotification('Switched to IndexDB storage - future scans will be saved', 'info');
     }
-  } catch (error) {
-    console.error('Failed to load available sites:', error);
-    showNotification(`Failed to load sites: ${error.message}`, 'error');
+
+    loadAvailableSites();
+  });
+
+  localeSelect.addEventListener('change', (e) => {
+    mediaLibrary.locale = e.target.value;
+  });
+
+  siteSelector.addEventListener('change', async (e) => {
+    const selectedSite = e.target.value;
+    if (selectedSite) {
+      await mediaLibrary.loadFromStorage(selectedSite);
+      showNotification(`Loaded data for site: ${selectedSite}`, 'success');
+      // Show delete button when a site is selected
+      deleteSiteBtn.style.display = 'inline-block';
+    } else {
+      mediaLibrary.clearData();
+      // Hide delete button when no site is selected
+      deleteSiteBtn.style.display = 'none';
+    }
+  });
+
+  scanBtn.addEventListener('click', async () => {
+    await performWordPressScan();
+  });
+
+  clearBtn.addEventListener('click', () => {
+    mediaLibrary.clearData();
+  });
+
+  deleteSiteBtn.addEventListener('click', async () => {
+    const selectedSite = siteSelector.value;
+    if (selectedSite) {
+      // eslint-disable-next-line no-alert, no-restricted-globals
+      const confirmed = confirm(`Are you sure you want to delete all data for "${selectedSite}"? This action cannot be undone.`);
+      if (confirmed) {
+        try {
+          const BrowserStorage = mediaLibrary.storageManager.constructor;
+          const indexDBStorage = new BrowserStorage('indexeddb');
+          await indexDBStorage.deleteSite(selectedSite);
+          showNotification(`Deleted data for site: ${selectedSite}`, 'success');
+
+          // Clear the current display if the deleted site was loaded
+          mediaLibrary.clearData();
+
+          // Reload the sites list
+          await loadAvailableSites();
+
+          // Reset the site selector
+          siteSelector.value = '';
+        } catch (error) {
+          showNotification(`Failed to delete site data: ${error.message}`, 'error');
+        }
+      }
+    }
+  });
+
+  if (configToggleBtn && configSection) {
+    configToggleBtn.addEventListener('click', () => {
+      const isCollapsed = configSection.classList.contains('collapsed');
+      if (isCollapsed) {
+        configSection.classList.remove('collapsed');
+        configToggleBtn.classList.remove('collapsed');
+      } else {
+        configSection.classList.add('collapsed');
+        configToggleBtn.classList.add('collapsed');
+      }
+    });
   }
+
+  loadAvailableSites();
+}
+
+function setupNotifications() {
+  window.addEventListener('show-notification', (e) => {
+    const { heading, message, type } = e.detail;
+    showNotification(`${heading}: ${message}`, type);
+  });
 }
 
 function parseURLParameters() {
@@ -277,11 +320,14 @@ function applyURLParameters() {
 
     showNotification('Configuration loaded from URL parameters', 'info');
 
+    const configSection = document.getElementById('config-section');
+    const configToggleBtn = document.getElementById('config-toggle-btn');
     if (configSection && configToggleBtn) {
       configSection.classList.add('collapsed');
       configToggleBtn.classList.add('collapsed');
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Error applying URL parameters:', error);
     showNotification(`Error loading URL parameters: ${error.message}`, 'error');
   }
@@ -300,6 +346,7 @@ window.clearOldData = async () => {
 
     const oldData = await storage.load('media-data');
     if (oldData && oldData.length > 0) {
+      // eslint-disable-next-line no-alert, no-restricted-globals
       const shouldMigrate = confirm(`Found ${oldData.length} items in old format. Would you like to migrate them to 'legacy-data' site before clearing?`);
       if (shouldMigrate) {
         await storage.save(oldData, 'legacy-data');
@@ -311,6 +358,7 @@ window.clearOldData = async () => {
     await loadAvailableSites();
     showNotification('Old data cleared successfully', 'success');
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to clear old data:', error);
     showNotification(`Failed to clear data: ${error.message}`, 'error');
   }

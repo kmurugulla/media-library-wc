@@ -13,9 +13,12 @@ class MediaTopbar extends LocalizableElement {
     locale: { type: String },
     isScanning: { type: Boolean },
     scanProgress: { type: Object },
+    isBatchLoading: { type: Boolean },
+    realTimeStats: { type: Object },
     lastScanDuration: { type: String },
     scanStats: { type: Object },
     imageAnalysisEnabled: { type: Boolean },
+    showAnalysisToggle: { type: Boolean },
     mediaData: { type: Array },
     _suggestions: { state: true },
     _activeIndex: { state: true },
@@ -32,9 +35,12 @@ class MediaTopbar extends LocalizableElement {
     this.locale = 'en';
     this.isScanning = false;
     this.scanProgress = null;
+    this.isBatchLoading = false;
+    this.realTimeStats = { images: 0, pages: 0, elapsed: 0 };
     this.lastScanDuration = null;
     this.scanStats = null;
     this.imageAnalysisEnabled = false;
+    this.showAnalysisToggle = true;
     this.mediaData = [];
     this._suggestions = [];
     this._activeIndex = -1;
@@ -148,6 +154,20 @@ class MediaTopbar extends LocalizableElement {
           ` : ''}
         </div>
 
+        ${this.isScanning ? html`
+          <div class="scan-stats">
+            <div class="stat-item">
+              <span class="stat-label">Found:</span>
+              <span class="stat-value stat-number">${this.realTimeStats.images}</span>
+              <span class="stat-text">media in</span>
+              <span class="stat-value stat-number">${this.realTimeStats.pages}</span>
+              <span class="stat-text">Pages in</span>
+              <span class="stat-value stat-number">${this.realTimeStats.elapsed}</span>
+              <span class="stat-text">s</span>
+            </div>
+          </div>
+        ` : ''}
+
         ${this.scanStats ? html`
           <div class="scan-stats">
             <div class="stat-item">
@@ -176,26 +196,22 @@ class MediaTopbar extends LocalizableElement {
           </svg>
         </button>
 
-        <div class="analysis-toggle-container">
-          <span class="analysis-toggle-text">Deep Analysis</span>
-          <label class="analysis-toggle-label">
-            <input 
-              type="checkbox" 
-              class="analysis-toggle-input"
-              ?checked=${this.imageAnalysisEnabled}
-              @change=${this.toggleImageAnalysis}
-              ?disabled=${this.isScanning}
-            />
-            <span class="analysis-toggle-slider ${this.imageAnalysisEnabled ? 'enabled' : ''}"></span>
-          </label>
-        </div>
-
-        
-        ${this.lastScanDuration ? html`
-          <div class="scan-duration">
-            Last scan: ${this.lastScanDuration}s
+        ${this.showAnalysisToggle ? html`
+          <div class="analysis-toggle-container">
+            <span class="analysis-toggle-text">Deep Analysis</span>
+            <label class="analysis-toggle-label">
+              <input 
+                type="checkbox" 
+                class="analysis-toggle-input"
+                ?checked=${this.imageAnalysisEnabled}
+                @change=${this.toggleImageAnalysis}
+                ?disabled=${this.isScanning}
+              />
+              <span class="analysis-toggle-slider ${this.imageAnalysisEnabled ? 'enabled' : ''}"></span>
+            </label>
           </div>
         ` : ''}
+
       </div>
 
     `;
@@ -356,6 +372,7 @@ class MediaTopbar extends LocalizableElement {
     this._suppressSuggestions = false;
     this.dispatchEvent(new CustomEvent('search', { detail: { query: '' } }));
   }
+
 
   handleViewChange(view) {
     this.dispatchEvent(new CustomEvent('viewChange', { detail: { view } }));

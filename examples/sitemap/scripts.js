@@ -27,6 +27,9 @@ async function loadAvailableSites() {
     const sites = await indexDBStorage.getAllSites();
 
     const siteSelector = document.getElementById('site-selector');
+    const deleteSiteBtn = document.getElementById('delete-site-btn');
+    const clearStorageBtn = document.getElementById('clear-storage-btn');
+
     siteSelector.innerHTML = '<option value="">Select a site...</option>';
 
     sites.forEach((site) => {
@@ -42,6 +45,14 @@ async function loadAvailableSites() {
       option.textContent = 'No sites found';
       option.disabled = true;
       siteSelector.appendChild(option);
+      // Hide both buttons when no sites are available
+      deleteSiteBtn.style.display = 'none';
+      clearStorageBtn.style.display = 'none';
+    } else {
+      // Show clear storage button when sites are available
+      clearStorageBtn.style.display = 'inline-block';
+      // Hide delete site button initially (will show when site is selected)
+      deleteSiteBtn.style.display = 'none';
     }
   } catch (error) {
     // eslint-disable-next-line no-console
@@ -52,13 +63,13 @@ async function loadAvailableSites() {
 
 function normalizeUrl(url) {
   if (!url) return url;
-  
+
   let normalizedUrl = url.trim();
-  
+
   if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
     normalizedUrl = `https://${normalizedUrl}`;
   }
-  
+
   return normalizedUrl;
 }
 
@@ -129,7 +140,8 @@ function setupControls() {
   const localeSelect = document.getElementById('locale');
   const siteSelector = document.getElementById('site-selector');
   const scanBtn = document.getElementById('scan-btn');
-  const clearBtn = document.getElementById('clear-btn');
+  const deleteSiteBtn = document.getElementById('delete-site-btn');
+  const clearStorageBtn = document.getElementById('clear-storage-btn');
 
   storageSelect.addEventListener('change', (e) => {
     const previousStorage = mediaLibrary.storage;
@@ -158,8 +170,12 @@ function setupControls() {
     if (selectedSite) {
       await mediaLibrary.loadFromStorage(selectedSite);
       showNotification(`Loaded data for site: ${selectedSite}`, 'success');
+      // Show delete button when a site is selected
+      deleteSiteBtn.style.display = 'inline-block';
     } else {
       mediaLibrary.clearData();
+      // Hide delete button when no site is selected
+      deleteSiteBtn.style.display = 'none';
     }
   });
 
@@ -167,9 +183,72 @@ function setupControls() {
     await performSitemapScan();
   });
 
-  clearBtn.addEventListener('click', () => {
-    mediaLibrary.clearData();
+  deleteSiteBtn.addEventListener('click', async () => {
+    const selectedSite = siteSelector.value;
+    if (selectedSite) {
+      // eslint-disable-next-line no-alert, no-restricted-globals
+      const confirmed = confirm(`Are you sure you want to delete all data for "${selectedSite}"? This action cannot be undone.`);
+      if (confirmed) {
+        try {
+          const BrowserStorage = mediaLibrary.storageManager.constructor;
+          const indexDBStorage = new BrowserStorage('indexeddb');
+          await indexDBStorage.deleteSite(selectedSite);
+          showNotification(`Deleted data for site: ${selectedSite}`, 'success');
+
+          // Clear the current display if the deleted site was loaded
+          mediaLibrary.clearData();
+
+          // Reload the sites list
+          await loadAvailableSites();
+
+          // Reset the site selector
+          siteSelector.value = '';
+        } catch (error) {
+          showNotification(`Failed to delete site data: ${error.message}`, 'error');
+        }
+      }
+    }
   });
+
+  clearStorageBtn.addEventListener('click', async () => {
+    // eslint-disable-next-line no-alert, no-restricted-globals
+    const confirmed = confirm('Are you sure you want to clear ALL stored data? This action cannot be undone.');
+    if (confirmed) {
+      try {
+        const BrowserStorage = mediaLibrary.storageManager.constructor;
+        const indexDBStorage = new BrowserStorage('indexeddb');
+        await indexDBStorage.clear();
+        showNotification('All stored data cleared successfully', 'success');
+
+        // Clear the current display
+        mediaLibrary.clearData();
+
+        // Reload the sites list
+        await loadAvailableSites();
+
+        // Reset the site selector
+        siteSelector.value = '';
+      } catch (error) {
+        showNotification(`Failed to clear storage: ${error.message}`, 'error');
+      }
+    }
+  });
+
+  // Add event listeners for URL inputs to show toggle when user is about to scan
+  const websiteUrlInput = document.getElementById('website-url');
+  const sitemapUrlInput = document.getElementById('sitemap-url');
+
+  const handleUrlChange = () => {
+    // Show toggle when user changes URL (indicating they want to scan)
+    // Access the private property through the component's internal state
+    if (mediaLibrary.showAnalysisToggle === false) {
+      mediaLibrary.showAnalysisToggle = true;
+      mediaLibrary.requestUpdate();
+    }
+  };
+
+  websiteUrlInput.addEventListener('input', handleUrlChange);
+  sitemapUrlInput.addEventListener('input', handleUrlChange);
 
   loadAvailableSites();
 }
@@ -256,34 +335,7 @@ function applyURLParameters() {
 
 window.refreshSites = loadAvailableSites;
 
-window.clearOldData = async () => {
-  try {
-    const storage = mediaLibrary.storageManager;
-
-    if (!storage) {
-      showNotification('Storage manager not available', 'error');
-      return;
-    }
-
-    const oldData = await storage.load('media-data');
-    if (oldData && oldData.length > 0) {
-      // eslint-disable-next-line no-alert, no-restricted-globals
-      const shouldMigrate = confirm(`Found ${oldData.length} items in old format. Would you like to migrate them to 'legacy-data' site before clearing?`);
-      if (shouldMigrate) {
-        await storage.save(oldData, 'legacy-data');
-        showNotification(`Migrated ${oldData.length} items to 'legacy-data' site`, 'success');
-      }
-    }
-
-    await storage.clear();
-    await loadAvailableSites();
-    showNotification('Old data cleared successfully', 'success');
-  } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error('Failed to clear old data:', error);
-    showNotification(`Failed to clear data: ${error.message}`, 'error');
-  }
-};
+// Legacy function removed - functionality replaced by new storage management buttons
 
 document.addEventListener('DOMContentLoaded', async () => {
   mediaLibrary = document.getElementById('media-library');

@@ -1,0 +1,16 @@
+# workers/cors-proxy/wrangler.toml
+name = "media-library-cors-proxy"
+main = "worker.js"
+compatibility_date = "2024-01-01"
+
+# Add your Cloudflare Account ID here (get it from your Cloudflare dashboard)
+account_id = "ac7ee4615628005dc5ba0a22f0aae2a6"
+
+# Optional: Add your Zone ID if you want to use a custom domain
+# zone_id = "your-zone-id-here"
+
+[env.production]
+name = "media-library-cors-proxy"
+
+[env.staging]
+name = "media-library-cors-proxy-staging"

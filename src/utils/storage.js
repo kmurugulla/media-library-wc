@@ -42,7 +42,6 @@ class BrowserStorage {
       case 'indexeddb':
         return this.saveToIndexedDB(data, siteKey);
       case 'none':
-        // No-op for 'none' storage type
         return Promise.resolve();
       default:
         throw new Error(`Unsupported storage type: ${this.type}`);
@@ -54,7 +53,6 @@ class BrowserStorage {
       case 'indexeddb':
         return this.loadFromIndexedDB(siteKey);
       case 'none':
-        // Return empty array for 'none' storage type
         return [];
       default:
         throw new Error(`Unsupported storage type: ${this.type}`);
@@ -126,7 +124,6 @@ class BrowserStorage {
       case 'indexeddb':
         return this.clearIndexedDB();
       case 'none':
-        // No-op for 'none' storage type
         return Promise.resolve();
       default:
         throw new Error(`Unsupported storage type: ${this.type}`);
@@ -252,7 +249,6 @@ class BrowserStorage {
       case 'indexeddb':
         return this.getAllSitesFromIndexedDB();
       case 'none':
-        // Return empty array for 'none' storage type
         return [];
       default:
         return [];
@@ -298,7 +294,6 @@ class BrowserStorage {
       case 'indexeddb':
         return this.deleteSiteFromIndexedDB(siteKey);
       case 'none':
-        // No-op for 'none' storage type
         return Promise.resolve();
       default:
         throw new Error(`Unsupported storage type: ${this.type}`);
@@ -334,7 +329,6 @@ class BrowserStorage {
       case 'indexeddb':
         return this.saveScanMetadataToIndexedDB(siteKey, metadata);
       case 'none':
-        // No-op for 'none' storage type
         return Promise.resolve();
       default:
         throw new Error(`Unsupported storage type: ${this.type}`);
@@ -346,7 +340,6 @@ class BrowserStorage {
       case 'indexeddb':
         return this.loadScanMetadataFromIndexedDB(siteKey);
       case 'none':
-        // Return null for 'none' storage type
         return null;
       default:
         return null;

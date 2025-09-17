@@ -46,36 +46,37 @@ class SitemapSource {
       throw new Error('Invalid source URL for sitemap discovery');
     }
 
-    let targetSitemapUrl = source;
-
     try {
       if (sitemapUrl && sitemapUrl.trim()) {
-        targetSitemapUrl = sitemapUrl;
+        // Use specific sitemap URL
+        return this.parseSitemap(sitemapUrl);
       } else if (this.isWebsiteUrl(source)) {
-        targetSitemapUrl = await this.autoDetectSitemap(source);
+        // Auto-detect sitemaps and get pages from all of them
+        return this.getPageListFromAllSitemaps(source);
+      } else {
+        // Direct sitemap URL
+        return this.parseSitemap(source);
       }
-
-      return this.parseSitemap(targetSitemapUrl);
     } catch (error) {
       // Provide helpful error message with suggestions
       if (error.message.includes('Unable to find sitemap')) {
         throw error; // Re-throw our detailed error
       } else if (error.message.includes('Failed to fetch')) {
         // Check if this might be a redirect-related CORS issue
-        const isRedirectIssue = targetSitemapUrl.includes('openreach.com') || 
-                               targetSitemapUrl.includes('www.') || 
+        const isRedirectIssue = source.includes('openreach.com') || 
+                               source.includes('www.') || 
                                error.message.includes('redirected');
         
         if (isRedirectIssue) {
           throw new Error(
-            `Failed to fetch sitemap from ${targetSitemapUrl}. This appears to be a redirect-related CORS issue. ` +
+            `Failed to fetch sitemap from ${source}. This appears to be a redirect-related CORS issue. ` +
             `The server is redirecting the request, which can trigger CORS restrictions. ` +
             `Try entering the direct sitemap URL (e.g., https://www.openreach.com/sitemap.xml) in the "Direct Sitemap URL" field, ` +
             `or use a CORS proxy to bypass this restriction.`
           );
         } else {
           throw new Error(
-            `Failed to fetch sitemap from ${targetSitemapUrl}. This is likely due to CORS restrictions. ` +
+            `Failed to fetch sitemap from ${source}. This is likely due to CORS restrictions. ` +
             `Try using a CORS proxy or enter the direct sitemap URL in the "Direct Sitemap URL" field.`
           );
         }
@@ -86,6 +87,87 @@ class SitemapSource {
         );
       }
     }
+  }
+
+  /**
+   * Get page list from all sitemaps found for a website
+   * @param {string} websiteUrl - Website URL
+   * @returns {Promise<Array>} Array of page objects from all sitemaps
+   */
+  async getPageListFromAllSitemaps(websiteUrl) {
+    const urlVariations = this.generateUrlVariations(websiteUrl);
+    const allPages = [];
+
+    for (const baseUrl of urlVariations) {
+      try {
+        this.contentOrigin = baseUrl;
+
+        // Get all sitemaps from robots.txt
+        const sitemapsFromRobots = await this.findSitemapInRobots(baseUrl);
+        if (sitemapsFromRobots && sitemapsFromRobots.length > 0) {
+          // Parse all sitemaps found in robots.txt
+          for (const sitemapUrl of sitemapsFromRobots) {
+            try {
+              const pages = await this.parseSitemap(sitemapUrl);
+              allPages.push(...pages);
+            } catch (error) {
+              // Log error but continue with other sitemaps
+              console.warn(`Failed to parse sitemap ${sitemapUrl}:`, error.message);
+            }
+          }
+          
+          // If we found pages from robots.txt sitemaps, return them
+          if (allPages.length > 0) {
+            return allPages;
+          }
+        }
+
+        // Try common sitemap paths as fallback
+        for (const path of this.commonSitemapPaths) {
+          if (path !== '/robots.txt') {
+            const sitemapUrl = `${baseUrl}${path}`;
+            try {
+              const response = await fetch(sitemapUrl, { method: 'HEAD' });
+              if (response?.ok) {
+                const pages = await this.parseSitemap(sitemapUrl);
+                allPages.push(...pages);
+                return allPages; // Return first successful sitemap
+              }
+            } catch (error) {
+              // Continue trying other paths
+            }
+          }
+        }
+      } catch (error) {
+        // Continue with next URL variation
+      }
+    }
+
+    // If no sitemaps found, try fallback page list creation
+    for (const baseUrl of urlVariations) {
+      try {
+        this.contentOrigin = baseUrl;
+        const fallbackResult = await this.createFallbackPageList(baseUrl);
+        if (fallbackResult && fallbackResult.pages && fallbackResult.pages.length > 0) {
+          return fallbackResult.pages;
+        }
+      } catch (error) {
+        // Continue with next URL variation
+      }
+    }
+
+    // If we still have no pages, throw detailed error
+    const errorDetails = {
+      originalUrl: websiteUrl,
+      attemptedUrls: urlVariations,
+      message: 'Unable to find any sitemaps or generate page list'
+    };
+
+    throw new Error(
+      `Unable to find sitemap for ${websiteUrl}. ` +
+      `Tried common sitemap locations and robots.txt discovery. ` +
+      `Please try entering the direct sitemap URL or check if the website is accessible.`
+    );
   }
 
   /**
@@ -104,77 +186,6 @@ class SitemapSource {
     return urlPattern.test(url);
   }
 
-  async autoDetectSitemap(websiteUrl) {
-    const urlVariations = this.generateUrlVariations(websiteUrl);
-    const attemptedUrls = [];
-    const foundSitemaps = [];
-
-    // Phase 1: Try to find sitemap via robots.txt and common paths
-    for (const baseUrl of urlVariations) {
-      try {
-        this.contentOrigin = baseUrl;
-        attemptedUrls.push(baseUrl);
-
-        // Try robots.txt first
-        const sitemapFromRobots = await this.findSitemapInRobots(baseUrl);
-        if (sitemapFromRobots) {
-          foundSitemaps.push({ url: sitemapFromRobots, source: 'robots.txt', baseUrl });
-          return sitemapFromRobots;
-        }
-
-        // Try common sitemap paths
-        for (const path of this.commonSitemapPaths) {
-          if (path !== '/robots.txt') {
-            const sitemapUrl = `${baseUrl}${path}`;
-            try {
-              const response = await fetch(sitemapUrl, { method: 'HEAD' });
-              if (response?.ok) {
-                foundSitemaps.push({ url: sitemapUrl, source: 'common-path', baseUrl });
-                return sitemapUrl;
-              }
-            } catch (error) {
-              // Continue trying other paths
-            }
-          }
-        }
-      } catch (error) {
-        // Continue with next URL variation
-      }
-    }
-
-    // Phase 2: Try fallback page list creation
-    for (const baseUrl of urlVariations) {
-      try {
-        this.contentOrigin = baseUrl;
-        const fallbackResult = await this.createFallbackPageList(baseUrl);
-        if (fallbackResult && fallbackResult.pages && fallbackResult.pages.length > 0) {
-          return fallbackResult;
-        }
-      } catch (error) {
-        // Continue with next URL variation
-      }
-    }
-
-    // Phase 3: Provide detailed error information
-    const errorDetails = {
-      originalUrl: websiteUrl,
-      attemptedVariations: attemptedUrls,
-      foundSitemaps: foundSitemaps,
-      suggestions: [
-        'Try entering the direct sitemap URL (e.g., https://example.com/sitemap.xml)',
-        'Check if the website has a robots.txt file with sitemap information',
-        'Verify the website URL is correct and accessible',
-        'Some websites may block automated requests - try using a CORS proxy'
-      ]
-    };
-
-    throw new Error(
-      `Unable to find sitemap for ${websiteUrl}. ` +
-      `Tried ${attemptedUrls.length} URL variations: ${attemptedUrls.join(', ')}. ` +
-      `Found ${foundSitemaps.length} potential sitemaps but none were accessible. ` +
-      `Please try entering the direct sitemap URL or check the website's robots.txt file.`
-    );
-  }
 
   normalizeWebsiteUrl(url) {
     let normalizedUrl = url.trim();
@@ -217,12 +228,14 @@ class SitemapSource {
       const sitemapMatches = robotsText.match(/^Sitemap:\s*(.+)$/gim);
 
       if (sitemapMatches && sitemapMatches.length > 0) {
-        let sitemapUrl = sitemapMatches[0].replace(/^Sitemap:\s*/i, '').trim();
+        // Return all sitemaps found, not just the first one
+        const sitemapUrls = sitemapMatches.map(match => {
+          let sitemapUrl = match.replace(/^Sitemap:\s*/i, '').trim();
+          // Fix common redirect issues by normalizing the sitemap URL
+          return this.normalizeSitemapUrl(sitemapUrl, baseUrl);
+        });
         
-        // Fix common redirect issues by normalizing the sitemap URL
-        sitemapUrl = this.normalizeSitemapUrl(sitemapUrl, baseUrl);
-        
-        return sitemapUrl;
+        return sitemapUrls;
       }
 
       return null;
@@ -350,8 +363,7 @@ class SitemapSource {
 
     const sitemapElements = sitemapDoc.querySelectorAll('sitemap');
     if (sitemapElements.length > 0) {
-      const maxSitemaps = Math.min(sitemapElements.length, 5);
-      for (let i = 0; i < maxSitemaps; i += 1) {
+      for (let i = 0; i < sitemapElements.length; i += 1) {
         const sitemapElement = sitemapElements[i];
         const loc = sitemapElement.querySelector('loc');
         sitemapElement.querySelector('lastmod');

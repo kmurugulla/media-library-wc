@@ -30,6 +30,9 @@ class MediaLibrary extends LocalizableElement {
     _lastScanDuration: { state: true },
     _scanStats: { state: true },
     _imageAnalysisEnabled: { state: true },
+    _isBatchLoading: { state: true },
+    _realTimeStats: { state: true },
+    showAnalysisToggle: { type: Boolean },
   };
 
   static styles = getStyles(mediaLibraryStyles);
@@ -46,6 +49,9 @@ class MediaLibrary extends LocalizableElement {
     this._isScanning = false;
     this._scanProgress = null;
     this._imageAnalysisEnabled = false;
+    this._isBatchLoading = false;
+    this._realTimeStats = { images: 0, pages: 0, elapsed: 0 };
+    this.showAnalysisToggle = true;
 
     this.storageManager = null;
     this.contentParser = null;
@@ -126,7 +132,10 @@ class MediaLibrary extends LocalizableElement {
            || changedProperties.has('_isScanning')
            || changedProperties.has('_scanProgress')
            || changedProperties.has('_error')
-           || changedProperties.has('locale');
+           || changedProperties.has('locale')
+           || changedProperties.has('showAnalysisToggle')
+           || changedProperties.has('_isBatchLoading')
+           || changedProperties.has('_realTimeStats');
   }
 
   async updated(changedProperties) {
@@ -167,6 +176,7 @@ class MediaLibrary extends LocalizableElement {
       this._usageCountCache = null;
       this._lastUsageCountParams = null;
 
+      this.updateAnalysisToggleVisibility();
       this.requestUpdate();
     } catch (error) {
       this._mediaData = [];
@@ -175,6 +185,7 @@ class MediaLibrary extends LocalizableElement {
         this._error = this.t('errors.loadFailed');
       }
 
+      this.updateAnalysisToggleVisibility();
       this.requestUpdate();
     }
   }
@@ -187,6 +198,7 @@ class MediaLibrary extends LocalizableElement {
 
     try {
       this._isScanning = true;
+      this._isBatchLoading = true;
       this._error = null;
       this._mediaData = [];
       this._processedData = null;
@@ -196,29 +208,70 @@ class MediaLibrary extends LocalizableElement {
       this._scanProgress = { current: 0, total: 0, found: 0 };
       this._lastScanDuration = null;
       this._scanStats = null;
+      this._realTimeStats = { images: 0, pages: 0, elapsed: 0 };
 
       window.dispatchEvent(new CustomEvent('clear-search'));
       window.dispatchEvent(new CustomEvent('clear-filters'));
 
       const storageKey = siteKey || 'media-data';
-      const previousMetadata = await this.storageManager.loadScanMetadata(storageKey);
 
       this._scanProgress = { current: 0, total: pageList.length, found: 0 };
       this.requestUpdate();
 
-      const progressCallback = (completed, total, found) => {
-        this._scanProgress = { current: completed, total, found };
+      const elapsedInterval = setInterval(() => {
+        this._realTimeStats.elapsed = ((Date.now() - this._scanStartTime) / 1000).toFixed(1);
+        this._realTimeStats = { ...this._realTimeStats };
         this.requestUpdate();
-        if (onProgress) {
-          onProgress(completed, total, found);
-        }
-      };
+      }, 100);
 
-      const mediaData = await this.contentParser.scanPages(
-        pageList,
-        progressCallback,
-        previousMetadata,
-      );
+      const allMediaData = [];
+
+
+      for (let i = 0; i < pageList.length; i += 1) {
+        const url = pageList[i];
+
+        try {
+          this._realTimeStats.pages = i + 1;
+          this._realTimeStats.elapsed = ((Date.now() - this._scanStartTime) / 1000).toFixed(1);
+          this.requestUpdate();
+
+          this._realTimeStats = { ...this._realTimeStats };
+
+          const mediaItems = await this.contentParser.scanPage(url);
+          allMediaData.push(...mediaItems);
+
+          this._realTimeStats.images += mediaItems.length;
+          this._realTimeStats.pages = i + 1;
+          this._realTimeStats.elapsed = ((Date.now() - this._scanStartTime) / 1000).toFixed(1);
+
+          this._realTimeStats = { ...this._realTimeStats };
+
+          this._mediaData = allMediaData;
+          this._processedData = processMediaData(allMediaData);
+
+          this._filteredDataCache = null;
+          this._lastFilterParams = null;
+          this._usageCountCache = null;
+          this._lastUsageCountParams = null;
+
+          this.requestUpdate();
+
+          if (onProgress) {
+            onProgress(i + 1, pageList.length, mediaItems.length);
+          }
+        } catch (error) {
+          this._realTimeStats.pages = i + 1;
+          this._realTimeStats.elapsed = ((Date.now() - this._scanStartTime) / 1000).toFixed(1);
+          this.requestUpdate();
+
+          if (onProgress) {
+            onProgress(i + 1, pageList.length, 0);
+          }
+        }
+      }
+
+      clearInterval(elapsedInterval);
+      const mediaData = allMediaData;
 
       const scanDuration = Date.now() - this._scanStartTime;
       const durationSeconds = (scanDuration / 1000).toFixed(1);
@@ -240,8 +293,11 @@ class MediaLibrary extends LocalizableElement {
       this._mediaData = mediaData;
       this._processedData = processMediaData(mediaData);
       this._isScanning = false;
+      this._isBatchLoading = false;
       this._scanProgress = null;
       this._lastScanDuration = durationSeconds;
+
+      this.updateAnalysisToggleVisibility();
 
       this._filteredDataCache = null;
       this._lastFilterParams = null;
@@ -261,8 +317,10 @@ class MediaLibrary extends LocalizableElement {
       return mediaData;
     } catch (error) {
       this._isScanning = false;
+      this._isBatchLoading = false;
       this._scanProgress = null;
       this._error = `Scan failed: ${error.message}`;
+      this.updateAnalysisToggleVisibility();
       throw error;
     }
   }
@@ -320,6 +378,8 @@ class MediaLibrary extends LocalizableElement {
       this._scanProgress = null;
       this._lastScanDuration = durationSeconds;
 
+      this.updateAnalysisToggleVisibility();
+
       this._filteredDataCache = null;
       this._lastFilterParams = null;
       this._usageCountCache = null;
@@ -341,6 +401,7 @@ class MediaLibrary extends LocalizableElement {
       this._isScanning = false;
       this._scanProgress = null;
       this._error = `Load failed: ${error.message}`;
+      this.updateAnalysisToggleVisibility();
       throw error;
     }
   }
@@ -353,6 +414,7 @@ class MediaLibrary extends LocalizableElement {
     this._selectedFilterType = 'all';
     this._scanStats = null;
     this._lastScanDuration = null;
+    this.updateAnalysisToggleVisibility();
     this.requestUpdate();
   }
 
@@ -380,6 +442,14 @@ class MediaLibrary extends LocalizableElement {
         extractDimensions: true,
         categorizeFromFilename: true,
       });
+    }
+  }
+
+  updateAnalysisToggleVisibility() {
+    const shouldShow = this._mediaData.length === 0 || this._isScanning;
+
+    if (this.showAnalysisToggle !== shouldShow) {
+      this.showAnalysisToggle = shouldShow;
     }
   }
 
@@ -563,15 +633,19 @@ class MediaLibrary extends LocalizableElement {
             .locale=${this.locale}
             .isScanning=${this._isScanning}
             .scanProgress=${this._scanProgress}
+            .isBatchLoading=${this._isBatchLoading}
+            .realTimeStats=${this._realTimeStats}
             .lastScanDuration=${this._lastScanDuration}
             .scanStats=${this._scanStats}
             .imageAnalysisEnabled=${this._imageAnalysisEnabled}
+            .showAnalysisToggle=${this.showAnalysisToggle}
             .mediaData=${this._mediaData}
             @search=${this.handleSearch}
             @viewChange=${this.handleViewChange}
             @toggleImageAnalysis=${this.handleToggleImageAnalysis}
           ></media-topbar>
         </div>
+
 
         <div class="sidebar">
           <media-sidebar
@@ -642,14 +716,8 @@ class MediaLibrary extends LocalizableElement {
       return html`
         <div class="loading-state">
           <div class="loading-spinner"></div>
-          <h3>${this.t('mediaLibrary.scanning')}</h3>
-          <p>${this._scanProgress?.current === 0
-    ? this.t('mediaLibrary.scanStarting')
-    : this.t('mediaLibrary.scanProgress', {
-      current: this._scanProgress?.current || 0,
-      total: this._scanProgress?.total || 0,
-    })
-}</p>
+          <h3>Discovering Media</h3>
+          <p>Scanning pages and extracting media files...</p>
         </div>
       `;
     }

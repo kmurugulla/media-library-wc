@@ -1,0 +1,13 @@
+{
+  "name": "media-library-cors-proxy",
+  "version": "1.0.0",
+  "description": "CORS proxy for Media Library Web Component",
+  "scripts": {
+    "deploy": "wrangler deploy",
+    "deploy:staging": "wrangler deploy --env staging",
+    "dev": "wrangler dev"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}
