@@ -87,7 +87,11 @@ async function performSitemapScan() {
   scanBtn.textContent = 'Scanning...';
 
   try {
-    const source = new SitemapSource();
+    const corsProxyUrl = 'https://media-library-cors-proxy.aem-poc-lab.workers.dev/';
+    const source = new SitemapSource({
+      corsProxy: corsProxyUrl,
+      useCorsProxy: true,
+    });
     let pageList;
 
     const normalizedWebsiteUrl = websiteUrl ? normalizeUrl(websiteUrl) : websiteUrl;
@@ -104,7 +108,6 @@ async function performSitemapScan() {
       return;
     }
 
-
     const siteKey = new URL(normalizedWebsiteUrl || normalizedSitemapUrl).hostname;
     const mediaData = await mediaLibrary.loadFromPageList(pageList, null, siteKey, true);
 
@@ -113,15 +116,15 @@ async function performSitemapScan() {
     let errorMessage = error.message;
 
     if (error.message.includes('CORS')) {
-      errorMessage = 'CORS Error: Please use the CORS proxy server or try a different website.';
+      errorMessage = 'CORS Error: The sitemap source is configured to use a CORS proxy automatically, but it may have failed. Try a different website or check the proxy configuration.';
     } else if (error.message.includes('Failed to fetch')) {
-      errorMessage = 'Network Error: Please check your internet connection and try again.';
+      errorMessage = 'Network Error: Please check your internet connection and try again. The CORS proxy may also be experiencing issues.';
     } else if (error.message.includes('Invalid URL')) {
       errorMessage = 'Invalid URL: Please enter a valid website URL.';
     } else if (error.message.includes('No sitemap found')) {
       errorMessage = 'No sitemap found: This website may not have a sitemap.xml file.';
     } else if (error.message.includes('Proxy Error')) {
-      errorMessage = `Proxy Error: ${error.message}. All proxy services failed.`;
+      errorMessage = `Proxy Error: ${error.message}. The CORS proxy service failed.`;
     }
 
     showNotification(`Scan failed: ${errorMessage}`, 'error');

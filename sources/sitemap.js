@@ -4,7 +4,7 @@
  */
 
 class SitemapSource {
-  constructor() {
+  constructor(options = {}) {
     this.name = 'Sitemap Source';
     this.description = 'Discovers and parses XML sitemaps to extract page lists';
     this.commonSitemapPaths = [
@@ -17,6 +17,60 @@ class SitemapSource {
       '/robots.txt',
     ];
     this.contentOrigin = null;
+    this.corsProxy = options.corsProxy || 'https://media-library-cors-proxy.aem-poc-lab.workers.dev/';
+    this.useCorsProxy = options.useCorsProxy !== false;
+  }
+
+  /**
+   * Fetch URL with CORS proxy support
+   * @param {string} url - URL to fetch
+   * @param {object} options - Fetch options
+   * @returns {Promise<Response>} Fetch response
+   */
+  async fetchWithProxy(url, options = {}) {
+    if (!this.useCorsProxy) {
+      return fetch(url, options);
+    }
+
+    const proxyServices = [
+      this.corsProxy,
+      'https://cors-anywhere.herokuapp.com/',
+      'https://api.allorigins.win/raw?url=',
+    ];
+
+    try {
+      return await fetch(url, options);
+    } catch (error) {
+      const isCorsError = error.message.includes('CORS') || 
+                         error.message.includes('Failed to fetch') ||
+                         error.message.includes('blocked by CORS policy') ||
+                         error.name === 'TypeError';
+
+      if (isCorsError) {
+        for (const proxy of proxyServices) {
+          try {
+            const proxyUrl = proxy.includes('allorigins') 
+              ? `${proxy}${encodeURIComponent(url)}`
+              : `${proxy}?url=${encodeURIComponent(url)}`;
+            
+            const response = await fetch(proxyUrl, options);
+            if (response.ok) {
+              return response;
+            }
+          } catch (proxyError) {
+            continue;
+          }
+        }
+        
+        throw new Error(
+          `Failed to fetch ${url} due to CORS restrictions. ` +
+          `Tried direct fetch and ${proxyServices.length} CORS proxy services, all failed. ` +
+          `This may be due to network issues or all proxy services being unavailable.`
+        );
+      }
+      
+      throw error;
+    }
   }
 
   /**
@@ -77,7 +131,8 @@ class SitemapSource {
         } else {
           throw new Error(
             `Failed to fetch sitemap from ${source}. This is likely due to CORS restrictions. ` +
-            `Try using a CORS proxy or enter the direct sitemap URL in the "Direct Sitemap URL" field.`
+            `The sitemap source is configured to use a CORS proxy automatically, but it may have failed. ` +
+            `Try entering the direct sitemap URL in the "Direct Sitemap URL" field or check your CORS proxy configuration.`
           );
         }
       } else {
@@ -127,7 +182,7 @@ class SitemapSource {
           if (path !== '/robots.txt') {
             const sitemapUrl = `${baseUrl}${path}`;
             try {
-              const response = await fetch(sitemapUrl, { method: 'HEAD' });
+              const response = await this.fetchWithProxy(sitemapUrl, { method: 'HEAD' });
               if (response?.ok) {
                 const pages = await this.parseSitemap(sitemapUrl);
                 allPages.push(...pages);
@@ -219,7 +274,7 @@ class SitemapSource {
     try {
       const robotsUrl = `${baseUrl}/robots.txt`;
 
-      const response = await fetch(robotsUrl);
+      const response = await this.fetchWithProxy(robotsUrl);
       if (!response.ok) {
         return null;
       }
@@ -303,7 +358,7 @@ class SitemapSource {
     }
 
     try {
-      const response = await fetch(baseUrl, { method: 'HEAD' });
+      const response = await this.fetchWithProxy(baseUrl, { method: 'HEAD' });
       if (!response.ok) {
         throw new Error(`Cannot access ${baseUrl}: ${response.status} ${response.statusText}`);
       }
@@ -328,7 +383,7 @@ class SitemapSource {
       return sitemapUrl.pages;
     }
 
-    const response = await fetch(sitemapUrl);
+    const response = await this.fetchWithProxy(sitemapUrl);
     if (!response.ok) {
       throw new Error(`Failed to fetch sitemap: ${response.status} ${response.statusText}`);
     }
