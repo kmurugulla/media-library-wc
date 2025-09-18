@@ -104,41 +104,20 @@ index.html?source=aem&org=mycompany&repo=website&autoscan=true
 
 ## Development
 
+### Getting Started
+
 ```bash
+# Clone the repository
 git clone https://github.com/your-org/media-library.git
 cd media-library
+
+# Install dependencies
 npm install
+
+# Start development server
 npm run dev
+
+# Build for production
 npm run build
 ```
 
-## License
-
-MIT License - see [LICENSE](LICENSE) file for details.
-
-## Changelog
-
-### v1.2.0
-- **Enhanced Context Detection**: Improved HTML context capture with semantic element detection and paragraph context
-- **Smart Categorization**: Automatic media categorization (People, Graphics & UI, Logos, Products, 404 Errors)
-- **Real-Time Scan View**: Live progress updates with progressive media discovery during scanning
-- **Improved People Detection**: Better detection of people photos using alt text patterns and context analysis
-- **Category Renaming**: Updated "Screenshots" to "Graphics & UI" and "People Photos" to "People" for better clarity
-- **Performance Optimizations**: Enhanced scanning performance with better error handling and memory management
-
-### v1.1.0
-- **Query Parameter Support**: Added comprehensive URL parameter support for deep linking and bookmarking
-- **Auto-Scan Feature**: Added `autoscan` parameter for automatic scanning on page load
-- **Multi-Source Configuration**: Support for sitemap, WordPress, AEM/EDS, and Adobe DA sources via URL parameters
-- **Form Auto-Population**: Automatic form filling from URL parameters
-- **Enhanced User Experience**: Improved workflow for sharing and bookmarking configurations
-
-### v1.0.0
-- Initial release
-- Sitemap parsing
-- Media scanning and detection
-- Grid and list views
-- Filtering and search
-- IndexedDB and localStorage support
-- Internationalization
-- Accessibility features
