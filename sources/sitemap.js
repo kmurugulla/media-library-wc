@@ -32,11 +32,6 @@ class SitemapSource {
       return fetch(url, options);
     }
 
-    const proxyServices = [
-      this.corsProxy,
-      'https://cors-anywhere.herokuapp.com/',
-      'https://api.allorigins.win/raw?url=',
-    ];
 
     try {
       return await fetch(url, options);
@@ -47,25 +42,20 @@ class SitemapSource {
                          error.name === 'TypeError';
 
       if (isCorsError) {
-        for (const proxy of proxyServices) {
-          try {
-            const proxyUrl = proxy.includes('allorigins') 
-              ? `${proxy}${encodeURIComponent(url)}`
-              : `${proxy}?url=${encodeURIComponent(url)}`;
-            
-            const response = await fetch(proxyUrl, options);
-            if (response.ok) {
-              return response;
-            }
-          } catch (proxyError) {
-            continue;
+        try {
+          const proxyUrl = `${this.corsProxy}?url=${encodeURIComponent(url)}`;
+          const response = await fetch(proxyUrl, options);
+          if (response.ok) {
+            return response;
           }
+        } catch (proxyError) {
+          console.warn(`CORS proxy failed:`, proxyError.message);
         }
         
         throw new Error(
           `Failed to fetch ${url} due to CORS restrictions. ` +
-          `Tried direct fetch and ${proxyServices.length} CORS proxy services, all failed. ` +
-          `This may be due to network issues or all proxy services being unavailable.`
+          `Direct fetch and CORS proxy failed. ` +
+          `This may be due to network issues or proxy service being unavailable.`
         );
       }
       

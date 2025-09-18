@@ -14,6 +14,10 @@
             <h2>Sitemap Integration</h2>
             <p>This example demonstrates scanning websites by parsing their sitemap.xml files. The sitemap source automatically discovers all pages and extracts media files from them.</p>
             
+            <div class="info-note">
+                <strong>Note:</strong> The scanning process has two phases: First, the system discovers and fetches the sitemap (this may take 10-30 seconds due to CORS proxy usage). Then, it scans each page for media files. Form fields will be disabled during sitemap discovery to prevent conflicts.
+            </div>
+            
             <div class="controls">
                 <!-- Sitemap Configuration Section -->
                 <div class="field-section source-section">

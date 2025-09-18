@@ -21,8 +21,6 @@
   },
   "scripts": {
     "dev": "vite",
-    "dev:with-proxy": "concurrently \"npm run cors-proxy\" \"npm run dev\"",
-    "cors-proxy": "node scripts/cors-proxy-server.js",
     "build": "vite build && npm run build:assets",
     "build:assets": "node build-dist.js",
     "preview": "vite preview",

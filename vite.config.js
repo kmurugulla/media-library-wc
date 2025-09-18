@@ -116,26 +116,6 @@ export default defineConfig(({ mode }) => {
       strictPort: true,
       open: '/examples/sitemap/index.html',
       hmr: { overlay: true },
-      proxy: {
-        '/api/proxy': {
-          target: 'https://cors-anywhere.herokuapp.com/',
-          changeOrigin: true,
-          rewrite: (path) => path.replace(/^\/api\/proxy/, ''),
-          configure: (proxy) => {
-            proxy.on('proxyReq', (proxyReq) => {
-              proxyReq.setHeader('Origin', 'https://cors-anywhere.herokuapp.com');
-            });
-          },
-        },
-        '/api/cors': {
-          target: 'https://api.allorigins.win',
-          changeOrigin: true,
-          rewrite: (path) => {
-            const encodedUrl = path.replace(/^\/api\/cors\//, '');
-            return `/raw?url=${encodedUrl}`;
-          },
-        },
-      },
     },
   };
 });

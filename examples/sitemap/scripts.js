@@ -73,6 +73,20 @@ function normalizeUrl(url) {
   return normalizedUrl;
 }
 
+function disableFormFields() {
+  document.getElementById('website-url').disabled = true;
+  document.getElementById('sitemap-url').disabled = true;
+  document.getElementById('storage-type').disabled = true;
+  document.getElementById('locale').disabled = true;
+}
+
+function enableFormFields() {
+  document.getElementById('website-url').disabled = false;
+  document.getElementById('sitemap-url').disabled = false;
+  document.getElementById('storage-type').disabled = false;
+  document.getElementById('locale').disabled = false;
+}
+
 async function performSitemapScan() {
   const websiteUrl = document.getElementById('website-url').value.trim();
   const sitemapUrl = document.getElementById('sitemap-url').value.trim();
@@ -84,7 +98,7 @@ async function performSitemapScan() {
 
   const scanBtn = document.getElementById('scan-btn');
   scanBtn.disabled = true;
-  scanBtn.textContent = 'Scanning...';
+  disableFormFields();
 
   try {
     const corsProxyUrl = 'https://media-library-cors-proxy.aem-poc-lab.workers.dev/';
@@ -98,8 +112,10 @@ async function performSitemapScan() {
     const normalizedSitemapUrl = sitemapUrl ? normalizeUrl(sitemapUrl) : sitemapUrl;
 
     if (normalizedSitemapUrl) {
+      scanBtn.textContent = 'Fetching sitemap...';
       pageList = await source.getPageList(normalizedWebsiteUrl, normalizedSitemapUrl);
     } else {
+      scanBtn.textContent = 'Discovering sitemap...';
       pageList = await source.getPageList(normalizedWebsiteUrl);
     }
 
@@ -108,7 +124,11 @@ async function performSitemapScan() {
       return;
     }
 
+    scanBtn.textContent = 'Parsing sitemap...';
+    enableFormFields();
+
     const siteKey = new URL(normalizedWebsiteUrl || normalizedSitemapUrl).hostname;
+    scanBtn.textContent = 'Scanning...';
     const mediaData = await mediaLibrary.loadFromPageList(pageList, null, siteKey, true);
 
     showNotification(`Scan complete! Found ${mediaData.length} media files.`, 'success');
@@ -116,15 +136,15 @@ async function performSitemapScan() {
     let errorMessage = error.message;
 
     if (error.message.includes('CORS')) {
-      errorMessage = 'CORS Error: The sitemap source is configured to use a CORS proxy automatically, but it may have failed. Try a different website or check the proxy configuration.';
+      errorMessage = 'CORS Error: Unable to fetch content due to CORS restrictions. Try a different website.';
     } else if (error.message.includes('Failed to fetch')) {
-      errorMessage = 'Network Error: Please check your internet connection and try again. The CORS proxy may also be experiencing issues.';
+      errorMessage = 'Network Error: Please check your internet connection and try again.';
     } else if (error.message.includes('Invalid URL')) {
       errorMessage = 'Invalid URL: Please enter a valid website URL.';
     } else if (error.message.includes('No sitemap found')) {
       errorMessage = 'No sitemap found: This website may not have a sitemap.xml file.';
     } else if (error.message.includes('Proxy Error')) {
-      errorMessage = `Proxy Error: ${error.message}. The CORS proxy service failed.`;
+      errorMessage = `Error: ${error.message}`;
     }
 
     showNotification(`Scan failed: ${errorMessage}`, 'error');
@@ -134,6 +154,7 @@ async function performSitemapScan() {
     const btn = document.getElementById('scan-btn');
     btn.disabled = false;
     btn.textContent = 'Scan Sitemap';
+    enableFormFields();
   }
 }
 
