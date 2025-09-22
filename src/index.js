@@ -10,6 +10,3 @@ export * from './utils/utils.js';
 
 export { waitForMediaLibraryReady, createMediaLibrary, initializeMediaLibrary } from './utils/initializer.js';
 
-if (import.meta.env.DEV) {
-  import(/* @vite-ignore */ './utils/debug-storage.js');
-}

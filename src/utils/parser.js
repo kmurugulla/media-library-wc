@@ -15,6 +15,7 @@ class ContentParser {
     this.enableCategorization = options.enableCategorization !== false;
     this.analysisConfig = options.analysisConfig || {};
     this.categorizationConfig = options.categorizationConfig || {};
+    this.latestMediaItems = [];
 
     if (this.enableImageAnalysis) {
       updateAnalysisConfig({
@@ -50,19 +51,17 @@ class ContentParser {
     const results = [];
     let completed = 0;
     const errors = [];
-    let skipped = 0;
+    this.latestMediaItems = []; // Reset latest items for this scan
 
     const urlsToScan = previousMetadata ? this.filterChangedUrls(urls, previousMetadata) : urls;
-    skipped = urls.length - urlsToScan.length;
-
-    if (skipped > 0) {
-      // URLs were skipped due to no changes detected
-    }
 
     for (const url of urlsToScan) {
       try {
         const mediaItems = await this.scanPage(url);
         completed += 1;
+
+        // Store latest items for progressive display
+        this.latestMediaItems = mediaItems;
 
         if (onProgress) {
           onProgress(completed, urlsToScan.length, mediaItems.length);
@@ -72,6 +71,7 @@ class ContentParser {
       } catch (error) {
         completed += 1;
         errors.push({ url, error });
+        this.latestMediaItems = []; // Clear on error
 
         if (onProgress) {
           onProgress(completed, urlsToScan.length, 0);
@@ -80,6 +80,10 @@ class ContentParser {
     }
 
     return results;
+  }
+
+  getLatestMediaItems() {
+    return this.latestMediaItems;
   }
 
   async scanPage(url) {
@@ -129,7 +133,7 @@ class ContentParser {
           type: `img > ${extension}`,
           doc: url.loc,
           ctx: this.captureContext(img, 'img'),
-          hash: this.createHash(actualSrc + img.alt + url.loc),
+          hash: this.createHash(this.normalizeUrlForHash(actualSrc) + img.alt + url.loc),
           firstUsedAt: timestamp,
           lastUsedAt: timestamp,
           domWidth,
@@ -207,14 +211,17 @@ class ContentParser {
       const videos = doc.querySelectorAll('video');
       videos.forEach((video) => {
         if (video.src && this.isMediaFile(video.src)) {
+          const resolvedUrl = this.resolveUrl(video.src, url.loc);
+          const documentDomain = new URL(url.loc).hostname;
+          const fixedUrl = this.fixLocalhostUrl(resolvedUrl, documentDomain);
           mediaItems.push({
-            url: this.resolveUrl(video.src, url.loc),
+            url: fixedUrl,
             name: this.getCleanFilename(video.src),
             alt: '',
             type: `video > ${this.getFileExtension(video.src)}`,
             doc: url.loc,
             ctx: this.captureContext(video, 'video'),
-            hash: this.createHash(`${video.src}${url.loc}`),
+            hash: this.createHash(`${this.normalizeUrlForHash(video.src)}${url.loc}`),
             firstUsedAt: timestamp,
             lastUsedAt: timestamp,
           });
@@ -224,14 +231,17 @@ class ContentParser {
       const sources = doc.querySelectorAll('video source');
       sources.forEach((source) => {
         if (source.src && this.isMediaFile(source.src)) {
+          const resolvedUrl = this.resolveUrl(source.src, url.loc);
+          const documentDomain = new URL(url.loc).hostname;
+          const fixedUrl = this.fixLocalhostUrl(resolvedUrl, documentDomain);
           mediaItems.push({
-            url: this.resolveUrl(source.src, url.loc),
+            url: fixedUrl,
             name: this.getCleanFilename(source.src),
             alt: '',
             type: `video-source > ${this.getFileExtension(source.src)}`,
             doc: url.loc,
             ctx: this.captureContext(source, 'video-source'),
-            hash: this.createHash(`${source.src}${url.loc}`),
+            hash: this.createHash(`${this.normalizeUrlForHash(source.src)}${url.loc}`),
             firstUsedAt: timestamp,
             lastUsedAt: timestamp,
           });
@@ -242,14 +252,17 @@ class ContentParser {
       links.forEach((link) => {
         const href = link.getAttribute('href');
         if (href && this.isMediaFile(href)) {
+          const resolvedUrl = this.resolveUrl(href, url.loc);
+          const documentDomain = new URL(url.loc).hostname;
+          const fixedUrl = this.fixLocalhostUrl(resolvedUrl, documentDomain);
           mediaItems.push({
-            url: this.resolveUrl(href, url.loc),
+            url: fixedUrl,
             name: this.getCleanFilename(href),
             alt: link.textContent || '',
             type: `link > ${this.getFileExtension(href)}`,
             doc: url.loc,
             ctx: this.captureContext(link, 'link'),
-            hash: this.createHash(href + link.textContent + url.loc),
+            hash: this.createHash(this.normalizeUrlForHash(href) + link.textContent + url.loc),
             firstUsedAt: timestamp,
             lastUsedAt: timestamp,
           });
@@ -475,6 +488,18 @@ class ContentParser {
     }
 
     return url;
+  }
+
+  normalizeUrlForHash(url) {
+    if (!url) return '';
+
+    try {
+      // Remove query parameters and fragments to normalize the URL for hashing
+      const cleanUrl = url.split(/[?#]/)[0];
+      return cleanUrl;
+    } catch (error) {
+      return url;
+    }
   }
 
   createHash(str) {

@@ -2,7 +2,7 @@ import { html } from 'lit';
 import { repeat } from 'lit/directives/repeat.js';
 import { ref, createRef } from 'lit/directives/ref.js';
 import LocalizableElement from '../base-localizable.js';
-import { getMediaType, isImage } from '../../utils/utils.js';
+import { getMediaType, isImage, isVideo, getVideoThumbnail, isExternalVideoUrl } from '../../utils/utils.js';
 import { getStyles } from '../../utils/get-styles.js';
 import { GridVirtualScrollManager } from '../../utils/virtual-scroll/scroll.js';
 import getSvg from '../../utils/get-svg.js';
@@ -13,6 +13,7 @@ class MediaGrid extends LocalizableElement {
     mediaData: { type: Array },
     searchQuery: { type: String },
     locale: { type: String },
+    isProcessing: { type: Boolean },
     visibleStart: { type: Number },
     visibleEnd: { type: Number },
     colCount: { type: Number },
@@ -25,6 +26,7 @@ class MediaGrid extends LocalizableElement {
     this.mediaData = [];
     this.searchQuery = '';
     this.locale = 'en';
+    this.isProcessing = false;
 
     this.visibleStart = 0;
     this.visibleEnd = 50;
@@ -65,6 +67,7 @@ class MediaGrid extends LocalizableElement {
   shouldUpdate(changedProperties) {
     return changedProperties.has('mediaData')
            || changedProperties.has('searchQuery')
+           || changedProperties.has('isProcessing')
            || changedProperties.has('visibleStart')
            || changedProperties.has('visibleEnd')
            || changedProperties.has('colCount')
@@ -240,6 +243,24 @@ class MediaGrid extends LocalizableElement {
       `;
     }
 
+    if (isVideo(media.url) && media.hasError !== true) {
+      return this.renderVideoPreview(media);
+    }
+
+    if (isVideo(media.url) && media.hasError === true) {
+      return html`
+        <div class="media-placeholder cors-error">
+          <svg class="placeholder-icon">
+            <use href="#video"></use>
+          </svg>
+          <div class="cors-message">
+            <small>CORS blocked</small>
+            <small>${this.getDomainFromUrl(media.url)}</small>
+          </div>
+        </div>
+      `;
+    }
+
     return html`
       <div class="media-placeholder">
         <svg class="placeholder-icon">
@@ -293,12 +314,72 @@ class MediaGrid extends LocalizableElement {
     }));
   }
 
+  renderVideoPreview(media) {
+    // Check if it's an external video URL (YouTube, Vimeo, etc.)
+    if (isExternalVideoUrl(media.url)) {
+      const thumbnail = getVideoThumbnail(media.url);
+      return html`
+        <div class="video-thumbnail-container">
+          ${thumbnail ? html`
+            <img 
+              class="video-thumbnail" 
+              src=${thumbnail} 
+              alt=${media.alt || media.name}
+              loading="lazy"
+              @error=${(e) => this.handleVideoThumbnailError(e, media)}
+            />
+          ` : html`
+            <div class="video-placeholder">
+              <svg class="video-icon">
+                <use href="#video"></use>
+              </svg>
+            </div>
+          `}
+          <div class="video-play-overlay">
+            <svg class="play-icon">
+              <use href="#external-link"></use>
+            </svg>
+          </div>
+        </div>
+      `;
+    }
+
+    // Regular video file - show first frame
+    return html`
+      <video 
+        class="media-video" 
+        src=${media.url} 
+        preload="metadata"
+        muted
+        @error=${(e) => this.handleVideoError(e, media)}
+        @loadedmetadata=${(e) => this.handleVideoLoaded(e, media)}
+      />
+    `;
+  }
+
   handleImageError(e, media) {
     media.hasError = true;
-
     e.target.style.display = 'none';
-
     this.requestUpdate();
+  }
+
+  handleVideoError(e, media) {
+    media.hasError = true;
+    e.target.style.display = 'none';
+    this.requestUpdate();
+  }
+
+  handleVideoThumbnailError(e) {
+    e.target.style.display = 'none';
+    this.requestUpdate();
+  }
+
+  handleVideoLoaded(e) {
+    // Seek to first frame for thumbnail
+    const video = e.target;
+    if (video.duration > 0) {
+      video.currentTime = 0.1;
+    }
   }
 
   highlightSearchTerm(text, query) {

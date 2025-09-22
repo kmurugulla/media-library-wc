@@ -2,6 +2,7 @@ import { html } from 'lit';
 import LocalizableElement from '../base-localizable.js';
 import { getStyles } from '../../utils/get-styles.js';
 import { getCategoryFilters } from '../../utils/filters.js';
+import logger from '../../utils/logger.js';
 import sidebarStyles from './sidebar.css?inline';
 
 class MediaSidebar extends LocalizableElement {
@@ -40,6 +41,8 @@ class MediaSidebar extends LocalizableElement {
 
   render() {
     const counts = this.filterCounts || {};
+    logger.debug('Sidebar render - filterCounts:', counts);
+    logger.debug('Sidebar render - isScanning:', this.isScanning);
 
     return html`
       <aside class="media-sidebar">
@@ -92,6 +95,8 @@ class MediaSidebar extends LocalizableElement {
     const categoryFilters = getCategoryFilters();
     const isCategoryFilter = categoryFilters.includes(filterType);
 
+    logger.debug(`renderFilterItem - ${filterType}: count=${count}, isScanning=${this.isScanning}`);
+
     // During scanning, show all filters but disabled and without counts
     if (this.isScanning) {
       return html`
@@ -109,7 +114,10 @@ class MediaSidebar extends LocalizableElement {
     }
 
     // After scanning, only show filters with counts > 0
-    if (!count || count === 0) return '';
+    if (!count || count === 0) {
+      logger.debug(`Hiding filter ${filterType} - no count`);
+      return '';
+    }
 
     return html`
       <li class="filter-item">

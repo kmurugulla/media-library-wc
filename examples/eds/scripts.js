@@ -22,7 +22,7 @@ function setupControls() {
     const BrowserStorage = mediaLibrary.storageManager.constructor;
     mediaLibrary.storageManager = new BrowserStorage(newStorage);
     
-    mediaLibrary.clearData();
+    await mediaLibrary.clearData();
     
     // Only show notification when switching to IndexDB (most important change)
     if (previousStorage !== 'indexdb' && newStorage === 'indexdb') {
@@ -44,7 +44,7 @@ function setupControls() {
       await mediaLibrary.loadFromStorage(selectedSite);
       showNotification(`Loaded data for site: ${selectedSite}`, 'success');
     } else {
-      mediaLibrary.clearData();
+      await mediaLibrary.clearData();
     }
   });
 
@@ -55,7 +55,7 @@ function setupControls() {
 
 
   clearBtn.addEventListener('click', () => {
-    mediaLibrary.clearData();
+    await mediaLibrary.clearData();
   });
 
 
@@ -119,27 +119,27 @@ async function performEDSScan() {
     const pageList = await dataSource.getPageList(null, options);
     const siteKey = `${edsOrg}-${edsRepo}`;
 
-    mediaLibrary.clearData();
+    await mediaLibrary.clearData();
     const mediaData = await mediaLibrary.loadFromPageList(pageList, null, siteKey);
 
     showNotification(`Scan complete! Found ${mediaData.length} media items`, 'success');
     loadAvailableSites();
   } catch (error) {
-    let errorMessage = error.message;
+    // Log detailed error to console
+    // eslint-disable-next-line no-console
+    console.error('EDS scan failed:', error);
+    // eslint-disable-next-line no-console
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      org,
+      repo,
+      maxResults,
+    });
 
-    if (error.message.includes('CORS') || error.message.includes('cross-origin')) {
-      errorMessage = `CORS Error: ${error.message}. This is common when testing against external sites.`;
-    } else if (error.message.includes('proxy')) {
-      errorMessage = `Proxy Error: ${error.message}. All proxy services failed.`;
-    } else if (error.message.includes('401') || error.message.includes('Unauthorized')) {
-      errorMessage = 'Authentication Error: Please check your AEM credentials and permissions.';
-    } else if (error.message.includes('404') || error.message.includes('Not Found')) {
-      errorMessage = 'AEM API not found. Please verify your organization and repository names.';
-    }
-
-    showNotification(`Scan failed: ${errorMessage}`, 'error');
-    
-    console.error('Scan error:', error);
+    // Show generic error message to user
+    showNotification('Scan failed: Check console for detailed error information', 'error');
   } finally {
     const scanBtn = document.getElementById('scan-btn');
     scanBtn.disabled = false;
@@ -287,7 +287,7 @@ window.clearOldData = async () => {
       
       const shouldMigrate = confirm(`Found ${oldData.length} items in old format. Would you like to migrate them to 'legacy-data' site before clearing?`);
       if (shouldMigrate) {
-        await storage.save(oldData, 'legacy-data');
+        await storage.save(oldData);
         showNotification(`Migrated ${oldData.length} items to 'legacy-data' site`, 'success');
       }
     }
