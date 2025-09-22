@@ -10,7 +10,6 @@ import './topbar/topbar.js';
 import './sidebar/sidebar.js';
 import './grid/grid.js';
 import './list/list.js';
-import './scan/scan.js';
 import './modal-manager/modal-manager.js';
 import getSvg from '../utils/get-svg.js';
 import mediaLibraryStyles from './media-library.css?inline';
@@ -271,18 +270,30 @@ class MediaLibrary extends LocalizableElement {
           if (found > 0) {
             const latestItems = this.contentParser.getLatestMediaItems();
             if (latestItems && latestItems.length > 0) {
+              let hasUpdates = false;
+
+              // Update usage counts for existing items
+              latestItems.forEach((newItem) => {
+                const groupingKey = getGroupingKey(newItem.url);
+                const existingItem = this._progressiveMediaData.find((item) => getGroupingKey(item.url) === groupingKey);
+                if (existingItem) {
+                  existingItem.usageCount = (existingItem.usageCount || 1) + 1;
+                  hasUpdates = true;
+                }
+              });
               // Filter out items that already exist in progressive data using grouping keys
               const newUniqueItems = latestItems.filter((item) => {
                 if (!item.url) return false;
                 const groupingKey = getGroupingKey(item.url);
                 if (!this._progressiveGroupingKeys.has(groupingKey)) {
                   this._progressiveGroupingKeys.add(groupingKey);
+                  item.usageCount = 1;
                   return true;
                 }
                 return false;
               });
 
-              if (newUniqueItems.length > 0) {
+              if (newUniqueItems.length > 0 || hasUpdates) {
                 // Add only new unique items to progressive data
                 this._progressiveMediaData = [...this._progressiveMediaData, ...newUniqueItems];
               }
@@ -742,10 +753,14 @@ class MediaLibrary extends LocalizableElement {
     if (this._isScanning) {
       if (this._progressiveMediaData.length > 0) {
         return html`
-          <media-scan-view
+          <media-grid
             .mediaData=${this._progressiveMediaData}
+            .searchQuery=${this._searchQuery}
             .locale=${this.locale}
-          ></media-scan-view>
+            .isProcessing=${true}
+            @mediaClick=${this.handleMediaClick}
+            @mediaAction=${this.handleMediaAction}
+          ></media-grid>
         `;
       }
 
@@ -758,8 +773,6 @@ class MediaLibrary extends LocalizableElement {
       `;
     }
 
-    // Usage counts are now pre-calculated during initial processing
-    // No need for expensive addUsageCountToMediaFromProcessedData function
     const mediaWithUsageCount = this.filteredMediaData;
 
     if (this._currentView === 'list') {
@@ -779,6 +792,7 @@ class MediaLibrary extends LocalizableElement {
         .mediaData=${mediaWithUsageCount}
         .searchQuery=${this._searchQuery}
         .locale=${this.locale}
+        .isProcessing=${false}
         @mediaClick=${this.handleMediaClick}
         @mediaAction=${this.handleMediaAction}
       ></media-grid>

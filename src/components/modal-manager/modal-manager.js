@@ -2,6 +2,7 @@ import { html } from 'lit';
 import LocalizableElement from '../base-localizable.js';
 import getSvg from '../../utils/get-svg.js';
 import { getStyles } from '../../utils/get-styles.js';
+import { getVideoThumbnail, isExternalVideoUrl, isVideo } from '../../utils/utils.js';
 import modalManagerStyles from './modal-manager.css?inline';
 
 class ModalManager extends LocalizableElement {
@@ -86,7 +87,12 @@ class ModalManager extends LocalizableElement {
     return previewEditDomains.some((domain) => source.includes(domain));
   }
 
-  getAltTextDisplay(alt) {
+  getAltTextDisplay(alt, mediaType = null) {
+    // For videos, alt text is not applicable
+    if (mediaType && (mediaType.startsWith('video') || mediaType === 'video')) {
+      return 'N/A';
+    }
+    
     if (!alt || alt === 'null') {
       return 'Missing Alt';
     }
@@ -292,7 +298,7 @@ class ModalManager extends LocalizableElement {
     return html`
                     <tr class="usage-row">
                       <td class="alt-cell">
-                        <div class="alt-text">${this.getAltTextDisplay(usage.alt)}</div>
+                        <div class="alt-text">${this.getAltTextDisplay(usage.alt, usage.type)}</div>
                       </td>
                       <td class="context-cell">
                         <div class="context-text">${this.formatContextAsHtml(usage.ctx)}</div>
@@ -439,6 +445,10 @@ class ModalManager extends LocalizableElement {
       `;
     }
 
+    if (this.isVideo(media.url)) {
+      return this.renderVideoPreview(media);
+    }
+
     if (this.isPdf(media.url)) {
       return html`
         <div class="pdf-preview">
@@ -474,10 +484,93 @@ class ModalManager extends LocalizableElement {
     `;
   }
 
+  renderVideoPreview(media) {
+    // Check if it's an external video URL (YouTube, Vimeo, etc.)
+    if (isExternalVideoUrl(media.url)) {
+      const thumbnail = getVideoThumbnail(media.url);
+      return html`
+        <div class="external-video-preview">
+          <div class="video-thumbnail-container">
+            ${thumbnail ? html`
+              <img 
+                class="video-thumbnail" 
+                src=${thumbnail} 
+                alt=${media.alt || media.name}
+                @error=${(e) => this.handleVideoThumbnailError(e, media)}
+              />
+            ` : html`
+              <div class="video-placeholder">
+                <svg class="video-icon">
+                  <use href="#video"></use>
+                </svg>
+              </div>
+            `}
+            <div class="video-play-overlay">
+              <svg class="play-icon">
+                <use href="#external-link"></use>
+              </svg>
+            </div>
+          </div>
+          <div class="video-info">
+            <h3>External Video</h3>
+            <p>${media.name}</p>
+            <button 
+              class="video-action-btn" 
+              @click=${(e) => this.handleExternalVideoAction(e, media.url, media.name)}
+              title="Click to open video, Ctrl/Cmd+Click to open in new tab"
+            >
+              <svg class="action-icon">
+                <use href="#external-link"></use>
+              </svg>
+              Open Video
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Regular video file
+    return html`
+      <video 
+        class="media-preview video-preview" 
+        src=${media.url} 
+        controls
+        preload="metadata"
+        @error=${(e) => this.handleVideoError(e, media)}
+      >
+        <p>Your browser does not support the video tag.</p>
+      </video>
+    `;
+  }
+
   handleImageError(e, media) {
     media.hasError = true;
     e.target.style.display = 'none';
     this.requestUpdate();
+  }
+
+  handleVideoError(e, media) {
+    media.hasError = true;
+    e.target.style.display = 'none';
+    this.requestUpdate();
+  }
+
+  handleVideoThumbnailError(e) {
+    e.target.style.display = 'none';
+    this.requestUpdate();
+  }
+
+  handleExternalVideoAction(e, url, name) {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    if (e.ctrlKey || e.metaKey) {
+      // Open in new tab
+      window.open(url, '_blank', 'noopener,noreferrer');
+    } else {
+      // Open in current tab
+      window.open(url, '_self');
+    }
   }
 
   getModalTitle() {

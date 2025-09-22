@@ -148,6 +148,14 @@ async function performSitemapScan() {
 
     if (changedPages.length === 0) {
       showNotification('No changes detected - scan not needed', 'info');
+
+      // Load existing data even when no changes are detected
+      if (existingMediaData && existingMediaData.length > 0) {
+        await mediaLibrary.loadMediaData(existingMediaData, siteKey, false, previousMetadata);
+        showNotification(`Loaded existing data: ${existingMediaData.length} media files`, 'success');
+      } else {
+        showNotification('No existing data found to load', 'info');
+      }
       return;
     }
 

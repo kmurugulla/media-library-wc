@@ -211,8 +211,11 @@ class ContentParser {
       const videos = doc.querySelectorAll('video');
       videos.forEach((video) => {
         if (video.src && this.isMediaFile(video.src)) {
+          const resolvedUrl = this.resolveUrl(video.src, url.loc);
+          const documentDomain = new URL(url.loc).hostname;
+          const fixedUrl = this.fixLocalhostUrl(resolvedUrl, documentDomain);
           mediaItems.push({
-            url: this.resolveUrl(video.src, url.loc),
+            url: fixedUrl,
             name: this.getCleanFilename(video.src),
             alt: '',
             type: `video > ${this.getFileExtension(video.src)}`,
@@ -228,8 +231,11 @@ class ContentParser {
       const sources = doc.querySelectorAll('video source');
       sources.forEach((source) => {
         if (source.src && this.isMediaFile(source.src)) {
+          const resolvedUrl = this.resolveUrl(source.src, url.loc);
+          const documentDomain = new URL(url.loc).hostname;
+          const fixedUrl = this.fixLocalhostUrl(resolvedUrl, documentDomain);
           mediaItems.push({
-            url: this.resolveUrl(source.src, url.loc),
+            url: fixedUrl,
             name: this.getCleanFilename(source.src),
             alt: '',
             type: `video-source > ${this.getFileExtension(source.src)}`,
@@ -246,8 +252,11 @@ class ContentParser {
       links.forEach((link) => {
         const href = link.getAttribute('href');
         if (href && this.isMediaFile(href)) {
+          const resolvedUrl = this.resolveUrl(href, url.loc);
+          const documentDomain = new URL(url.loc).hostname;
+          const fixedUrl = this.fixLocalhostUrl(resolvedUrl, documentDomain);
           mediaItems.push({
-            url: this.resolveUrl(href, url.loc),
+            url: fixedUrl,
             name: this.getCleanFilename(href),
             alt: link.textContent || '',
             type: `link > ${this.getFileExtension(href)}`,
