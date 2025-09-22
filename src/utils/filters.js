@@ -1,7 +1,28 @@
 import { getAvailableCategories } from './category-detector.js';
+// import { normalizeUrl, urlsMatch } from './utils.js'; // Unused imports
 
 function extractFileExtension(filePath) {
   return filePath?.split('.').pop()?.toLowerCase();
+}
+
+export function getGroupingKey(url) {
+  if (!url) return '';
+
+  try {
+    const urlObj = new URL(url);
+    const { pathname } = urlObj;
+    const filename = pathname.split('/').pop();
+
+    // For media files with specific patterns, use just the filename
+    if (filename && filename.includes('media_')) {
+      return filename;
+    }
+
+    // For other files, use the full pathname
+    return pathname;
+  } catch {
+    return url;
+  }
 }
 
 function detectMediaTypeFromExtension(ext) {
@@ -314,6 +335,48 @@ export function calculateFilteredMediaData(
   return filteredData;
 }
 
+// New function that uses processed data indexes for fast filtering
+export function calculateFilteredMediaDataFromIndex(
+  mediaData,
+  processedData,
+  selectedFilterType,
+  searchQuery,
+  selectedDocument,
+) {
+  if (!mediaData || mediaData.length === 0 || !processedData) {
+    return [];
+  }
+
+  let filteredData = [...mediaData];
+
+  // Apply search filter first (still need to scan for search)
+  if (searchQuery && searchQuery.trim()) {
+    const colonSyntax = parseColonSyntax(searchQuery);
+    if (colonSyntax) {
+      filteredData = filterByColonSyntax(filteredData, colonSyntax);
+    } else {
+      filteredData = filterBySearchQuery(filteredData, searchQuery);
+    }
+  }
+
+  // Apply filter using pre-computed indexes
+  if (selectedFilterType && selectedFilterType !== 'all') {
+    const filterHashes = processedData.filterArrays[selectedFilterType] || [];
+    const filteredHashes = new Set(filterHashes);
+
+    // Filter by document if needed
+    if (selectedDocument && selectedFilterType.startsWith('document')) {
+      filteredData = filteredData.filter((item) => (
+        filteredHashes.has(item.hash) && item.doc === selectedDocument
+      ));
+    } else {
+      filteredData = filteredData.filter((item) => filteredHashes.has(item.hash));
+    }
+  }
+
+  return filteredData;
+}
+
 function generateFolderSuggestions(mediaData, value) {
   const folderPaths = new Set();
 
@@ -493,13 +556,45 @@ function createDataHash(mediaData) {
   return `${length}-${firstItem?.url || ''}-${lastItem?.url || ''}`;
 }
 
-export function processMediaData(mediaData) {
+// Chunk array utility for batch processing
+function chunkArray(array, chunkSize) {
+  const chunks = [];
+  for (let i = 0; i < array.length; i += chunkSize) {
+    chunks.push(array.slice(i, i + chunkSize));
+  }
+  return chunks;
+}
+
+export function initializeProcessedData() {
+  const filterArrays = {};
+  const usageData = {};
+  const searchIndex = {
+    name: {},
+    alt: {},
+    doc: {},
+    ctx: {},
+    url: {},
+  };
+  const filterCounts = {};
+
+  Object.keys(FILTER_CONFIG).forEach((filterName) => {
+    if (!filterName.startsWith('document')) {
+      filterArrays[filterName] = [];
+    }
+  });
+
+  return {
+    filterArrays,
+    usageData,
+    searchIndex,
+    filterCounts,
+    totalCount: 0,
+  };
+}
+
+export async function processMediaData(mediaData, onProgress = null) {
   if (!mediaData || mediaData.length === 0) {
-    processedDataCache = {
-      filterCounts: {},
-      totalCount: 0,
-    };
-    return processedDataCache;
+    return initializeProcessedData();
   }
 
   const currentHash = createDataHash(mediaData);
@@ -507,52 +602,393 @@ export function processMediaData(mediaData) {
     return processedDataCache;
   }
 
-  const filterCounts = {};
+  const processedData = initializeProcessedData();
   const uniqueMediaUrls = new Set();
   const uniqueNonSvgUrls = new Set();
 
-  const filterUrlSets = {};
-  Object.keys(FILTER_CONFIG).forEach((filterName) => {
-    if (!filterName.startsWith('document')) {
-      filterUrlSets[filterName] = new Set();
-    }
-  });
+  // Use smaller batch size for very large datasets to prevent UI blocking
+  const batchSize = mediaData.length > 100000 ? 500 : 1000;
+  const batches = chunkArray(mediaData, batchSize);
+  const totalBatches = batches.length;
 
-  mediaData.forEach((item) => {
-    if (item.url) {
-      uniqueMediaUrls.add(item.url);
+  for (let i = 0; i < batches.length; i += 1) {
+    const batch = batches[i];
 
-      if (!isSvgFile(item)) {
-        uniqueNonSvgUrls.add(item.url);
+    batch.forEach((item) => {
+      if (!item.hash) return;
+
+      if (item.url) {
+        const groupingKey = getGroupingKey(item.url);
+        if (!processedData.usageData[groupingKey]) {
+          processedData.usageData[groupingKey] = {
+            hashes: [],
+            uniqueDocs: new Set(),
+            count: 0,
+          };
+        }
+        processedData.usageData[groupingKey].hashes.push(item.hash);
+        if (item.doc) {
+          processedData.usageData[groupingKey].uniqueDocs.add(item.doc);
+        }
+        const usageData = processedData.usageData[groupingKey];
+        usageData.count = usageData.hashes.length;
       }
 
-      Object.keys(filterUrlSets).forEach((filterName) => {
+      if (item.name) {
+        const nameKey = item.name.toLowerCase();
+        if (!processedData.searchIndex.name[nameKey]) {
+          processedData.searchIndex.name[nameKey] = [];
+        }
+        processedData.searchIndex.name[nameKey].push(item.hash);
+      }
+
+      if (item.alt) {
+        const altKey = item.alt.toLowerCase();
+        if (!processedData.searchIndex.alt[altKey]) {
+          processedData.searchIndex.alt[altKey] = [];
+        }
+        processedData.searchIndex.alt[altKey].push(item.hash);
+      }
+
+      if (item.doc) {
+        const docKey = item.doc.toLowerCase();
+        if (!processedData.searchIndex.doc[docKey]) {
+          processedData.searchIndex.doc[docKey] = [];
+        }
+        processedData.searchIndex.doc[docKey].push(item.hash);
+      }
+
+      if (item.ctx) {
+        const ctxKey = item.ctx.toLowerCase();
+        if (!processedData.searchIndex.ctx[ctxKey]) {
+          processedData.searchIndex.ctx[ctxKey] = [];
+        }
+        processedData.searchIndex.ctx[ctxKey].push(item.hash);
+      }
+
+      if (item.url) {
+        const urlKey = item.url.toLowerCase();
+        if (!processedData.searchIndex.url[urlKey]) {
+          processedData.searchIndex.url[urlKey] = [];
+        }
+        processedData.searchIndex.url[urlKey].push(item.hash);
+      }
+
+      Object.keys(processedData.filterArrays).forEach((filterName) => {
         try {
           if (FILTER_CONFIG[filterName](item)) {
-            filterUrlSets[filterName].add(item.url);
+            processedData.filterArrays[filterName].push(item.hash);
           }
         } catch (error) {
           // Filter function failed, skip this item
         }
       });
+
+      if (item.url) {
+        uniqueMediaUrls.add(item.url);
+        if (!isSvgFile(item)) {
+          uniqueNonSvgUrls.add(item.url);
+        }
+      }
+    });
+
+    if (onProgress) {
+      onProgress(((i + 1) / totalBatches) * 100);
+    }
+
+    // Yield to browser more frequently for large datasets
+    if (i < batches.length - 1) {
+      if (mediaData.length > 100000 && i % 5 === 0) {
+        // For very large datasets, yield every 5 batches
+        await new Promise((resolve) => {
+          setTimeout(resolve, 1);
+        });
+      } else {
+        await new Promise((resolve) => {
+          setTimeout(resolve, 0);
+        });
+      }
+    }
+  }
+
+  // Calculate filter counts based on unique URLs, not all occurrences
+  // Create hash-to-item lookup map for O(1) access instead of O(n) find operations
+  const hashToItemMap = new Map();
+  mediaData.forEach((item) => {
+    if (item.hash) {
+      hashToItemMap.set(item.hash, item);
     }
   });
 
-  Object.keys(filterUrlSets).forEach((filterName) => {
-    filterCounts[filterName] = filterUrlSets[filterName].size;
+  // Add usageCount to each media item during initial processing
+  mediaData.forEach((item) => {
+    if (item.url) {
+      const groupingKey = getGroupingKey(item.url);
+      const usageInfo = processedData.usageData[groupingKey];
+      if (usageInfo) {
+        item.usageCount = usageInfo.count || 1;
+      } else {
+        item.usageCount = 1;
+      }
+    } else {
+      item.usageCount = 1;
+    }
   });
-  filterCounts.all = uniqueNonSvgUrls.size;
+  Object.keys(processedData.filterArrays).forEach((filterName) => {
+    const uniqueUrls = new Set();
+    processedData.filterArrays[filterName].forEach((hash) => {
+      // Use O(1) map lookup instead of O(n) find operation
+      const item = hashToItemMap.get(hash);
+      if (item && item.url) {
+        uniqueUrls.add(item.url);
+      }
+    });
+    processedData.filterCounts[filterName] = uniqueUrls.size;
+  });
 
-  processedDataCache = {
-    filterCounts,
-    totalCount: uniqueMediaUrls.size,
-  };
+  // Calculate "all" filter count - should be unique media URLs, not all occurrences
+  processedData.filterCounts.all = uniqueNonSvgUrls.size;
+  processedData.totalCount = uniqueMediaUrls.size;
+
+  processedDataCache = processedData;
   lastProcessedDataHash = currentHash;
 
-  return processedDataCache;
+  return processedData;
 }
 
 export function clearProcessedDataCache() {
   processedDataCache = null;
   lastProcessedDataHash = null;
+}
+
+function mergeSearchIndex(item, searchIndex) {
+  if (item.name) {
+    const nameKey = item.name.toLowerCase();
+    if (!searchIndex.name[nameKey]) {
+      searchIndex.name[nameKey] = [];
+    }
+    if (!searchIndex.name[nameKey].includes(item.hash)) {
+      searchIndex.name[nameKey].push(item.hash);
+    }
+  }
+
+  if (item.alt) {
+    const altKey = item.alt.toLowerCase();
+    if (!searchIndex.alt[altKey]) {
+      searchIndex.alt[altKey] = [];
+    }
+    if (!searchIndex.alt[altKey].includes(item.hash)) {
+      searchIndex.alt[altKey].push(item.hash);
+    }
+  }
+
+  if (item.doc) {
+    const docKey = item.doc.toLowerCase();
+    if (!searchIndex.doc[docKey]) {
+      searchIndex.doc[docKey] = [];
+    }
+    if (!searchIndex.doc[docKey].includes(item.hash)) {
+      searchIndex.doc[docKey].push(item.hash);
+    }
+  }
+
+  if (item.ctx) {
+    const ctxKey = item.ctx.toLowerCase();
+    if (!searchIndex.ctx[ctxKey]) {
+      searchIndex.ctx[ctxKey] = [];
+    }
+    if (!searchIndex.ctx[ctxKey].includes(item.hash)) {
+      searchIndex.ctx[ctxKey].push(item.hash);
+    }
+  }
+
+  if (item.url) {
+    const urlKey = item.url.toLowerCase();
+    if (!searchIndex.url[urlKey]) {
+      searchIndex.url[urlKey] = [];
+    }
+    if (!searchIndex.url[urlKey].includes(item.hash)) {
+      searchIndex.url[urlKey].push(item.hash);
+    }
+  }
+}
+
+function mergeFilterArrays(item, filterArrays) {
+  Object.keys(filterArrays).forEach((filterName) => {
+    try {
+      if (FILTER_CONFIG[filterName](item)) {
+        if (!filterArrays[filterName].includes(item.hash)) {
+          filterArrays[filterName].push(item.hash);
+        }
+      }
+    } catch (error) {
+      // Filter function failed, skip this item
+    }
+  });
+}
+
+function recalculateFilterCounts(processedData) {
+  Object.keys(processedData.filterArrays).forEach((filterName) => {
+    processedData.filterCounts[filterName] = processedData.filterArrays[filterName].length;
+  });
+}
+
+export async function processNewItems(newItems, existingProcessedData, onProgress = null) {
+  const batchSize = 100;
+
+  for (let i = 0; i < newItems.length; i += batchSize) {
+    const batch = newItems.slice(i, i + batchSize);
+
+    batch.forEach((item) => {
+      if (!item.hash) return;
+
+      if (item.url) {
+        const groupingKey = getGroupingKey(item.url);
+        if (!existingProcessedData.usageData[groupingKey]) {
+          existingProcessedData.usageData[groupingKey] = {
+            hashes: [],
+            uniqueDocs: new Set(),
+            count: 0,
+          };
+        }
+        if (!existingProcessedData.usageData[groupingKey].hashes.includes(item.hash)) {
+          existingProcessedData.usageData[groupingKey].hashes.push(item.hash);
+          if (item.doc) {
+            existingProcessedData.usageData[groupingKey].uniqueDocs.add(item.doc);
+          }
+          const existingUsageData = existingProcessedData.usageData[groupingKey];
+          existingUsageData.count = existingUsageData.hashes.length;
+        }
+      }
+
+      mergeSearchIndex(item, existingProcessedData.searchIndex);
+      mergeFilterArrays(item, existingProcessedData.filterArrays);
+
+      existingProcessedData.totalCount += 1;
+    });
+
+    if (onProgress) {
+      onProgress(((i + batchSize) / newItems.length) * 100);
+    }
+
+    await new Promise((resolve) => {
+      setTimeout(resolve, 0);
+    });
+  }
+
+  recalculateFilterCounts(existingProcessedData);
+  return existingProcessedData;
+}
+
+// New functions to work with processed data structure
+export function getFilteredItems(processedData, filterName) {
+  if (!processedData || !processedData.filterArrays) {
+    return [];
+  }
+
+  if (filterName === 'all') {
+    return processedData.filterArrays.all || [];
+  }
+
+  if (filterName && processedData.filterArrays[filterName]) {
+    return processedData.filterArrays[filterName];
+  }
+
+  return [];
+}
+
+export function getItemByHash(rawData, hash) {
+  if (!rawData || !Array.isArray(rawData)) {
+    return null;
+  }
+  return rawData.find((item) => item.hash === hash) || null;
+}
+
+export function getUsageData(processedData, url) {
+  if (!processedData || !processedData.usageData) {
+    return [];
+  }
+
+  const groupingKey = getGroupingKey(url);
+  const usageInfo = processedData.usageData[groupingKey];
+
+  if (!usageInfo) {
+    return [];
+  }
+
+  // Return the hashes array for backward compatibility
+  return usageInfo.hashes || [];
+}
+
+export function searchProcessedData(processedData, query) {
+  if (!processedData || !processedData.searchIndex || !query) {
+    return [];
+  }
+
+  const lowerQuery = query.toLowerCase().trim();
+  const results = new Set();
+
+  // Search across all indexes
+  Object.keys(processedData.searchIndex).forEach((field) => {
+    const index = processedData.searchIndex[field];
+    Object.keys(index).forEach((key) => {
+      if (key.includes(lowerQuery)) {
+        index[key].forEach((hash) => results.add(hash));
+      }
+    });
+  });
+
+  return Array.from(results);
+}
+
+export function getFilterCounts(processedData) {
+  if (!processedData || !processedData.filterCounts) {
+    return {};
+  }
+  return processedData.filterCounts;
+}
+
+export async function updateUsageCounts(items, processedData, progressCallback) {
+  if (!items || items.length === 0) return;
+
+  const batchSize = 100;
+  let processed = 0;
+
+  for (let i = 0; i < items.length; i += batchSize) {
+    const batch = items.slice(i, i + batchSize);
+
+    for (const item of batch) {
+      const { hash } = item;
+      if (!hash) {
+        // eslint-disable-next-line no-continue
+        continue;
+      }
+
+      // Update usage count for this hash
+      if (!processedData.usageData[hash]) {
+        processedData.usageData[hash] = {
+          count: 0,
+          urls: new Set(),
+          docs: new Set(),
+        };
+      }
+
+      processedData.usageData[hash].count += 1;
+      if (item.url) processedData.usageData[hash].urls.add(item.url);
+      if (item.doc) processedData.usageData[hash].docs.add(item.doc);
+    }
+
+    processed += batch.length;
+
+    if (progressCallback) {
+      progressCallback((processed / items.length) * 100);
+    }
+
+    // Small delay to prevent UI blocking
+    if (i + batchSize < items.length) {
+      await new Promise((resolve) => {
+        setTimeout(resolve, 1);
+      });
+    }
+  }
 }

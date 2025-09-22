@@ -6,6 +6,11 @@ import { resolve } from 'path';
 export default defineConfig(({ mode }) => {
   const isSelfContained = mode === 'self-contained';
   const isCore = mode === 'core';
+  const isDev = mode === 'development';
+
+  // Disable Lit dev mode warnings
+  process.env.LIT_DEV_MODE = 'false';
+  
 
   return {
     plugins: [

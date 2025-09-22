@@ -40,7 +40,7 @@ document.getElementById('load-audit-logs').addEventListener('click', async () =>
     loadButton.textContent = 'Loading...';
 
 
-    mediaLibrary.clearData();
+    await mediaLibrary.clearData();
 
 
     const auditSource = new MediaBusAuditSource();
@@ -64,7 +64,6 @@ document.getElementById('load-audit-logs').addEventListener('click', async () =>
     await mediaLibrary.loadMediaData(mediaData, siteKey, useStorage);
 
     
-    console.log(`Loaded ${mediaData.length} media items from audit logs`);
 
 
     const storageStatus = useStorage ? ' (saved to storage)' : ' (not saved)';

@@ -107,25 +107,26 @@ async function performWordPressScan() {
     const pageList = await dataSource.getPageList(normalizedWebsiteUrl, options);
     const siteKey = mediaLibrary.generateSiteKey(normalizedWebsiteUrl);
 
-    mediaLibrary.clearData();
+    await mediaLibrary.clearData();
     const mediaData = await mediaLibrary.loadFromPageList(pageList, null, siteKey);
 
     showNotification(`Scan complete! Found ${mediaData.length} media items`, 'success');
     loadAvailableSites();
   } catch (error) {
-    let errorMessage = error.message;
-
-    if (error.message.includes('CORS') || error.message.includes('cross-origin')) {
-      errorMessage = `CORS Error: ${error.message}. This is common when testing against external sites.`;
-    } else if (error.message.includes('proxy')) {
-      errorMessage = `Proxy Error: ${error.message}. All proxy services failed.`;
-    } else if (error.message.includes('404') || error.message.includes('Not Found')) {
-      errorMessage = 'WordPress API not found. Please ensure the site URL is correct and the WordPress REST API is enabled.';
-    }
-
-    showNotification(`Scan failed: ${errorMessage}`, 'error');
+    // Log detailed error to console
     // eslint-disable-next-line no-console
-    console.error('Scan error:', error);
+    console.error('WordPress scan failed:', error);
+    // eslint-disable-next-line no-console
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      wordpressUrl,
+      maxResults,
+    });
+
+    // Show generic error message to user
+    showNotification('Scan failed: Check console for detailed error information', 'error');
   } finally {
     const scanBtn = document.getElementById('scan-btn');
     scanBtn.disabled = false;
@@ -153,7 +154,7 @@ function setupControls() {
     const BrowserStorage = mediaLibrary.storageManager.constructor;
     mediaLibrary.storageManager = new BrowserStorage(newStorage);
 
-    mediaLibrary.clearData();
+    await mediaLibrary.clearData();
 
     // Only show notification when switching to IndexDB (most important change)
     if (previousStorage !== 'indexdb' && newStorage === 'indexdb') {
@@ -175,7 +176,7 @@ function setupControls() {
       // Show delete button when a site is selected
       deleteSiteBtn.style.display = 'inline-block';
     } else {
-      mediaLibrary.clearData();
+      await mediaLibrary.clearData();
       // Hide delete button when no site is selected
       deleteSiteBtn.style.display = 'none';
     }
@@ -186,7 +187,7 @@ function setupControls() {
   });
 
   clearBtn.addEventListener('click', () => {
-    mediaLibrary.clearData();
+    await mediaLibrary.clearData();
   });
 
   deleteSiteBtn.addEventListener('click', async () => {
@@ -202,7 +203,7 @@ function setupControls() {
           showNotification(`Deleted data for site: ${selectedSite}`, 'success');
 
           // Clear the current display if the deleted site was loaded
-          mediaLibrary.clearData();
+          await mediaLibrary.clearData();
 
           // Reload the sites list
           await loadAvailableSites();
@@ -349,7 +350,7 @@ window.clearOldData = async () => {
       // eslint-disable-next-line no-alert, no-restricted-globals
       const shouldMigrate = confirm(`Found ${oldData.length} items in old format. Would you like to migrate them to 'legacy-data' site before clearing?`);
       if (shouldMigrate) {
-        await storage.save(oldData, 'legacy-data');
+        await storage.save(oldData);
         showNotification(`Migrated ${oldData.length} items to 'legacy-data' site`, 'success');
       }
     }

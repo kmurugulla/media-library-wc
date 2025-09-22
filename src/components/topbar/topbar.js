@@ -168,7 +168,7 @@ class MediaTopbar extends LocalizableElement {
               <span class="stat-value stat-number">${this.realTimeStats.pages}</span>
               <span class="stat-text">/</span>
               <span class="stat-value stat-number">${this.totalPages}</span>
-              <span class="stat-text">pages in</span>
+              <span class="stat-text">changed pages in</span>
               <span class="stat-value stat-number">${this.realTimeStats.elapsed}</span>
               <span class="stat-text">s</span>
             </div>

@@ -3,7 +3,7 @@ import LocalizableElement from './base-localizable.js';
 import i18n from '../utils/i18n.js';
 import BrowserStorage from '../utils/storage.js';
 import ContentParser from '../utils/parser.js';
-import { processMediaData, calculateFilteredMediaData } from '../utils/filters.js';
+import { processMediaData, calculateFilteredMediaData, calculateFilteredMediaDataFromIndex, getGroupingKey } from '../utils/filters.js';
 import { copyMediaToClipboard, urlsMatch } from '../utils/utils.js';
 import { getStyles } from '../utils/get-styles.js';
 import './topbar/topbar.js';
@@ -56,6 +56,7 @@ class MediaLibrary extends LocalizableElement {
     this._realTimeStats = { images: 0, pages: 0, elapsed: 0 };
     this._progressiveMediaData = [];
     this._progressiveLimit = 0;
+    this._progressiveGroupingKeys = new Set();
     this._totalPages = 0;
     this.showAnalysisToggle = true;
 
@@ -66,8 +67,8 @@ class MediaLibrary extends LocalizableElement {
     this._filteredDataCache = null;
     this._lastFilterParams = null;
 
-    this._usageCountCache = null;
-    this._lastUsageCountParams = null;
+    // REMOVED: _usageCountCache and _lastUsageCountParams
+    // Usage counts are now pre-calculated during initial processing
 
     this._readyPromise = null;
     this._isReady = false;
@@ -171,10 +172,10 @@ class MediaLibrary extends LocalizableElement {
 
       if (data && data.length > 0) {
         this._mediaData = data;
-        this._processedData = processMediaData(data);
+        this._processedData = await processMediaData(data);
       } else {
         this._mediaData = [];
-        this._processedData = processMediaData([]);
+        this._processedData = await processMediaData([]);
       }
 
       this._filteredDataCache = null;
@@ -186,7 +187,7 @@ class MediaLibrary extends LocalizableElement {
       this.requestUpdate();
     } catch (error) {
       this._mediaData = [];
-      this._processedData = processMediaData([]);
+      this._processedData = await processMediaData([]);
       if (error.name !== 'NotFoundError' && !error.message.includes('object store')) {
         this._error = this.t('errors.loadFailed');
       }
@@ -196,7 +197,18 @@ class MediaLibrary extends LocalizableElement {
     }
   }
 
-  async loadFromPageList(pageList, onProgress = null, siteKey = null, saveToStorage = true) {
+  async loadFromPageList(
+    pageList,
+    onProgress = null,
+    siteKey = null,
+    saveToStorage = true,
+    previousMetadata = null,
+    completePageList = null,
+    existingMediaData = null,
+  ) {
+    if (siteKey) {
+      // siteKey is used by calling code to set up site-specific storage
+    }
     if (!pageList || pageList.length === 0) {
       this._error = 'No pages provided to scan';
       return [];
@@ -206,9 +218,8 @@ class MediaLibrary extends LocalizableElement {
       this._isScanning = true;
       this._isBatchLoading = true;
       this._error = null;
-      this._mediaData = [];
       this._progressiveMediaData = [];
-      this._processedData = null;
+      this._progressiveGroupingKeys = new Set();
       this._searchQuery = '';
       this._selectedFilterType = 'all';
       this._scanStartTime = Date.now();
@@ -221,7 +232,22 @@ class MediaLibrary extends LocalizableElement {
       window.dispatchEvent(new CustomEvent('clear-search'));
       window.dispatchEvent(new CustomEvent('clear-filters'));
 
-      const storageKey = siteKey || 'media-data';
+      let currentExistingMediaData = existingMediaData || this._mediaData || [];
+
+      if (previousMetadata && currentExistingMediaData.length === 0) {
+        currentExistingMediaData = await this.storageManager.load() || [];
+      }
+
+      // Initialize progressive media data with existing media for incremental scans
+      if (currentExistingMediaData.length > 0) {
+        this._progressiveMediaData = [...currentExistingMediaData];
+        // Initialize grouping keys for existing media
+        currentExistingMediaData.forEach((item) => {
+          if (item.url) {
+            this._progressiveGroupingKeys.add(getGroupingKey(item.url));
+          }
+        });
+      }
 
       this._scanProgress = { current: 0, total: pageList.length, found: 0 };
       this._totalPages = pageList.length;
@@ -233,68 +259,80 @@ class MediaLibrary extends LocalizableElement {
         this.requestUpdate();
       }, 100);
 
-      const allMediaData = [];
-
-      for (let i = 0; i < pageList.length; i += 1) {
-        const url = pageList[i];
-
-        try {
-          this._realTimeStats.pages = i + 1;
+      const newMediaItems = await this.contentParser.scanPages(
+        pageList,
+        (completed, total, found) => {
+          this._realTimeStats.pages = completed;
+          this._realTimeStats.images += found;
           this._realTimeStats.elapsed = ((Date.now() - this._scanStartTime) / 1000).toFixed(1);
-          this.requestUpdate();
-
           this._realTimeStats = { ...this._realTimeStats };
 
-          const mediaItems = await this.contentParser.scanPage(url);
-          allMediaData.push(...mediaItems);
+          // Update progressive media data for real-time display
+          if (found > 0) {
+            const latestItems = this.contentParser.getLatestMediaItems();
+            if (latestItems && latestItems.length > 0) {
+              // Filter out items that already exist in progressive data using grouping keys
+              const newUniqueItems = latestItems.filter((item) => {
+                if (!item.url) return false;
+                const groupingKey = getGroupingKey(item.url);
+                if (!this._progressiveGroupingKeys.has(groupingKey)) {
+                  this._progressiveGroupingKeys.add(groupingKey);
+                  return true;
+                }
+                return false;
+              });
 
-          this._realTimeStats.images += mediaItems.length;
-          this._realTimeStats.pages = i + 1;
-          this._realTimeStats.elapsed = ((Date.now() - this._scanStartTime) / 1000).toFixed(1);
-
-          this._realTimeStats = { ...this._realTimeStats };
-
-          this._mediaData = allMediaData;
-          this._progressiveMediaData = [...allMediaData];
+              if (newUniqueItems.length > 0) {
+                // Add only new unique items to progressive data
+                this._progressiveMediaData = [...this._progressiveMediaData, ...newUniqueItems];
+              }
+            }
+          }
 
           this.requestUpdate();
 
           if (onProgress) {
-            onProgress(i + 1, pageList.length, mediaItems.length);
+            onProgress(completed, total, found);
           }
-        } catch (error) {
-          this._realTimeStats.pages = i + 1;
-          this._realTimeStats.elapsed = ((Date.now() - this._scanStartTime) / 1000).toFixed(1);
-          this.requestUpdate();
-
-          if (onProgress) {
-            onProgress(i + 1, pageList.length, 0);
-          }
-        }
-      }
+        },
+        previousMetadata,
+      );
 
       clearInterval(elapsedInterval);
-      const mediaData = allMediaData;
 
       const scanDuration = Date.now() - this._scanStartTime;
       const durationSeconds = (scanDuration / 1000).toFixed(1);
 
-      if (saveToStorage) {
-        await this.storageManager.save(mediaData, storageKey);
-        const pageLastModified = {};
-        pageList.forEach((page) => {
-          pageLastModified[page.loc || page.url] = page.lastmod;
-        });
-
-        await this.storageManager.saveScanMetadata(storageKey, {
-          totalPages: pageList.length,
-          pageLastModified,
-          scanDuration,
-        });
+      let pagesToReparse = [];
+      if (previousMetadata && previousMetadata.pageLastModified) {
+        pagesToReparse = pageList.map((page) => page.loc || page.url);
       }
 
-      this._mediaData = mediaData;
-      this._processedData = processMediaData(mediaData);
+      const filteredExistingMedia = currentExistingMediaData.filter((item) => {
+        const isNotInReparseList = !pagesToReparse.includes(item.doc);
+        return isNotInReparseList;
+      });
+
+      const completeMediaData = [...filteredExistingMedia, ...newMediaItems];
+
+      if (saveToStorage) {
+        await this.storageManager.save(completeMediaData);
+      }
+
+      const metadataPageList = completePageList || pageList;
+      const pageLastModified = {};
+      metadataPageList.forEach((page) => {
+        pageLastModified[page.loc || page.url] = page.lastmod;
+      });
+
+      await this.storageManager.saveScanMetadata({
+        totalPages: metadataPageList.length,
+        pageLastModified,
+        scanDuration,
+      });
+
+      this._mediaData = completeMediaData;
+      this._processedData = await processMediaData(completeMediaData);
       this._isScanning = false;
       this._isBatchLoading = false;
       this._scanProgress = null;
@@ -307,9 +345,11 @@ class MediaLibrary extends LocalizableElement {
       this._usageCountCache = null;
       this._lastUsageCountParams = null;
 
+      this.requestUpdate();
+
       this._scanStats = {
         pagesScanned: pageList.length,
-        mediaFound: mediaData.length,
+        mediaFound: newMediaItems.length,
         duration: durationSeconds,
       };
 
@@ -317,7 +357,7 @@ class MediaLibrary extends LocalizableElement {
         window.refreshSites();
       }
 
-      return mediaData;
+      return completeMediaData;
     } catch (error) {
       this._isScanning = false;
       this._isBatchLoading = false;
@@ -340,7 +380,7 @@ class MediaLibrary extends LocalizableElement {
     }
   }
 
-  async loadMediaData(mediaData, siteKey = null, saveToStorage = false) {
+  async loadMediaData(mediaData, siteKey = null, saveToStorage = false, metadata = null) {
     if (!mediaData || !Array.isArray(mediaData)) {
       this._error = 'No media data provided';
       return [];
@@ -352,7 +392,7 @@ class MediaLibrary extends LocalizableElement {
       this._searchQuery = '';
       this._selectedFilterType = 'all';
       this._scanStartTime = Date.now();
-      this._scanProgress = { current: 0, total: 1, found: mediaData.length };
+      this._scanProgress = { current: 0, total: 0, found: mediaData.length };
       this._lastScanDuration = null;
       this._scanStats = null;
 
@@ -362,14 +402,18 @@ class MediaLibrary extends LocalizableElement {
       this.requestUpdate();
 
       this._mediaData = mediaData;
-      this._processedData = processMediaData(mediaData);
+      this._processedData = await processMediaData(mediaData);
 
       const loadDuration = Date.now() - this._scanStartTime;
       const durationSeconds = (loadDuration / 1000).toFixed(1);
 
+      // Use provided metadata or load from storage
+      const existingMetadata = metadata || await this.storageManager.loadScanMetadata();
+      const totalPages = existingMetadata ? existingMetadata.totalPages : 0;
+
       if (saveToStorage && siteKey) {
-        await this.storageManager.save(mediaData, siteKey);
-        await this.storageManager.saveScanMetadata(siteKey, {
+        await this.storageManager.save(mediaData);
+        await this.storageManager.saveScanMetadata({
           totalPages: 0,
           pageLastModified: {},
           scanDuration: loadDuration,
@@ -377,9 +421,12 @@ class MediaLibrary extends LocalizableElement {
         });
       }
 
+      // Set scanning to false and update the UI
       this._isScanning = false;
+      this._isBatchLoading = false;
       this._scanProgress = null;
       this._lastScanDuration = durationSeconds;
+      this._totalPages = totalPages;
 
       this.updateAnalysisToggleVisibility();
 
@@ -388,8 +435,10 @@ class MediaLibrary extends LocalizableElement {
       this._usageCountCache = null;
       this._lastUsageCountParams = null;
 
+      this.requestUpdate();
+
       this._scanStats = {
-        pagesScanned: 0,
+        pagesScanned: totalPages,
         mediaFound: mediaData.length,
         duration: durationSeconds,
         source: 'direct-load',
@@ -409,9 +458,9 @@ class MediaLibrary extends LocalizableElement {
     }
   }
 
-  clearData() {
+  async clearData() {
     this._mediaData = [];
-    this._processedData = processMediaData([]);
+    this._processedData = await processMediaData([]);
     this._error = null;
     this._searchQuery = '';
     this._selectedFilterType = 'all';
@@ -470,8 +519,22 @@ class MediaLibrary extends LocalizableElement {
       return this._filteredDataCache;
     }
 
-    const filteredData = calculateFilteredMediaData(
+    // Check if we have processed data for indexed filtering
+    if (!this._processedData) {
+      const filteredData = calculateFilteredMediaData(
+        this._mediaData,
+        this._selectedFilterType,
+        this._searchQuery,
+        this.selectedDocument,
+      );
+      this._filteredDataCache = filteredData;
+      this._lastFilterParams = currentParams;
+      return filteredData;
+    }
+
+    const filteredData = calculateFilteredMediaDataFromIndex(
       this._mediaData,
+      this._processedData,
       this._selectedFilterType,
       this._searchQuery,
       this.selectedDocument,
@@ -483,63 +546,9 @@ class MediaLibrary extends LocalizableElement {
     return filteredData;
   }
 
-  addUsageCountToMedia(mediaData) {
-    if (!mediaData) return [];
-
-    const currentParams = {
-      dataLength: mediaData.length,
-      firstUrl: mediaData[0]?.url || '',
-      lastUrl: mediaData[mediaData.length - 1]?.url || '',
-    };
-
-    if (this._usageCountCache
-        && this._lastUsageCountParams
-        && JSON.stringify(this._lastUsageCountParams) === JSON.stringify(currentParams)) {
-      return this._usageCountCache;
-    }
-
-    const usageCounts = {};
-    const urlGroups = {};
-
-    mediaData.forEach((item) => {
-      if (item.url) {
-        let groupKey = null;
-
-        for (const existingKey of Object.keys(urlGroups)) {
-          if (urlsMatch(item.url, existingKey)) {
-            groupKey = existingKey;
-            break;
-          }
-        }
-
-        if (!groupKey) {
-          groupKey = item.url;
-          urlGroups[groupKey] = [];
-        }
-
-        urlGroups[groupKey].push(item);
-        usageCounts[groupKey] = (usageCounts[groupKey] || 0) + 1;
-      }
-    });
-
-    const uniqueMedia = {};
-    Object.keys(urlGroups).forEach((groupKey) => {
-      const group = urlGroups[groupKey];
-      const firstItem = group[0];
-
-      uniqueMedia[groupKey] = {
-        ...firstItem,
-        usageCount: usageCounts[groupKey] || 1,
-      };
-    });
-
-    const result = Object.values(uniqueMedia);
-
-    this._usageCountCache = result;
-    this._lastUsageCountParams = currentParams;
-
-    return result;
-  }
+  // REMOVED: addUsageCountToMediaFromProcessedData function
+  // Usage counts are now calculated during initial processing in processMediaData()
+  // This eliminates the 7+ second delay on every filter change
 
   getProgressiveLimit() {
     return this._currentView === 'grid' ? 500 : 750;
@@ -562,7 +571,8 @@ class MediaLibrary extends LocalizableElement {
   }
 
   get filterCounts() {
-    return this._processedData?.filterCounts || {};
+    const counts = this._processedData?.filterCounts || {};
+    return counts;
   }
 
   get isUIdisabled() {
@@ -748,27 +758,31 @@ class MediaLibrary extends LocalizableElement {
       `;
     }
 
-    const mediaWithUsageCount = this.addUsageCountToMedia(this.filteredMediaData);
+    // Usage counts are now pre-calculated during initial processing
+    // No need for expensive addUsageCountToMediaFromProcessedData function
+    const mediaWithUsageCount = this.filteredMediaData;
 
-    return this._currentView === 'list'
-      ? html`
-          <media-list
-            .mediaData=${mediaWithUsageCount}
-            .searchQuery=${this._searchQuery}
-            .locale=${this.locale}
-            @mediaClick=${this.handleMediaClick}
-            @mediaAction=${this.handleMediaAction}
-          ></media-list>
-        `
-      : html`
-          <media-grid
-            .mediaData=${mediaWithUsageCount}
-            .searchQuery=${this._searchQuery}
-            .locale=${this.locale}
-            @mediaClick=${this.handleMediaClick}
-            @mediaAction=${this.handleMediaAction}
-          ></media-grid>
-        `;
+    if (this._currentView === 'list') {
+      return html`
+        <media-list
+          .mediaData=${mediaWithUsageCount}
+          .searchQuery=${this._searchQuery}
+          .locale=${this.locale}
+          @mediaClick=${this.handleMediaClick}
+          @mediaAction=${this.handleMediaAction}
+        ></media-list>
+      `;
+    }
+
+    return html`
+      <media-grid
+        .mediaData=${mediaWithUsageCount}
+        .searchQuery=${this._searchQuery}
+        .locale=${this.locale}
+        @mediaClick=${this.handleMediaClick}
+        @mediaAction=${this.handleMediaAction}
+      ></media-grid>
+    `;
   }
 }
 

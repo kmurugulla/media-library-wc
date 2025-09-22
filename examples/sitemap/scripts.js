@@ -1,5 +1,7 @@
+/* eslint-disable no-console, no-alert, no-restricted-globals */
 import { waitForMediaLibraryReady } from '../../dist/media-library.es.js';
 import { SitemapSource } from '../../sources/index.js';
+import BrowserStorage from '../../src/utils/storage.js';
 
 let mediaLibrary;
 
@@ -21,7 +23,6 @@ function showNotification(message, type = 'info') {
 
 async function loadAvailableSites() {
   try {
-    const BrowserStorage = mediaLibrary.storageManager.constructor;
     const indexDBStorage = new BrowserStorage('indexeddb');
 
     const sites = await indexDBStorage.getAllSites();
@@ -45,19 +46,20 @@ async function loadAvailableSites() {
       option.textContent = 'No sites found';
       option.disabled = true;
       siteSelector.appendChild(option);
-      // Hide both buttons when no sites are available
       deleteSiteBtn.style.display = 'none';
       clearStorageBtn.style.display = 'none';
     } else {
-      // Show clear storage button when sites are available
       clearStorageBtn.style.display = 'inline-block';
-      // Hide delete site button initially (will show when site is selected)
       deleteSiteBtn.style.display = 'none';
     }
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('Failed to load available sites:', error);
-    showNotification(`Failed to load sites: ${error.message}`, 'error');
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+    });
+    showNotification('Failed to load sites: Check console for details', 'error');
   }
 }
 
@@ -129,27 +131,49 @@ async function performSitemapScan() {
 
     const siteKey = new URL(normalizedWebsiteUrl || normalizedSitemapUrl).hostname;
     scanBtn.textContent = 'Scanning...';
-    const mediaData = await mediaLibrary.loadFromPageList(pageList, null, siteKey, true);
+
+    mediaLibrary.storage = 'indexeddb';
+    await mediaLibrary.initialize();
+
+    const siteStorageManager = new BrowserStorage('indexeddb', siteKey);
+    mediaLibrary.storageManager = siteStorageManager;
+
+    const existingMediaData = await siteStorageManager.load();
+
+    const previousMetadata = await siteStorageManager.loadScanMetadata();
+
+    const changedPages = previousMetadata
+      ? source.filterChangedUrls(pageList, previousMetadata)
+      : pageList;
+
+    if (changedPages.length === 0) {
+      showNotification('No changes detected - scan not needed', 'info');
+      return;
+    }
+
+    const shouldSaveMedia = document.getElementById('storage-type').value === 'indexeddb';
+    const mediaData = await mediaLibrary.loadFromPageList(
+      changedPages,
+      null,
+      siteKey,
+      shouldSaveMedia,
+      previousMetadata,
+      pageList,
+      existingMediaData,
+    );
 
     showNotification(`Scan complete! Found ${mediaData.length} media files.`, 'success');
   } catch (error) {
-    let errorMessage = error.message;
+    console.error('Sitemap scan failed:', error);
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      websiteUrl,
+      sitemapUrl,
+    });
 
-    if (error.message.includes('CORS')) {
-      errorMessage = 'CORS Error: Unable to fetch content due to CORS restrictions. Try a different website.';
-    } else if (error.message.includes('Failed to fetch')) {
-      errorMessage = 'Network Error: Please check your internet connection and try again.';
-    } else if (error.message.includes('Invalid URL')) {
-      errorMessage = 'Invalid URL: Please enter a valid website URL.';
-    } else if (error.message.includes('No sitemap found')) {
-      errorMessage = 'No sitemap found: This website may not have a sitemap.xml file.';
-    } else if (error.message.includes('Proxy Error')) {
-      errorMessage = `Error: ${error.message}`;
-    }
-
-    showNotification(`Scan failed: ${errorMessage}`, 'error');
-    // eslint-disable-next-line no-console
-    console.error('Scan error:', error);
+    showNotification('Scan failed: Check console for detailed error information', 'error');
   } finally {
     const btn = document.getElementById('scan-btn');
     btn.disabled = false;
@@ -166,18 +190,15 @@ function setupControls() {
   const deleteSiteBtn = document.getElementById('delete-site-btn');
   const clearStorageBtn = document.getElementById('clear-storage-btn');
 
-  storageSelect.addEventListener('change', (e) => {
+  storageSelect.addEventListener('change', async (e) => {
     const previousStorage = mediaLibrary.storage;
     const newStorage = e.target.value;
 
     mediaLibrary.storage = newStorage;
 
-    const BrowserStorage = mediaLibrary.storageManager.constructor;
-    mediaLibrary.storageManager = new BrowserStorage(newStorage);
+    await mediaLibrary.clearData();
 
-    mediaLibrary.clearData();
-
-    if (previousStorage !== 'indexdb' && newStorage === 'indexdb') {
+    if (previousStorage !== 'indexeddb' && newStorage === 'indexeddb') {
       showNotification('Switched to IndexDB storage - future scans will be saved', 'info');
     }
 
@@ -191,13 +212,28 @@ function setupControls() {
   siteSelector.addEventListener('change', async (e) => {
     const selectedSite = e.target.value;
     if (selectedSite) {
-      await mediaLibrary.loadFromStorage(selectedSite);
-      showNotification(`Loaded data for site: ${selectedSite}`, 'success');
-      // Show delete button when a site is selected
-      deleteSiteBtn.style.display = 'inline-block';
+      try {
+        const siteStorageManager = new BrowserStorage('indexeddb', selectedSite);
+
+        const mediaData = await siteStorageManager.load();
+        const metadata = await siteStorageManager.loadScanMetadata();
+
+        await mediaLibrary.loadMediaData(mediaData, null, false, metadata);
+
+        showNotification(`Loaded data for site: ${selectedSite}`, 'success');
+        deleteSiteBtn.style.display = 'inline-block';
+      } catch (error) {
+        console.error(`Failed to load data for site: ${selectedSite}`, error);
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+          selectedSite,
+        });
+        showNotification('Failed to load site data: Check console for details', 'error');
+      }
     } else {
-      mediaLibrary.clearData();
-      // Hide delete button when no site is selected
+      await mediaLibrary.clearData();
       deleteSiteBtn.style.display = 'none';
     }
   });
@@ -209,61 +245,61 @@ function setupControls() {
   deleteSiteBtn.addEventListener('click', async () => {
     const selectedSite = siteSelector.value;
     if (selectedSite) {
-      // eslint-disable-next-line no-alert, no-restricted-globals
       const confirmed = confirm(`Are you sure you want to delete all data for "${selectedSite}"? This action cannot be undone.`);
       if (confirmed) {
         try {
-          const BrowserStorage = mediaLibrary.storageManager.constructor;
           const indexDBStorage = new BrowserStorage('indexeddb');
-          await indexDBStorage.deleteSite(selectedSite);
+          await indexDBStorage.deleteSiteFromIndexedDB(selectedSite);
           showNotification(`Deleted data for site: ${selectedSite}`, 'success');
 
-          // Clear the current display if the deleted site was loaded
-          mediaLibrary.clearData();
+          await mediaLibrary.clearData();
 
-          // Reload the sites list
           await loadAvailableSites();
 
-          // Reset the site selector
           siteSelector.value = '';
         } catch (error) {
-          showNotification(`Failed to delete site data: ${error.message}`, 'error');
+          console.error(`Failed to delete site data: ${selectedSite}`, error);
+          console.error('Error details:', {
+            message: error.message,
+            stack: error.stack,
+            name: error.name,
+            selectedSite,
+          });
+          showNotification('Failed to delete site data: Check console for details', 'error');
         }
       }
     }
   });
 
   clearStorageBtn.addEventListener('click', async () => {
-    // eslint-disable-next-line no-alert, no-restricted-globals
     const confirmed = confirm('Are you sure you want to clear ALL stored data? This action cannot be undone.');
     if (confirmed) {
       try {
-        const BrowserStorage = mediaLibrary.storageManager.constructor;
         const indexDBStorage = new BrowserStorage('indexeddb');
-        await indexDBStorage.clear();
+        await indexDBStorage.clearAllSites();
         showNotification('All stored data cleared successfully', 'success');
 
-        // Clear the current display
-        mediaLibrary.clearData();
+        await mediaLibrary.clearData();
 
-        // Reload the sites list
         await loadAvailableSites();
 
-        // Reset the site selector
         siteSelector.value = '';
       } catch (error) {
-        showNotification(`Failed to clear storage: ${error.message}`, 'error');
+        console.error('Failed to clear storage:', error);
+        console.error('Error details:', {
+          message: error.message,
+          stack: error.stack,
+          name: error.name,
+        });
+        showNotification('Failed to clear storage: Check console for details', 'error');
       }
     }
   });
 
-  // Add event listeners for URL inputs to show toggle when user is about to scan
   const websiteUrlInput = document.getElementById('website-url');
   const sitemapUrlInput = document.getElementById('sitemap-url');
 
   const handleUrlChange = () => {
-    // Show toggle when user changes URL (indicating they want to scan)
-    // Access the private property through the component's internal state
     if (mediaLibrary.showAnalysisToggle === false) {
       mediaLibrary.showAnalysisToggle = true;
       mediaLibrary.requestUpdate();
@@ -350,15 +386,18 @@ function applyURLParameters() {
 
     showNotification('Configuration loaded from URL parameters', 'info');
   } catch (error) {
-    // eslint-disable-next-line no-console
     console.error('Error applying URL parameters:', error);
-    showNotification(`Error loading URL parameters: ${error.message}`, 'error');
+    console.error('Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name,
+      params,
+    });
+    showNotification('Error loading URL parameters: Check console for details', 'error');
   }
 }
 
 window.refreshSites = loadAvailableSites;
-
-// Legacy function removed - functionality replaced by new storage management buttons
 
 document.addEventListener('DOMContentLoaded', async () => {
   mediaLibrary = document.getElementById('media-library');
