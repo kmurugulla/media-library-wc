@@ -2,18 +2,22 @@
 
 A browser-based media library web component that scans websites for media files and provides a searchable, filterable interface for managing digital assets.
 
-## Features
+## Getting Started
 
-| Feature | Description |
-|---------|-------------|
-| **Browser-Only** | No server dependencies - everything runs in the browser |
-| **Real-Time Scanning** | Live progress updates with media preview during scan |
-| **Smart Categorization** | Automatic categorization (People, Graphics & UI, Logos, Products) |
-| **Advanced Filtering** | Filter by categories, media types, and accessibility status |
-| **Dual Views** | Grid and list views with responsive layouts |
-| **Local Storage** | Uses IndexedDB or localStorage for data persistence |
-| **Multi-Source Support** | Sitemap, WordPress, AEM, Adobe DA integration |
-| **Accessibility** | WCAG compliant with keyboard navigation and screen reader support |
+```bash
+# Clone the repository
+git clone https://github.com/kmurugulla/media-library-wc.git
+cd media-library-wc
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Build for production
+npm run build
+```
 
 ## For Users
 
@@ -102,22 +106,16 @@ index.html?source=wordpress&url=https://myblog.com&storage=local&autoscan=true
 index.html?source=aem&org=mycompany&repo=website&autoscan=true
 ```
 
-## Development
+## Features
 
-### Getting Started
-
-```bash
-# Clone the repository
-git clone https://github.com/your-org/media-library.git
-cd media-library
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
-
-# Build for production
-npm run build
-```
+| Feature | Description |
+|---------|-------------|
+| **Browser-Only** | No server dependencies - everything runs in the browser |
+| **Real-Time Scanning** | Live progress updates with media preview during scan |
+| **Smart Categorization** | Automatic categorization (People, Graphics & UI, Logos, Products) |
+| **Advanced Filtering** | Filter by categories, media types, and accessibility status |
+| **Dual Views** | Grid and list views with responsive layouts |
+| **Local Storage** | Uses IndexedDB or localStorage for data persistence |
+| **Multi-Source Support** | Sitemap, WordPress, AEM, Adobe DA integration |
+| **Accessibility** | WCAG compliant with keyboard navigation and screen reader support |
 
