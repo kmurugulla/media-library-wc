@@ -2,6 +2,8 @@
 
 A browser-based media library web component that scans websites for media files and provides a searchable, filterable interface for managing digital assets.
 
+![Media Library Architecture](./media-library.jpg)
+
 ## Getting Started
 
 ```bash
