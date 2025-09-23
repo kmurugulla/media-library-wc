@@ -123,7 +123,10 @@ class BrowserStorage {
   async load() {
     switch (this.type) {
       case 'indexeddb':
-        return this.loadRawDataBySite();
+        const data = await this.loadRawDataBySite();
+        
+        
+        return data;
       case 'none':
         return [];
       default:

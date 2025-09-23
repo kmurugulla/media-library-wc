@@ -597,6 +597,7 @@ export async function processMediaData(mediaData, onProgress = null) {
     return initializeProcessedData();
   }
 
+
   const currentHash = createDataHash(mediaData);
   if (processedDataCache && lastProcessedDataHash === currentHash) {
     return processedDataCache;

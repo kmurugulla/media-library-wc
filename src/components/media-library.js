@@ -169,6 +169,7 @@ class MediaLibrary extends LocalizableElement {
       const key = siteKey || 'media-data';
       const data = await this.storageManager.load(key);
 
+
       if (data && data.length > 0) {
         this._mediaData = data;
         this._processedData = await processMediaData(data);
@@ -176,6 +177,11 @@ class MediaLibrary extends LocalizableElement {
         this._mediaData = [];
         this._processedData = await processMediaData([]);
       }
+
+      // Reset scanning state to prevent progressive loading from interfering
+      this._isScanning = false;
+      this._isBatchLoading = false;
+      this._progressiveMediaData = [];
 
       this._filteredDataCache = null;
       this._lastFilterParams = null;
@@ -187,6 +193,12 @@ class MediaLibrary extends LocalizableElement {
     } catch (error) {
       this._mediaData = [];
       this._processedData = await processMediaData([]);
+      
+      // Reset scanning state to prevent progressive loading from interfering
+      this._isScanning = false;
+      this._isBatchLoading = false;
+      this._progressiveMediaData = [];
+      
       if (error.name !== 'NotFoundError' && !error.message.includes('object store')) {
         this._error = this.t('errors.loadFailed');
       }
@@ -324,6 +336,7 @@ class MediaLibrary extends LocalizableElement {
         return isNotInReparseList;
       });
 
+
       const completeMediaData = [...filteredExistingMedia, ...newMediaItems];
 
       if (saveToStorage) {
@@ -435,9 +448,11 @@ class MediaLibrary extends LocalizableElement {
       // Set scanning to false and update the UI
       this._isScanning = false;
       this._isBatchLoading = false;
+      this._progressiveMediaData = []; // Clear progressive data
       this._scanProgress = null;
       this._lastScanDuration = durationSeconds;
       this._totalPages = totalPages;
+      
 
       this.updateAnalysisToggleVisibility();
 
@@ -538,9 +553,21 @@ class MediaLibrary extends LocalizableElement {
         this._searchQuery,
         this.selectedDocument,
       );
-      this._filteredDataCache = filteredData;
+      
+      // Deduplicate by URL - keep only one instance per unique URL
+      const deduplicatedData = [];
+      const seenUrls = new Set();
+      
+      filteredData.forEach(item => {
+        if (item.url && !seenUrls.has(item.url)) {
+          seenUrls.add(item.url);
+          deduplicatedData.push(item);
+        }
+      });
+      
+      this._filteredDataCache = deduplicatedData;
       this._lastFilterParams = currentParams;
-      return filteredData;
+      return deduplicatedData;
     }
 
     const filteredData = calculateFilteredMediaDataFromIndex(
@@ -551,10 +578,22 @@ class MediaLibrary extends LocalizableElement {
       this.selectedDocument,
     );
 
-    this._filteredDataCache = filteredData;
+    // Deduplicate by URL - keep only one instance per unique URL
+    const deduplicatedData = [];
+    const seenUrls = new Set();
+    
+    filteredData.forEach(item => {
+      if (item.url && !seenUrls.has(item.url)) {
+        seenUrls.add(item.url);
+        deduplicatedData.push(item);
+      }
+    });
+
+
+    this._filteredDataCache = deduplicatedData;
     this._lastFilterParams = currentParams;
 
-    return filteredData;
+    return deduplicatedData;
   }
 
   // REMOVED: addUsageCountToMediaFromProcessedData function
