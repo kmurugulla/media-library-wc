@@ -1,4 +1,4 @@
-import { waitForMediaLibraryReady } from '../../dist/media-library.es.js';
+import { waitForMediaLibraryReady, createStorage } from '../../dist/media-library.es.js';
 import { WordPressSource } from '../../sources/index.js';
 
 let mediaLibrary;
@@ -30,12 +30,10 @@ function normalizeUrl(url) {
 
 async function loadAvailableSites() {
   try {
-    // Always create a temporary IndexDB storage manager to check for available sites
-    // This is independent of the current storage setting
-    const BrowserStorage = mediaLibrary.storageManager.constructor;
-    const indexDBStorage = new BrowserStorage('indexeddb');
+    const storageType = document.getElementById('storage-type').value || 'indexeddb';
+    const storage = createStorage(storageType);
 
-    const sites = await indexDBStorage.getAllSites();
+    const sites = await storage.getAllSites();
 
     const siteSelector = document.getElementById('site-selector');
     const deleteSiteBtn = document.getElementById('delete-site-btn');
@@ -144,21 +142,21 @@ function setupControls() {
   const configToggleBtn = document.getElementById('config-toggle-btn');
   const configSection = document.getElementById('config-section');
 
-  storageSelect.addEventListener('change', (e) => {
+  storageSelect.addEventListener('change', async (e) => {
     const previousStorage = mediaLibrary.storage;
     const newStorage = e.target.value;
 
     mediaLibrary.storage = newStorage;
 
-    // Recreate the storage manager with the new type
-    const BrowserStorage = mediaLibrary.storageManager.constructor;
-    mediaLibrary.storageManager = new BrowserStorage(newStorage);
+    // Recreate storage manager with new storage type
+    mediaLibrary.storageManager = createStorage(newStorage);
 
     await mediaLibrary.clearData();
 
-    // Only show notification when switching to IndexDB (most important change)
-    if (previousStorage !== 'indexdb' && newStorage === 'indexdb') {
+    if (previousStorage !== 'indexeddb' && newStorage === 'indexeddb') {
       showNotification('Switched to IndexDB storage - future scans will be saved', 'info');
+    } else if (previousStorage !== 'r2' && newStorage === 'r2') {
+      showNotification('Switched to R2 storage - future scans will be saved to cloud', 'info');
     }
 
     loadAvailableSites();
@@ -197,9 +195,9 @@ function setupControls() {
       const confirmed = confirm(`Are you sure you want to delete all data for "${selectedSite}"? This action cannot be undone.`);
       if (confirmed) {
         try {
-          const BrowserStorage = mediaLibrary.storageManager.constructor;
-          const indexDBStorage = new BrowserStorage('indexeddb');
-          await indexDBStorage.deleteSite(selectedSite);
+          const storageType = document.getElementById('storage-type').value || 'indexeddb';
+          const storage = createStorage(storageType);
+          await storage.deleteSite(selectedSite);
           showNotification(`Deleted data for site: ${selectedSite}`, 'success');
 
           // Clear the current display if the deleted site was loaded

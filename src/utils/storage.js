@@ -1,4 +1,5 @@
 import logger from './logger.js';
+import R2Storage from './r2-storage.js';
 
 class BrowserStorage {
   constructor(type = 'indexeddb', siteKey = null) {
@@ -122,11 +123,10 @@ class BrowserStorage {
 
   async load() {
     switch (this.type) {
-      case 'indexeddb':
+      case 'indexeddb': {
         const data = await this.loadRawDataBySite();
-        
-        
         return data;
+      }
       case 'none':
         return [];
       default:
@@ -631,4 +631,14 @@ class BrowserStorage {
   }
 }
 
+export function createStorage(type = 'indexeddb', siteKey = null) {
+  if (type === 'r2') {
+    const r2Storage = new R2Storage(type, siteKey);
+    return r2Storage;
+  }
+  const browserStorage = new BrowserStorage(type, siteKey);
+  return browserStorage;
+}
+
+export { BrowserStorage };
 export default BrowserStorage;

@@ -12,9 +12,9 @@
   ],
   "exports": {
     ".": {
+      "types": "./dist/media-library.d.ts",
       "import": "./dist/media-library.es.js",
-      "require": "./dist/media-library.umd.js",
-      "types": "./dist/media-library.d.ts"
+      "require": "./dist/media-library.umd.js"
     },
     "./styles": "./dist/style.css",
     "./locales/*": "./locales/*.json"

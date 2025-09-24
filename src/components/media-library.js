@@ -1,7 +1,7 @@
 import { html } from 'lit';
 import LocalizableElement from './base-localizable.js';
 import i18n from '../utils/i18n.js';
-import BrowserStorage from '../utils/storage.js';
+import { createStorage } from '../utils/storage.js';
 import ContentParser from '../utils/parser.js';
 import { processMediaData, calculateFilteredMediaData, calculateFilteredMediaDataFromIndex, getGroupingKey } from '../utils/filters.js';
 import { copyMediaToClipboard, urlsMatch } from '../utils/utils.js';
@@ -20,6 +20,7 @@ class MediaLibrary extends LocalizableElement {
   static properties = {
     storage: { type: String },
     locale: { type: String },
+    mode: { type: String },
     _mediaData: { state: true },
     _error: { state: true },
     _searchQuery: { state: true },
@@ -43,6 +44,7 @@ class MediaLibrary extends LocalizableElement {
     super();
     this.storage = 'none';
     this.locale = 'en';
+    this.mode = 'live';
     this._mediaData = [];
     this._error = null;
     this._searchQuery = '';
@@ -110,7 +112,12 @@ class MediaLibrary extends LocalizableElement {
     await i18n.loadLocale(this.locale);
     i18n.setLocale(this.locale);
 
-    this.storageManager = new BrowserStorage(this.storage);
+    this.storageManager = createStorage(this.storage);
+
+    // Set the correct mode for R2Storage
+    if (this.storageManager && this.storageManager.setMode) {
+      this.storageManager.setMode(this.mode);
+    }
     this.contentParser = new ContentParser({
       enableImageAnalysis: this._imageAnalysisEnabled,
       enableCategorization: true,
@@ -166,9 +173,16 @@ class MediaLibrary extends LocalizableElement {
         return;
       }
 
-      const key = siteKey || 'media-data';
-      const data = await this.storageManager.load(key);
+      this._isBatchLoading = true;
+      this.requestUpdate();
 
+      let data;
+      if (this.storage === 'r2') {
+        data = await this.storageManager.loadMediaUsages(this.mode);
+      } else {
+        const key = siteKey || 'media-data';
+        data = await this.storageManager.load(key);
+      }
 
       if (data && data.length > 0) {
         this._mediaData = data;
@@ -193,12 +207,12 @@ class MediaLibrary extends LocalizableElement {
     } catch (error) {
       this._mediaData = [];
       this._processedData = await processMediaData([]);
-      
+
       // Reset scanning state to prevent progressive loading from interfering
       this._isScanning = false;
       this._isBatchLoading = false;
       this._progressiveMediaData = [];
-      
+
       if (error.name !== 'NotFoundError' && !error.message.includes('object store')) {
         this._error = this.t('errors.loadFailed');
       }
@@ -246,7 +260,11 @@ class MediaLibrary extends LocalizableElement {
       let currentExistingMediaData = existingMediaData || this._mediaData || [];
 
       if (previousMetadata && currentExistingMediaData.length === 0) {
-        currentExistingMediaData = await this.storageManager.load() || [];
+        if (this.storage === 'r2') {
+          currentExistingMediaData = await this.storageManager.loadMediaUsages(this.mode) || [];
+        } else {
+          currentExistingMediaData = await this.storageManager.load() || [];
+        }
       }
 
       // Initialize progressive media data with existing media for incremental scans
@@ -287,7 +305,10 @@ class MediaLibrary extends LocalizableElement {
               // Update usage counts for existing items
               latestItems.forEach((newItem) => {
                 const groupingKey = getGroupingKey(newItem.url);
-                const existingItem = this._progressiveMediaData.find((item) => getGroupingKey(item.url) === groupingKey);
+                const existingItem = this._progressiveMediaData.find((item) => {
+                  const itemGroupingKey = getGroupingKey(item.url);
+                  return itemGroupingKey === groupingKey;
+                });
                 if (existingItem) {
                   existingItem.usageCount = (existingItem.usageCount || 1) + 1;
                   hasUpdates = true;
@@ -336,11 +357,14 @@ class MediaLibrary extends LocalizableElement {
         return isNotInReparseList;
       });
 
-
       const completeMediaData = [...filteredExistingMedia, ...newMediaItems];
 
       if (saveToStorage) {
-        await this.storageManager.save(completeMediaData);
+        if (this.storage === 'r2') {
+          await this.storageManager.saveMediaUsages(completeMediaData, this.mode);
+        } else {
+          await this.storageManager.save(completeMediaData);
+        }
       }
 
       const metadataPageList = completePageList || pageList;
@@ -436,7 +460,11 @@ class MediaLibrary extends LocalizableElement {
       const totalPages = existingMetadata ? existingMetadata.totalPages : 0;
 
       if (saveToStorage && siteKey) {
-        await this.storageManager.save(mediaData);
+        if (this.storage === 'r2') {
+          await this.storageManager.saveMediaUsages(mediaData, this.mode);
+        } else {
+          await this.storageManager.save(mediaData);
+        }
         await this.storageManager.saveScanMetadata({
           totalPages: 0,
           pageLastModified: {},
@@ -452,7 +480,6 @@ class MediaLibrary extends LocalizableElement {
       this._scanProgress = null;
       this._lastScanDuration = durationSeconds;
       this._totalPages = totalPages;
-      
 
       this.updateAnalysisToggleVisibility();
 
@@ -553,18 +580,18 @@ class MediaLibrary extends LocalizableElement {
         this._searchQuery,
         this.selectedDocument,
       );
-      
+
       // Deduplicate by URL - keep only one instance per unique URL
       const deduplicatedData = [];
       const seenUrls = new Set();
-      
-      filteredData.forEach(item => {
+
+      filteredData.forEach((item) => {
         if (item.url && !seenUrls.has(item.url)) {
           seenUrls.add(item.url);
           deduplicatedData.push(item);
         }
       });
-      
+
       this._filteredDataCache = deduplicatedData;
       this._lastFilterParams = currentParams;
       return deduplicatedData;
@@ -581,14 +608,13 @@ class MediaLibrary extends LocalizableElement {
     // Deduplicate by URL - keep only one instance per unique URL
     const deduplicatedData = [];
     const seenUrls = new Set();
-    
-    filteredData.forEach(item => {
+
+    filteredData.forEach((item) => {
       if (item.url && !seenUrls.has(item.url)) {
         seenUrls.add(item.url);
         deduplicatedData.push(item);
       }
     });
-
 
     this._filteredDataCache = deduplicatedData;
     this._lastFilterParams = currentParams;
@@ -808,6 +834,16 @@ class MediaLibrary extends LocalizableElement {
           <div class="loading-spinner"></div>
           <h3>Discovering Media</h3>
           <p>Scanning pages and extracting media files...</p>
+        </div>
+      `;
+    }
+
+    if (this._isBatchLoading) {
+      return html`
+        <div class="loading-state">
+          <div class="loading-spinner"></div>
+          <h3>Loading Media</h3>
+          <p>Loading media data from storage...</p>
         </div>
       `;
     }

@@ -1,7 +1,7 @@
 
 import '../../dist/media-library.es.js';
 import { EDSSource } from '../../sources/index.js';
-import { waitForMediaLibraryReady } from '../../dist/media-library.es.js';
+import { waitForMediaLibraryReady, createStorage } from '../../dist/media-library.es.js';
 
 let mediaLibrary;
 
@@ -12,21 +12,21 @@ function setupControls() {
   const scanBtn = document.getElementById('scan-btn');
   const clearBtn = document.getElementById('clear-btn');
 
-  storageSelect.addEventListener('change', (e) => {
+  storageSelect.addEventListener('change', async (e) => {
     const previousStorage = mediaLibrary.storage;
     const newStorage = e.target.value;
     
     mediaLibrary.storage = newStorage;
     
-    // Recreate the storage manager with the new type
-    const BrowserStorage = mediaLibrary.storageManager.constructor;
-    mediaLibrary.storageManager = new BrowserStorage(newStorage);
+    // Recreate storage manager with new storage type
+    mediaLibrary.storageManager = createStorage(newStorage);
     
     await mediaLibrary.clearData();
     
-    // Only show notification when switching to IndexDB (most important change)
-    if (previousStorage !== 'indexdb' && newStorage === 'indexdb') {
+    if (previousStorage !== 'indexeddb' && newStorage === 'indexeddb') {
       showNotification('Switched to IndexDB storage - future scans will be saved', 'info');
+    } else if (previousStorage !== 'r2' && newStorage === 'r2') {
+      showNotification('Switched to R2 storage - future scans will be saved to cloud', 'info');
     }
     
     loadAvailableSites();
@@ -149,12 +149,10 @@ async function performEDSScan() {
 
 async function loadAvailableSites() {
   try {
-    // Always create a temporary IndexDB storage manager to check for available sites
-    // This is independent of the current storage setting
-    const BrowserStorage = mediaLibrary.storageManager.constructor;
-    const indexDBStorage = new BrowserStorage('indexeddb');
+    const storageType = document.getElementById('storage-type').value || 'indexeddb';
+    const storage = createStorage(storageType);
 
-    const sites = await indexDBStorage.getAllSites();
+    const sites = await storage.getAllSites();
 
     const siteSelector = document.getElementById('site-selector');
     siteSelector.innerHTML = '<option value="">Select a site...</option>';
