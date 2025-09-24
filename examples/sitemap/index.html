@@ -51,6 +51,7 @@
                         <label for="storage-type">Storage:</label>
                         <select id="storage-type">
                             <option value="indexeddb">Local IndexDB</option>
+                            <option value="r2">Cloudflare R2</option>
                             <option value="none">None</option>
                         </select>
                     </div>
@@ -94,7 +95,8 @@
             <div class="media-library-container">
                 <media-library 
                     id="media-library"
-                    storage="indexeddb"
+                    storage="none"
+                    mode="live"
                     locale="en">
                 </media-library>
             </div>

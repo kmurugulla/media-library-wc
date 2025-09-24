@@ -1,7 +1,7 @@
 /* eslint-disable no-console, no-alert, no-restricted-globals */
 import { waitForMediaLibraryReady } from '../../dist/media-library.es.js';
 import { SitemapSource } from '../../sources/index.js';
-import BrowserStorage from '../../src/utils/storage.js';
+import { createStorage } from '../../src/utils/storage.js';
 
 let mediaLibrary;
 
@@ -23,9 +23,10 @@ function showNotification(message, type = 'info') {
 
 async function loadAvailableSites() {
   try {
-    const indexDBStorage = new BrowserStorage('indexeddb');
+    const storageType = document.getElementById('storage-type').value || 'indexeddb';
+    const storage = createStorage(storageType);
 
-    const sites = await indexDBStorage.getAllSites();
+    const sites = await storage.getAllSites();
 
     const siteSelector = document.getElementById('site-selector');
     const deleteSiteBtn = document.getElementById('delete-site-btn');
@@ -72,6 +73,8 @@ function normalizeUrl(url) {
     normalizedUrl = `https://${normalizedUrl}`;
   }
 
+  // eslint-disable-next-line no-console
+  console.log('Normalized URL:', normalizedUrl);
   return normalizedUrl;
 }
 
@@ -132,10 +135,13 @@ async function performSitemapScan() {
     const siteKey = new URL(normalizedWebsiteUrl || normalizedSitemapUrl).hostname;
     scanBtn.textContent = 'Scanning...';
 
-    mediaLibrary.storage = 'indexeddb';
+    // Use the selected storage type instead of hardcoding IndexedDB
+    const selectedStorageType = document.getElementById('storage-type').value || 'indexeddb';
+
+    mediaLibrary.storage = selectedStorageType;
     await mediaLibrary.initialize();
 
-    const siteStorageManager = new BrowserStorage('indexeddb', siteKey);
+    const siteStorageManager = createStorage(selectedStorageType, siteKey);
     mediaLibrary.storageManager = siteStorageManager;
 
     const existingMediaData = await siteStorageManager.load();
@@ -159,7 +165,7 @@ async function performSitemapScan() {
       return;
     }
 
-    const shouldSaveMedia = document.getElementById('storage-type').value === 'indexeddb';
+    const shouldSaveMedia = document.getElementById('storage-type').value !== 'none';
     const mediaData = await mediaLibrary.loadFromPageList(
       changedPages,
       null,
@@ -204,10 +210,15 @@ function setupControls() {
 
     mediaLibrary.storage = newStorage;
 
+    // Recreate storage manager with new storage type
+    mediaLibrary.storageManager = createStorage(newStorage);
+
     await mediaLibrary.clearData();
 
     if (previousStorage !== 'indexeddb' && newStorage === 'indexeddb') {
       showNotification('Switched to IndexDB storage - future scans will be saved', 'info');
+    } else if (previousStorage !== 'r2' && newStorage === 'r2') {
+      showNotification('Switched to R2 storage - future scans will be saved to cloud', 'info');
     }
 
     loadAvailableSites();
@@ -221,7 +232,8 @@ function setupControls() {
     const selectedSite = e.target.value;
     if (selectedSite) {
       try {
-        const siteStorageManager = new BrowserStorage('indexeddb', selectedSite);
+        const storageType = document.getElementById('storage-type').value || 'indexeddb';
+        const siteStorageManager = createStorage(storageType, selectedSite);
 
         const mediaData = await siteStorageManager.load();
         const metadata = await siteStorageManager.loadScanMetadata();
@@ -256,8 +268,9 @@ function setupControls() {
       const confirmed = confirm(`Are you sure you want to delete all data for "${selectedSite}"? This action cannot be undone.`);
       if (confirmed) {
         try {
-          const indexDBStorage = new BrowserStorage('indexeddb');
-          await indexDBStorage.deleteSiteFromIndexedDB(selectedSite);
+          const storageType = document.getElementById('storage-type').value || 'indexeddb';
+          const storage = createStorage(storageType);
+          await storage.deleteSite(selectedSite);
           showNotification(`Deleted data for site: ${selectedSite}`, 'success');
 
           await mediaLibrary.clearData();
@@ -283,8 +296,9 @@ function setupControls() {
     const confirmed = confirm('Are you sure you want to clear ALL stored data? This action cannot be undone.');
     if (confirmed) {
       try {
-        const indexDBStorage = new BrowserStorage('indexeddb');
-        await indexDBStorage.clearAllSites();
+        const storageType = document.getElementById('storage-type').value || 'indexeddb';
+        const storage = createStorage(storageType);
+        await storage.clearAllSites();
         showNotification('All stored data cleared successfully', 'success');
 
         await mediaLibrary.clearData();

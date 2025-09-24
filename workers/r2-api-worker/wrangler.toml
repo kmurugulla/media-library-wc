@@ -1,0 +1,7 @@
+name = "r2-api-worker"
+main = "index.js"
+compatibility_date = "2023-09-24"
+
+[[r2_buckets]]
+binding = "R2_BUCKET"
+bucket_name = "media-library"

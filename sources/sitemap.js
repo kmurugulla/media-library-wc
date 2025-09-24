@@ -33,7 +33,21 @@ class SitemapSource {
     }
 
     try {
-      return await fetch(url, options);
+      const response = await fetch(url, options);
+      
+      // Check for Cloudflare protection
+      if (response.status === 403) {
+        const text = await response.text();
+        if (text.includes('Cloudflare') || text.includes('Attention Required')) {
+          throw new Error(
+            `Website is protected by Cloudflare security measures. `
+            + 'Please use the direct sitemap URL instead of the website URL. '
+            + 'Try entering the full sitemap URL (e.g., https://www.durysta.com/sitemap.xml) in the "Direct Sitemap URL" field.',
+          );
+        }
+      }
+      
+      return response;
     } catch (error) {
       const isCorsError = error.message.includes('CORS')
                          || error.message.includes('Failed to fetch')
@@ -47,6 +61,16 @@ class SitemapSource {
           if (response.ok) {
             return response;
           }
+          
+          // Check if proxy also gets Cloudflare protection
+          const text = await response.text();
+          if (text.includes('Cloudflare') || text.includes('Attention Required')) {
+            throw new Error(
+              `Website is protected by Cloudflare security measures. `
+              + 'Please use the direct sitemap URL instead of the website URL. '
+              + 'Try entering the full sitemap URL (e.g., https://www.durysta.com/sitemap.xml) in the "Direct Sitemap URL" field.',
+            );
+          }
         } catch (proxyError) {
           // eslint-disable-next-line no-console
           console.warn('CORS proxy failed:', proxyError.message);
@@ -54,8 +78,10 @@ class SitemapSource {
 
         throw new Error(
           `Failed to fetch ${url} due to CORS restrictions. `
-          + 'Direct fetch and CORS proxy failed. '
-          + 'This may be due to network issues or proxy service being unavailable.',
+          + 'The website appears to be protected by Cloudflare or similar security measures that block automated access. '
+          + 'This is a common issue with websites that have strict security policies. '
+          + 'Unfortunately, there is no way to bypass this protection from a web browser. '
+          + 'You may need to contact the website owner or use a different approach to access the sitemap data.',
         );
       }
 
@@ -143,6 +169,7 @@ class SitemapSource {
   async getPageListFromAllSitemaps(websiteUrl) {
     const urlVariations = this.generateUrlVariations(websiteUrl);
     const allPages = [];
+    const attemptedUrls = [];
 
     for (const baseUrl of urlVariations) {
       try {
@@ -151,6 +178,7 @@ class SitemapSource {
         const sitemapsFromRobots = await this.findSitemapInRobots(baseUrl);
         if (sitemapsFromRobots && sitemapsFromRobots.length > 0) {
           for (const sitemapUrl of sitemapsFromRobots) {
+            attemptedUrls.push(sitemapUrl);
             try {
               const pages = await this.parseSitemap(sitemapUrl);
               allPages.push(...pages);
@@ -168,6 +196,7 @@ class SitemapSource {
         for (const path of this.commonSitemapPaths) {
           if (path !== '/robots.txt') {
             const sitemapUrl = `${baseUrl}${path}`;
+            attemptedUrls.push(sitemapUrl);
             try {
               const response = await this.fetchWithProxy(sitemapUrl, { method: 'HEAD' });
               if (response?.ok) {
@@ -184,6 +213,9 @@ class SitemapSource {
         // Continue with next URL variation
       }
     }
+
+    // eslint-disable-next-line no-console
+    console.log('Attempted URLs:', attemptedUrls);
 
     throw new Error(
       `Unable to find sitemap for ${websiteUrl}. `
@@ -222,6 +254,11 @@ class SitemapSource {
 
   generateUrlVariations(url) {
     let domain = url.trim();
+
+    // Normalize the URL first
+    if (!domain.startsWith('http://') && !domain.startsWith('https://')) {
+      domain = `https://${domain}`;
+    }
 
     domain = domain.replace(/^https?:\/\//, '');
 

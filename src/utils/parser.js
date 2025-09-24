@@ -16,6 +16,7 @@ class ContentParser {
     this.analysisConfig = options.analysisConfig || {};
     this.categorizationConfig = options.categorizationConfig || {};
     this.latestMediaItems = [];
+    this.occurrenceCounters = new Map();
 
     if (this.enableImageAnalysis) {
       updateAnalysisConfig({
@@ -133,7 +134,7 @@ class ContentParser {
           type: `img > ${extension}`,
           doc: url.loc,
           ctx: this.captureContext(img, 'img'),
-          hash: this.createHash(this.normalizeUrlForHash(actualSrc) + img.alt + url.loc),
+          hash: this.createUniqueHash(actualSrc, url.loc, img.alt, this.getOccurrenceIndex(actualSrc, url.loc)),
           firstUsedAt: timestamp,
           lastUsedAt: timestamp,
           domWidth,
@@ -221,7 +222,7 @@ class ContentParser {
             type: `video > ${this.getFileExtension(video.src)}`,
             doc: url.loc,
             ctx: this.captureContext(video, 'video'),
-            hash: this.createHash(`${this.normalizeUrlForHash(video.src)}${url.loc}`),
+            hash: this.createUniqueHash(video.src, url.loc, '', this.getOccurrenceIndex(video.src, url.loc)),
             firstUsedAt: timestamp,
             lastUsedAt: timestamp,
           });
@@ -241,7 +242,7 @@ class ContentParser {
             type: `video-source > ${this.getFileExtension(source.src)}`,
             doc: url.loc,
             ctx: this.captureContext(source, 'video-source'),
-            hash: this.createHash(`${this.normalizeUrlForHash(source.src)}${url.loc}`),
+            hash: this.createUniqueHash(source.src, url.loc, '', this.getOccurrenceIndex(source.src, url.loc)),
             firstUsedAt: timestamp,
             lastUsedAt: timestamp,
           });
@@ -262,7 +263,7 @@ class ContentParser {
             type: `link > ${this.getFileExtension(href)}`,
             doc: url.loc,
             ctx: this.captureContext(link, 'link'),
-            hash: this.createHash(this.normalizeUrlForHash(href) + link.textContent + url.loc),
+            hash: this.createUniqueHash(href, url.loc, link.textContent, this.getOccurrenceIndex(href, url.loc)),
             firstUsedAt: timestamp,
             lastUsedAt: timestamp,
           });
@@ -500,6 +501,19 @@ class ContentParser {
     } catch (error) {
       return url;
     }
+  }
+
+  getOccurrenceIndex(mediaUrl, pageUrl) {
+    const key = `${mediaUrl}_${pageUrl}`;
+    const currentCount = this.occurrenceCounters.get(key) || 0;
+    this.occurrenceCounters.set(key, currentCount + 1);
+    return currentCount;
+  }
+
+  createUniqueHash(mediaUrl, pageUrl, altText = '', occurrenceIndex = 0) {
+    const baseString = this.normalizeUrlForHash(mediaUrl) + altText + pageUrl;
+    const occurrenceString = baseString + `_${occurrenceIndex}`;
+    return this.createHash(occurrenceString);
   }
 
   createHash(str) {
