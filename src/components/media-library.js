@@ -21,6 +21,7 @@ class MediaLibrary extends LocalizableElement {
     storage: { type: String },
     locale: { type: String },
     mode: { type: String },
+    corsProxy: { type: String },
     _mediaData: { state: true },
     _error: { state: true },
     _searchQuery: { state: true },
@@ -45,6 +46,7 @@ class MediaLibrary extends LocalizableElement {
     this.storage = 'none';
     this.locale = 'en';
     this.mode = 'live';
+    this.corsProxy = 'https://media-library-cors-proxy.aem-poc-lab.workers.dev/';
     this._mediaData = [];
     this._error = null;
     this._searchQuery = '';
@@ -119,6 +121,7 @@ class MediaLibrary extends LocalizableElement {
       this.storageManager.setMode(this.mode);
     }
     this.contentParser = new ContentParser({
+      corsProxy: this.corsProxy,
       enableImageAnalysis: this._imageAnalysisEnabled,
       enableCategorization: true,
       analysisConfig: {
@@ -146,6 +149,7 @@ class MediaLibrary extends LocalizableElement {
            || changedProperties.has('_scanProgress')
            || changedProperties.has('_error')
            || changedProperties.has('locale')
+           || changedProperties.has('corsProxy')
            || changedProperties.has('showAnalysisToggle')
            || changedProperties.has('_isBatchLoading')
            || changedProperties.has('_realTimeStats');
@@ -155,6 +159,13 @@ class MediaLibrary extends LocalizableElement {
     if (changedProperties.has('locale')) {
       await i18n.loadLocale(this.locale);
       i18n.setLocale(this.locale);
+    }
+
+    if (changedProperties.has('corsProxy')) {
+      // Update the ContentParser with the new CORS proxy
+      if (this.contentParser) {
+        this.contentParser.corsProxy = this.corsProxy;
+      }
     }
   }
 

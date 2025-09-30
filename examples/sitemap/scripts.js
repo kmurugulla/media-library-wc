@@ -106,7 +106,8 @@ async function performSitemapScan() {
   disableFormFields();
 
   try {
-    const corsProxyUrl = 'https://media-library-cors-proxy.aem-poc-lab.workers.dev/';
+    // Use the CORS proxy from the media library component if available
+    const corsProxyUrl = mediaLibrary.corsProxy || 'https://media-library-cors-proxy.aem-poc-lab.workers.dev/';
     const source = new SitemapSource({
       corsProxy: corsProxyUrl,
       useCorsProxy: true,

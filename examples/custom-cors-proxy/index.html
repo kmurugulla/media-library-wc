@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Library - Custom CORS Proxy</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Media Library with Custom CORS Proxy</h1>
+            <p>This example shows how to configure a custom CORS proxy URL for the Media Library component.</p>
+        </header>
+
+        <div class="config-section">
+            <h2>CORS Proxy Configuration</h2>
+            
+            <div class="method-section">
+                <h3>Method 1: HTML Attribute (Static)</h3>
+                <pre><code>&lt;media-library 
+  cors-proxy="https://your-cors-proxy.com/"
+  storage="indexeddb"&gt;
+&lt;/media-library&gt;</code></pre>
+            </div>
+
+            <div class="method-section">
+                <h3>Method 2: JavaScript Property (Dynamic)</h3>
+                <div class="form-group">
+                    <label for="cors-proxy-url">CORS Proxy URL:</label>
+                    <input type="url" id="cors-proxy-url" placeholder="https://your-cors-proxy.com/">
+                    <small>Enter your custom CORS proxy URL. The proxy should accept requests with a 'url' query parameter.</small>
+                </div>
+                <button id="apply-config">Apply Configuration</button>
+            </div>
+
+            <div class="method-section">
+                <h3>Method 3: Constructor (Programmatic)</h3>
+                <pre><code>const mediaLibrary = await MediaLibrary.create({
+  corsProxy: 'https://your-cors-proxy.com/',
+  storage: 'indexeddb'
+});</code></pre>
+            </div>
+        </div>
+
+        <div class="media-library-container">
+            <media-library 
+                id="media-library" 
+                cors-proxy="https://media-library-cors-proxy.aem-poc-lab.workers.dev/"
+                storage="indexeddb"
+                locale="en">
+            </media-library>
+        </div>
+    </div>
+
+    <script type="module" src="scripts.js"></script>
+</body>
+</html>
