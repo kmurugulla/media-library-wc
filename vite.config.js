@@ -118,7 +118,7 @@ export default defineConfig(({ mode }) => {
     },
     server: {
       port: 3000,
-      strictPort: true,
+      strictPort: false,
       open: '/examples/sitemap/index.html',
       hmr: { overlay: true },
     },
