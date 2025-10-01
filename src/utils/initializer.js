@@ -69,6 +69,7 @@ export async function createMediaLibrary(options = {}) {
 }
 
 export async function waitForMediaLibraryInit(mediaLibraryElement) {
+  // eslint-disable-next-line no-console
   console.warn('waitForMediaLibraryInit() is deprecated. Use waitForMediaLibraryReady() instead.');
   return waitForMediaLibraryReady(mediaLibraryElement);
 }

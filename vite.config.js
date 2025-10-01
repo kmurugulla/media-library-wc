@@ -1,4 +1,6 @@
+// eslint-disable-next-line import/no-extraneous-dependencies
 import { defineConfig } from 'vite';
+// eslint-disable-next-line import/no-extraneous-dependencies
 import litCss from 'vite-plugin-lit-css';
 import { mkdirSync, existsSync } from 'fs';
 import { resolve } from 'path';
@@ -7,11 +9,8 @@ export default defineConfig(({ mode }) => {
   const isSelfContained = mode === 'self-contained';
   const isSelfContainedUnminified = mode === 'self-contained-unminified';
   const isCore = mode === 'core';
-  const isDev = mode === 'development';
-
   // Disable Lit dev mode warnings
   process.env.LIT_DEV_MODE = 'false';
-  
 
   return {
     plugins: [

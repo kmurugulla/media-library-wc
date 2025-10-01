@@ -2,7 +2,7 @@ import './components/media-library.js';
 
 export { default as MediaLibrary } from './components/media-library.js';
 
-export { default as BrowserStorage } from './utils/storage.js';
+export { default as BrowserStorage, createStorage } from './utils/storage.js';
 export { default as ContentParser } from './utils/parser.js';
 export { default as i18n } from './utils/i18n.js';
 export * from './utils/filters.js';

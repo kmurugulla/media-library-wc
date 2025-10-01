@@ -30,7 +30,6 @@ async function loadAvailableSites() {
 
     const siteSelector = document.getElementById('site-selector');
     const deleteSiteBtn = document.getElementById('delete-site-btn');
-    const clearStorageBtn = document.getElementById('clear-storage-btn');
 
     // Store current selection before rebuilding
     const currentSelection = siteSelector.value;
@@ -51,19 +50,14 @@ async function loadAvailableSites() {
       option.disabled = true;
       siteSelector.appendChild(option);
       deleteSiteBtn.style.display = 'none';
-      clearStorageBtn.style.display = 'none';
-    } else {
+    } else if (currentSelection && sites.some((site) => site.siteKey === currentSelection)) {
       // Restore selection if it was valid
-      if (currentSelection && sites.some(site => site.siteKey === currentSelection)) {
-        siteSelector.value = currentSelection;
-        // Show Clear Data button and hide Clear All button when site is selected
-        deleteSiteBtn.style.display = 'inline-block';
-        clearStorageBtn.style.display = 'none';
-      } else {
-        // No valid selection, hide both buttons (Clear All should never show)
-        clearStorageBtn.style.display = 'none';
-        deleteSiteBtn.style.display = 'none';
-      }
+      siteSelector.value = currentSelection;
+      // Show Clear Data button when site is selected
+      deleteSiteBtn.style.display = 'inline-block';
+    } else {
+      // No valid selection, hide delete button
+      deleteSiteBtn.style.display = 'none';
     }
   } catch (error) {
     console.error('Failed to load available sites:', error);
@@ -215,7 +209,9 @@ function setupControls() {
   const siteSelector = document.getElementById('site-selector');
   const scanBtn = document.getElementById('scan-btn');
   const deleteSiteBtn = document.getElementById('delete-site-btn');
-  const clearStorageBtn = document.getElementById('clear-storage-btn');
+
+  // Load available sites on initialization
+  loadAvailableSites();
 
   storageSelect.addEventListener('change', async (e) => {
     const previousStorage = mediaLibrary.storage;
@@ -254,9 +250,8 @@ function setupControls() {
         await mediaLibrary.loadMediaData(mediaData, null, false, metadata);
 
         showNotification(`Loaded data for site: ${selectedSite}`, 'success');
-        // Show Clear Data button and hide Clear All button when site is selected
+        // Show Clear Data button when site is selected
         deleteSiteBtn.style.display = 'inline-block';
-        clearStorageBtn.style.display = 'none';
       } catch (error) {
         console.error(`Failed to load data for site: ${selectedSite}`, error);
         console.error('Error details:', {
@@ -269,9 +264,8 @@ function setupControls() {
       }
     } else {
       await mediaLibrary.clearData();
-      // Hide Clear Data button and show Clear All button when no site is selected
+      // Hide Clear Data button when no site is selected
       deleteSiteBtn.style.display = 'none';
-      clearStorageBtn.style.display = 'inline-block';
     }
   });
 
@@ -288,12 +282,12 @@ function setupControls() {
           const storageType = document.getElementById('storage-type').value || 'indexeddb';
           const storage = createStorage(storageType);
           await storage.deleteSite(selectedSite);
-          
+
           // Close the storage connection to prevent database locks
           if (storage.closeConnection) {
             storage.closeConnection();
           }
-          
+
           showNotification(`Deleted data for site: ${selectedSite}`, 'success');
 
           await mediaLibrary.clearData();
@@ -311,32 +305,6 @@ function setupControls() {
           });
           showNotification('Failed to delete site data: Check console for details', 'error');
         }
-      }
-    }
-  });
-
-  clearStorageBtn.addEventListener('click', async () => {
-    const confirmed = confirm('Are you sure you want to clear ALL stored data? This action cannot be undone.');
-    if (confirmed) {
-      try {
-        const storageType = document.getElementById('storage-type').value || 'indexeddb';
-        const storage = createStorage(storageType);
-        await storage.clearAllSites();
-        showNotification('All stored data cleared successfully', 'success');
-
-        await mediaLibrary.clearData();
-
-        await loadAvailableSites();
-
-        siteSelector.value = '';
-      } catch (error) {
-        console.error('Failed to clear storage:', error);
-        console.error('Error details:', {
-          message: error.message,
-          stack: error.stack,
-          name: error.name,
-        });
-        showNotification('Failed to clear storage: Check console for details', 'error');
       }
     }
   });

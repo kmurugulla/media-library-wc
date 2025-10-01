@@ -1,7 +1,5 @@
-
-import '../../dist/media-library.es.js';
-import { AdobeDASource } from '../../sources/index.js';
 import { waitForMediaLibraryReady, createStorage } from '../../dist/media-library.es.js';
+import { AdobeDASource } from '../../sources/index.js';
 
 let mediaLibrary;
 
@@ -18,33 +16,38 @@ function setupControls() {
   storageSelect.addEventListener('change', async (e) => {
     const previousStorage = mediaLibrary.storage;
     const newStorage = e.target.value;
-    
+
     mediaLibrary.storage = newStorage;
-    
+
     // Recreate storage manager with new storage type
     mediaLibrary.storageManager = createStorage(newStorage);
-    
+
     await mediaLibrary.clearData();
-    
+
     if (previousStorage !== 'indexeddb' && newStorage === 'indexeddb') {
+      // eslint-disable-next-line no-use-before-define
+    // eslint-disable-next-line no-use-before-define
       showNotification('Switched to IndexDB storage - future scans will be saved', 'info');
     } else if (previousStorage !== 'r2' && newStorage === 'r2') {
+      // eslint-disable-next-line no-use-before-define
+      // eslint-disable-next-line no-use-before-define
       showNotification('Switched to R2 storage - future scans will be saved to cloud', 'info');
     }
-    
+
+    // eslint-disable-next-line no-use-before-define
+    // eslint-disable-next-line no-use-before-define
     loadAvailableSites();
   });
-
 
   localeSelect.addEventListener('change', (e) => {
     mediaLibrary.locale = e.target.value;
   });
 
-
   siteSelector.addEventListener('change', async (e) => {
     const selectedSite = e.target.value;
     if (selectedSite) {
       await mediaLibrary.loadFromStorage(selectedSite);
+      // eslint-disable-next-line no-use-before-define
       showNotification(`Loaded data for site: ${selectedSite}`, 'success');
       // Show Clear Data button and hide Clear All Storage button when site is selected
       deleteSiteBtn.style.display = 'inline-block';
@@ -57,18 +60,17 @@ function setupControls() {
     }
   });
 
-
   scanBtn.addEventListener('click', async () => {
-    await performAdobeDAScan();
+    await // eslint-disable-next-line no-use-before-define
+    performAdobeDAScan();
   });
-
 
   authBtn.addEventListener('click', async () => {
-    await performAuthentication();
+    await // eslint-disable-next-line no-use-before-define
+    performAuthentication();
   });
 
-
-  clearBtn.addEventListener('click', () => {
+  clearBtn.addEventListener('click', async () => {
     await mediaLibrary.clearData();
   });
 
@@ -82,52 +84,46 @@ function setupControls() {
           const storageType = document.getElementById('storage-type').value || 'indexeddb';
           const storage = createStorage(storageType);
           await storage.deleteSite(selectedSite);
-          
+
           // Close the storage connection to prevent database locks
           if (storage.closeConnection) {
             storage.closeConnection();
           }
-          
+
+          // eslint-disable-next-line no-use-before-define
           showNotification(`Deleted data for site: ${selectedSite}`, 'success');
 
           // Clear the current display if the deleted site was loaded
           await mediaLibrary.clearData();
 
           // Reload the sites list
-          await loadAvailableSites();
+          await // eslint-disable-next-line no-use-before-define
+          loadAvailableSites();
 
           // Reset the site selector
           siteSelector.value = '';
         } catch (error) {
+          // eslint-disable-next-line no-use-before-define
           showNotification(`Failed to delete site data: ${error.message}`, 'error');
         }
       }
     }
   });
 
-
-  configToggleBtn.addEventListener('click', () => {
-    const isCollapsed = configSection.classList.contains('collapsed');
-    if (isCollapsed) {
-      configSection.classList.remove('collapsed');
-      configToggleBtn.classList.remove('collapsed');
-    } else {
-      configSection.classList.add('collapsed');
-      configToggleBtn.classList.add('collapsed');
-    }
-  });
-
+  // eslint-disable-next-line no-use-before-define
   loadAvailableSites();
 }
 
 function setupNotifications() {
   window.addEventListener('show-notification', (e) => {
     const { heading, message, type } = e.detail;
+    // eslint-disable-next-line no-use-before-define
     showNotification(`${heading}: ${message}`, type);
   });
 }
 
-function showNotification(message, type = 'info') {
+function // eslint-disable-next-line no-use-before-define
+showNotification(message, type = 'info') {
   const notification = document.createElement('div');
   notification.className = `notification ${type}`;
   notification.textContent = message;
@@ -140,11 +136,13 @@ function showNotification(message, type = 'info') {
   }, 3000);
 }
 
-async function performAdobeDAScan() {
+async function // eslint-disable-next-line no-use-before-define
+performAdobeDAScan() {
   const adobeOrg = document.getElementById('adobe-org').value.trim();
   const adobeRepo = document.getElementById('adobe-repo').value.trim();
 
   if (!adobeOrg || !adobeRepo) {
+    // eslint-disable-next-line no-use-before-define
     showNotification('Please enter both Organization and Repository', 'error');
     return;
   }
@@ -153,7 +151,6 @@ async function performAdobeDAScan() {
     const scanBtn = document.getElementById('scan-btn');
     scanBtn.disabled = true;
     scanBtn.textContent = 'Scanning...';
-
 
     const dataSource = new AdobeDASource();
     const options = {
@@ -169,7 +166,9 @@ async function performAdobeDAScan() {
     await mediaLibrary.clearData();
     const mediaData = await mediaLibrary.loadFromPageList(pageList, null, siteKey);
 
+    // eslint-disable-next-line no-use-before-define
     showNotification(`Scan complete! Found ${mediaData.length} media items`, 'success');
+    // eslint-disable-next-line no-use-before-define
     loadAvailableSites();
   } catch (error) {
     // Log detailed error to console
@@ -180,12 +179,10 @@ async function performAdobeDAScan() {
       message: error.message,
       stack: error.stack,
       name: error.name,
-      org,
-      repo,
-      maxResults,
     });
 
     // Show generic error message to user
+    // eslint-disable-next-line no-use-before-define
     showNotification('Scan failed: Check console for detailed error information', 'error');
   } finally {
     const scanBtn = document.getElementById('scan-btn');
@@ -194,32 +191,35 @@ async function performAdobeDAScan() {
   }
 }
 
-async function performAuthentication() {
+async function // eslint-disable-next-line no-use-before-define
+performAuthentication() {
   try {
     const authBtn = document.getElementById('auth-btn');
     authBtn.disabled = true;
     authBtn.textContent = 'Authenticating...';
 
-
     if (window.adobeIMS) {
-  
       const token = window.adobeIMS.getAccessToken();
       if (token) {
         localStorage.setItem('nx-ims', 'true');
+        // eslint-disable-next-line no-use-before-define
         showNotification('Already authenticated with Adobe IMS', 'success');
       } else {
-    
         window.adobeIMS.signIn();
+        // eslint-disable-next-line no-use-before-define
         showNotification('Please complete authentication in the popup window', 'info');
       }
     } else {
-  
-      await loadIMSLibrary();
+      await // eslint-disable-next-line no-use-before-define
+      loadIMSLibrary();
+      // eslint-disable-next-line no-use-before-define
       showNotification('IMS library loaded. Please try authenticating again.', 'info');
     }
   } catch (error) {
+    // eslint-disable-next-line no-use-before-define
     showNotification(`Authentication failed: ${error.message}`, 'error');
-    
+
+    // eslint-disable-next-line no-console
     console.error('Authentication error:', error);
   } finally {
     const authBtn = document.getElementById('auth-btn');
@@ -228,7 +228,8 @@ async function performAuthentication() {
   }
 }
 
-async function loadIMSLibrary() {
+async function // eslint-disable-next-line no-use-before-define
+loadIMSLibrary() {
   return new Promise((resolve, reject) => {
     if (window.adobeIMS) {
       resolve();
@@ -238,7 +239,6 @@ async function loadIMSLibrary() {
     const script = document.createElement('script');
     script.src = 'https://auth.services.adobe.com/imslib/imslib.min.js';
     script.onload = () => {
-  
       window.adobeid = {
         client_id: 'your-client-id',
         scope: 'AdobeID,openid,gnav',
@@ -261,7 +261,8 @@ async function loadIMSLibrary() {
   });
 }
 
-async function loadAvailableSites() {
+async function // eslint-disable-next-line no-use-before-define
+loadAvailableSites() {
   try {
     const storageType = document.getElementById('storage-type').value || 'indexeddb';
     const storage = createStorage(storageType);
@@ -292,30 +293,28 @@ async function loadAvailableSites() {
       siteSelector.appendChild(option);
       deleteSiteBtn.style.display = 'none';
       clearStorageBtn.style.display = 'none';
-    } else {
+    } else if (currentSelection && sites.some((site) => site.siteKey === currentSelection)) {
       // Restore selection if it was valid
-      if (currentSelection && sites.some(site => site.siteKey === currentSelection)) {
-        siteSelector.value = currentSelection;
-        // Show Clear Data button and hide Clear All Storage button when site is selected
-        deleteSiteBtn.style.display = 'inline-block';
-        clearStorageBtn.style.display = 'none';
-      } else {
-        // No valid selection, hide both buttons (Clear All should never show)
-        clearStorageBtn.style.display = 'none';
-        deleteSiteBtn.style.display = 'none';
-      }
+      siteSelector.value = currentSelection;
+      // Show Clear Data button and hide Clear All Storage button when site is selected
+      deleteSiteBtn.style.display = 'inline-block';
+      clearStorageBtn.style.display = 'none';
+    } else {
+      // No valid selection, hide both buttons (Clear All should never show)
+      clearStorageBtn.style.display = 'none';
+      deleteSiteBtn.style.display = 'none';
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to load available sites:', error);
+    // eslint-disable-next-line no-use-before-define
     showNotification(`Failed to load sites: ${error.message}`, 'error');
   }
 }
 
-
 function parseURLParameters() {
   const urlParams = new URLSearchParams(window.location.search);
   const params = {};
-
 
   for (const [key, value] of urlParams.entries()) {
     params[key] = decodeURIComponent(value);
@@ -332,14 +331,12 @@ function applyURLParameters() {
   }
 
   try {
-
     if (params.org) {
       const adobeOrgInput = document.getElementById('adobe-org');
       if (adobeOrgInput) {
         adobeOrgInput.value = params.org;
       }
     }
-
 
     if (params.repo) {
       const adobeRepoInput = document.getElementById('adobe-repo');
@@ -348,31 +345,27 @@ function applyURLParameters() {
       }
     }
 
-
     if (params.storage) {
       const storageSelect = document.getElementById('storage-type');
       if (storageSelect) {
         storageSelect.value = params.storage;
-    
+
         storageSelect.dispatchEvent(new Event('change'));
       }
     }
-
 
     if (params.locale) {
       const localeSelect = document.getElementById('locale');
       if (localeSelect) {
         localeSelect.value = params.locale;
-    
+
         localeSelect.dispatchEvent(new Event('change'));
       }
     }
 
-
     if (params.load) {
       const siteSelector = document.getElementById('site-selector');
       if (siteSelector) {
-    
         setTimeout(() => {
           siteSelector.value = params.load;
           siteSelector.dispatchEvent(new Event('change'));
@@ -380,28 +373,22 @@ function applyURLParameters() {
       }
     }
 
-
     if (params.autoscan === 'true') {
-  
       setTimeout(() => {
+        // eslint-disable-next-line no-use-before-define
         performAdobeDAScan();
       }, 1000);
     }
 
+    // eslint-disable-next-line no-use-before-define
     showNotification('Configuration loaded from URL parameters', 'info');
-
-
-    if (configSection && configToggleBtn) {
-      configSection.classList.add('collapsed');
-      configToggleBtn.classList.add('collapsed');
-    }
   } catch (error) {
-    
+    // eslint-disable-next-line no-console
     console.error('Error applying URL parameters:', error);
+    // eslint-disable-next-line no-use-before-define
     showNotification(`Error loading URL parameters: ${error.message}`, 'error');
   }
 }
-
 
 window.refreshSites = loadAvailableSites;
 
@@ -410,41 +397,43 @@ window.clearOldData = async () => {
     const storage = mediaLibrary.storageManager;
 
     if (!storage) {
+      // eslint-disable-next-line no-use-before-define
       showNotification('Storage manager not available', 'error');
       return;
     }
 
     const oldData = await storage.load('media-data');
     if (oldData && oldData.length > 0) {
-      
+      // eslint-disable-next-line no-alert, no-restricted-globals
       const shouldMigrate = confirm(`Found ${oldData.length} items in old format. Would you like to migrate them to 'legacy-data' site before clearing?`);
       if (shouldMigrate) {
         await storage.save(oldData);
+        // eslint-disable-next-line no-use-before-define
         showNotification(`Migrated ${oldData.length} items to 'legacy-data' site`, 'success');
       }
     }
 
     // Use clearAllSites() instead of the non-existent clear() method
     await storage.clearAllSites();
-    await loadAvailableSites();
+    await // eslint-disable-next-line no-use-before-define
+    loadAvailableSites();
+    // eslint-disable-next-line no-use-before-define
     showNotification('Old data cleared successfully', 'success');
   } catch (error) {
-    
+    // eslint-disable-next-line no-console
     console.error('Failed to clear old data:', error);
+    // eslint-disable-next-line no-use-before-define
     showNotification(`Failed to clear data: ${error.message}`, 'error');
   }
 };
 
-
 document.addEventListener('DOMContentLoaded', async () => {
   mediaLibrary = document.getElementById('media-library');
-
 
   await waitForMediaLibraryReady(mediaLibrary);
 
   setupControls();
   setupNotifications();
-
 
   applyURLParameters();
 });

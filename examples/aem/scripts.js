@@ -1,7 +1,5 @@
-
-import '../../dist/media-library.es.js';
-import { AEMSource } from '../../sources/index.js';
 import { waitForMediaLibraryReady, createStorage } from '../../dist/media-library.es.js';
+import { AEMSource } from '../../sources/index.js';
 
 let mediaLibrary;
 
@@ -27,7 +25,6 @@ async function loadAvailableSites() {
 
     const siteSelector = document.getElementById('site-selector');
     const deleteSiteBtn = document.getElementById('delete-site-btn');
-    const clearStorageBtn = document.getElementById('clear-storage-btn');
 
     // Store current selection before rebuilding
     const currentSelection = siteSelector.value;
@@ -48,21 +45,17 @@ async function loadAvailableSites() {
       option.disabled = true;
       siteSelector.appendChild(option);
       deleteSiteBtn.style.display = 'none';
-      clearStorageBtn.style.display = 'none';
-    } else {
+    } else if (currentSelection && sites.some((site) => site.siteKey === currentSelection)) {
       // Restore selection if it was valid
-      if (currentSelection && sites.some(site => site.siteKey === currentSelection)) {
-        siteSelector.value = currentSelection;
-        // Show Clear Data button and hide Clear All Storage button when site is selected
-        deleteSiteBtn.style.display = 'inline-block';
-        clearStorageBtn.style.display = 'none';
-      } else {
-        // No valid selection, hide both buttons (Clear All should never show)
-        clearStorageBtn.style.display = 'none';
-        deleteSiteBtn.style.display = 'none';
-      }
+      siteSelector.value = currentSelection;
+      // Show Clear Data button and hide Clear All Storage button when site is selected
+      deleteSiteBtn.style.display = 'inline-block';
+    } else {
+      // No valid selection, hide both buttons (Clear All should never show)
+      deleteSiteBtn.style.display = 'none';
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to load available sites:', error);
     showNotification(`Failed to load sites: ${error.message}`, 'error');
   }
@@ -83,7 +76,6 @@ async function performAEMScan() {
     const scanBtn = document.getElementById('scan-btn');
     scanBtn.disabled = true;
     scanBtn.textContent = 'Scanning...';
-
 
     const dataSource = new AEMSource();
     const options = {
@@ -131,34 +123,33 @@ function setupControls() {
   const scanBtn = document.getElementById('scan-btn');
   const clearBtn = document.getElementById('clear-btn');
   const deleteSiteBtn = document.getElementById('delete-site-btn');
-  const clearStorageBtn = document.getElementById('clear-storage-btn');
 
+  // Load available sites on initialization
+  loadAvailableSites();
 
   storageSelect.addEventListener('change', async (e) => {
     const previousStorage = mediaLibrary.storage;
     const newStorage = e.target.value;
-    
+
     mediaLibrary.storage = newStorage;
-    
+
     // Recreate storage manager with new storage type
     mediaLibrary.storageManager = createStorage(newStorage);
-    
+
     await mediaLibrary.clearData();
-    
+
     if (previousStorage !== 'indexeddb' && newStorage === 'indexeddb') {
       showNotification('Switched to IndexDB storage - future scans will be saved', 'info');
     } else if (previousStorage !== 'r2' && newStorage === 'r2') {
       showNotification('Switched to R2 storage - future scans will be saved to cloud', 'info');
     }
-    
+
     loadAvailableSites();
   });
-
 
   localeSelect.addEventListener('change', (e) => {
     mediaLibrary.locale = e.target.value;
   });
-
 
   siteSelector.addEventListener('change', async (e) => {
     const selectedSite = e.target.value;
@@ -167,22 +158,18 @@ function setupControls() {
       showNotification(`Loaded data for site: ${selectedSite}`, 'success');
       // Show Clear Data button and hide Clear All Storage button when site is selected
       deleteSiteBtn.style.display = 'inline-block';
-      clearStorageBtn.style.display = 'none';
     } else {
       await mediaLibrary.clearData();
       // Hide Clear Data button and show Clear All Storage button when no site is selected
       deleteSiteBtn.style.display = 'none';
-      clearStorageBtn.style.display = 'inline-block';
     }
   });
-
 
   scanBtn.addEventListener('click', async () => {
     await performAEMScan();
   });
 
-
-  clearBtn.addEventListener('click', () => {
+  clearBtn.addEventListener('click', async () => {
     await mediaLibrary.clearData();
   });
 
@@ -196,12 +183,12 @@ function setupControls() {
           const storageType = document.getElementById('storage-type').value || 'indexeddb';
           const storage = createStorage(storageType);
           await storage.deleteSite(selectedSite);
-          
+
           // Close the storage connection to prevent database locks
           if (storage.closeConnection) {
             storage.closeConnection();
           }
-          
+
           showNotification(`Deleted data for site: ${selectedSite}`, 'success');
 
           // Clear the current display if the deleted site was loaded
@@ -219,18 +206,6 @@ function setupControls() {
     }
   });
 
-
-  configToggleBtn.addEventListener('click', () => {
-    const isCollapsed = configSection.classList.contains('collapsed');
-    if (isCollapsed) {
-      configSection.classList.remove('collapsed');
-      configToggleBtn.classList.remove('collapsed');
-    } else {
-      configSection.classList.add('collapsed');
-      configToggleBtn.classList.add('collapsed');
-    }
-  });
-
   loadAvailableSites();
 }
 
@@ -244,7 +219,6 @@ function setupNotifications() {
 function parseURLParameters() {
   const urlParams = new URLSearchParams(window.location.search);
   const params = {};
-
 
   for (const [key, value] of urlParams.entries()) {
     params[key] = decodeURIComponent(value);
@@ -261,14 +235,12 @@ function applyURLParameters() {
   }
 
   try {
-
     if (params.url) {
       const aemUrlInput = document.getElementById('aem-url');
       if (aemUrlInput) {
         aemUrlInput.value = params.url;
       }
     }
-
 
     if (params.endpoint) {
       const graphqlEndpointInput = document.getElementById('graphql-endpoint');
@@ -277,14 +249,12 @@ function applyURLParameters() {
       }
     }
 
-
     if (params.path) {
       const contentPathInput = document.getElementById('content-path');
       if (contentPathInput) {
         contentPathInput.value = params.path;
       }
     }
-
 
     if (params.maxResults) {
       const maxResultsInput = document.getElementById('max-results');
@@ -293,31 +263,27 @@ function applyURLParameters() {
       }
     }
 
-
     if (params.storage) {
       const storageSelect = document.getElementById('storage-type');
       if (storageSelect) {
         storageSelect.value = params.storage;
-    
+
         storageSelect.dispatchEvent(new Event('change'));
       }
     }
-
 
     if (params.locale) {
       const localeSelect = document.getElementById('locale');
       if (localeSelect) {
         localeSelect.value = params.locale;
-    
+
         localeSelect.dispatchEvent(new Event('change'));
       }
     }
 
-
     if (params.load) {
       const siteSelector = document.getElementById('site-selector');
       if (siteSelector) {
-    
         setTimeout(() => {
           siteSelector.value = params.load;
           siteSelector.dispatchEvent(new Event('change'));
@@ -325,66 +291,27 @@ function applyURLParameters() {
       }
     }
 
-
     if (params.autoscan === 'true') {
-  
       setTimeout(() => {
         performAEMScan();
       }, 1000);
     }
 
     showNotification('Configuration loaded from URL parameters', 'info');
-
-
-    if (configSection && configToggleBtn) {
-      configSection.classList.add('collapsed');
-      configToggleBtn.classList.add('collapsed');
-    }
   } catch (error) {
     showNotification(`Error loading URL parameters: ${error.message}`, 'error');
   }
 }
 
-
 window.refreshSites = loadAvailableSites;
-
-window.clearOldData = async () => {
-  try {
-    const storage = mediaLibrary.storageManager;
-
-    if (!storage) {
-      showNotification('Storage manager not available', 'error');
-      return;
-    }
-
-    const oldData = await storage.load('media-data');
-    if (oldData && oldData.length > 0) {
-      
-      const shouldMigrate = confirm(`Found ${oldData.length} items in old format. Would you like to migrate them to 'legacy-data' site before clearing?`);
-      if (shouldMigrate) {
-        await storage.save(oldData);
-        showNotification(`Migrated ${oldData.length} items to 'legacy-data' site`, 'success');
-      }
-    }
-
-    // Use clearAllSites() instead of the non-existent clear() method
-    await storage.clearAllSites();
-    await loadAvailableSites();
-    showNotification('Old data cleared successfully', 'success');
-  } catch (error) {
-    showNotification(`Failed to clear data: ${error.message}`, 'error');
-  }
-};
 
 document.addEventListener('DOMContentLoaded', async () => {
   mediaLibrary = document.getElementById('media-library');
-
 
   await waitForMediaLibraryReady(mediaLibrary);
 
   setupControls();
   setupNotifications();
-
 
   applyURLParameters();
 });
