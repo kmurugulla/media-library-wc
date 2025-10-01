@@ -1,3 +1,4 @@
+// eslint-disable-next-line import/named
 import { waitForMediaLibraryReady, createStorage } from '../../dist/media-library.es.js';
 import { WordPressSource } from '../../sources/index.js';
 
@@ -29,14 +30,19 @@ function normalizeUrl(url) {
 }
 
 async function loadAvailableSites() {
+  let storage = null;
   try {
     const storageType = document.getElementById('storage-type').value || 'indexeddb';
-    const storage = createStorage(storageType);
+    storage = createStorage(storageType);
 
     const sites = await storage.getAllSites();
 
     const siteSelector = document.getElementById('site-selector');
     const deleteSiteBtn = document.getElementById('delete-site-btn');
+    const clearStorageBtn = document.getElementById('clear-storage-btn');
+
+    // Store current selection before rebuilding
+    const currentSelection = siteSelector.value;
 
     siteSelector.innerHTML = '<option value="">Select a site...</option>';
 
@@ -53,16 +59,30 @@ async function loadAvailableSites() {
       option.textContent = 'No sites found';
       option.disabled = true;
       siteSelector.appendChild(option);
-      // Hide delete button when no sites are available
       deleteSiteBtn.style.display = 'none';
+      clearStorageBtn.style.display = 'none';
     } else {
-      // Hide delete button initially (will show when site is selected)
+      // Restore selection if it was valid
+      if (currentSelection && sites.some((site) => site.siteKey === currentSelection)) {
+        siteSelector.value = currentSelection;
+        // Show Clear Data button and hide Clear All Storage button when site is selected
+        deleteSiteBtn.style.display = 'inline-block';
+        clearStorageBtn.style.display = 'none';
+        return;
+      }
+      // No valid selection, hide both buttons (Clear All should never show)
+      clearStorageBtn.style.display = 'none';
       deleteSiteBtn.style.display = 'none';
     }
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to load available sites:', error);
     showNotification(`Failed to load sites: ${error.message}`, 'error');
+  } finally {
+    // Close the storage connection to prevent database locks
+    if (storage && storage.closeConnection) {
+      storage.closeConnection();
+    }
   }
 }
 
@@ -119,8 +139,7 @@ async function performWordPressScan() {
       message: error.message,
       stack: error.stack,
       name: error.name,
-      wordpressUrl,
-      maxResults,
+      websiteUrl,
     });
 
     // Show generic error message to user
@@ -171,12 +190,14 @@ function setupControls() {
     if (selectedSite) {
       await mediaLibrary.loadFromStorage(selectedSite);
       showNotification(`Loaded data for site: ${selectedSite}`, 'success');
-      // Show delete button when a site is selected
+      // Show Clear Data button and hide Clear All Storage button when site is selected
       deleteSiteBtn.style.display = 'inline-block';
+      document.getElementById('clear-storage-btn').style.display = 'none';
     } else {
       await mediaLibrary.clearData();
-      // Hide delete button when no site is selected
+      // Hide Clear Data button and show Clear All Storage button when no site is selected
       deleteSiteBtn.style.display = 'none';
+      document.getElementById('clear-storage-btn').style.display = 'inline-block';
     }
   });
 
@@ -184,7 +205,7 @@ function setupControls() {
     await performWordPressScan();
   });
 
-  clearBtn.addEventListener('click', () => {
+  clearBtn.addEventListener('click', async () => {
     await mediaLibrary.clearData();
   });
 
@@ -198,6 +219,12 @@ function setupControls() {
           const storageType = document.getElementById('storage-type').value || 'indexeddb';
           const storage = createStorage(storageType);
           await storage.deleteSite(selectedSite);
+
+          // Close the storage connection to prevent database locks
+          if (storage.closeConnection) {
+            storage.closeConnection();
+          }
+
           showNotification(`Deleted data for site: ${selectedSite}`, 'success');
 
           // Clear the current display if the deleted site was loaded
@@ -353,9 +380,10 @@ window.clearOldData = async () => {
       }
     }
 
-    await storage.clear();
+    // Use clearAllSites() instead of the non-existent clear() method
+    await storage.clearAllSites();
     await loadAvailableSites();
-    showNotification('Old data cleared successfully', 'success');
+    showNotification('All stored data cleared successfully', 'success');
   } catch (error) {
     // eslint-disable-next-line no-console
     console.error('Failed to clear old data:', error);

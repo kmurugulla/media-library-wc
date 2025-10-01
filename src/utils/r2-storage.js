@@ -14,6 +14,7 @@ class R2Storage {
     this.type = type;
     this.siteKey = siteKey;
     this.mode = 'live';
+    this.isDestroyed = false;
 
     const apiUrl = import.meta.env.VITE_R2_API_URL || window.R2_API_URL;
 
@@ -25,6 +26,10 @@ class R2Storage {
   }
 
   async saveMediaUsages(mediaUsages, mode = 'live') {
+    if (this.isDestroyed) {
+      throw new Error('R2Storage instance has been destroyed');
+    }
+
     try {
       const batchSize = 100;
       const batches = chunkArray(mediaUsages, batchSize);
@@ -402,6 +407,18 @@ class R2Storage {
       logger.error('Failed to clear all sites from R2:', error);
       throw error;
     }
+  }
+
+  destroy() {
+    if (this.isDestroyed) return;
+
+    this.isDestroyed = true;
+    this.r2API = null;
+    logger.debug(`R2Storage instance destroyed for ${this.siteKey || 'default'}`);
+  }
+
+  isValid() {
+    return !this.isDestroyed;
   }
 }
 

@@ -9,4 +9,3 @@ export * from './utils/filters.js';
 export * from './utils/utils.js';
 
 export { waitForMediaLibraryReady, createMediaLibrary, initializeMediaLibrary } from './utils/initializer.js';
-

@@ -5,6 +5,7 @@ import { resolve } from 'path';
 
 export default defineConfig(({ mode }) => {
   const isSelfContained = mode === 'self-contained';
+  const isSelfContainedUnminified = mode === 'self-contained-unminified';
   const isCore = mode === 'core';
   const isDev = mode === 'development';
 
@@ -81,16 +82,18 @@ export default defineConfig(({ mode }) => {
           if (isCore) {
             return `media-library-core.${format}.js`;
           } if (isSelfContained) {
-            return `media-library-full.${format}.js`;
+            return `media-library-min.${format}.js`;
+          } if (isSelfContainedUnminified) {
+            return `media-library.${format}.js`;
           }
           return `media-library.${format}.js`;
         },
-        formats: isSelfContained ? ['iife'] : ['es', 'umd'],
+        formats: (isSelfContained || isSelfContainedUnminified) ? ['iife'] : ['es', 'umd'],
       },
       rollupOptions: {
-        external: isSelfContained ? [] : ['lit', 'lit/directives/repeat.js', 'lit/directives/ref.js'],
+        external: (isSelfContained || isSelfContainedUnminified) ? [] : ['lit', 'lit/directives/repeat.js', 'lit/directives/ref.js'],
         output: {
-          globals: isSelfContained ? {} : { lit: 'lit', 'lit/directives/repeat.js': 'lit', 'lit/directives/ref.js': 'lit' },
+          globals: (isSelfContained || isSelfContainedUnminified) ? {} : { lit: 'lit', 'lit/directives/repeat.js': 'lit', 'lit/directives/ref.js': 'lit' },
           assetFileNames: (assetInfo) => {
             if (assetInfo.name && assetInfo.name.endsWith('.css')) {
               return 'style.css';
@@ -102,17 +105,19 @@ export default defineConfig(({ mode }) => {
       assetsInlineLimit: 0,
       cssCodeSplit: false,
       sourcemap: false,
-      minify: 'terser',
-      terserOptions: {
-        compress: {
-          drop_console: true,
-          drop_debugger: true,
-          pure_funcs: ['console.log', 'console.info', 'console.debug'],
-          passes: 2,
+      minify: isSelfContainedUnminified ? false : 'terser',
+      ...(isSelfContainedUnminified ? {} : {
+        terserOptions: {
+          compress: {
+            drop_console: true,
+            drop_debugger: true,
+            pure_funcs: ['console.log', 'console.info', 'console.debug'],
+            passes: 2,
+          },
+          mangle: { safari10: true },
+          format: { comments: false },
         },
-        mangle: { safari10: true },
-        format: { comments: false },
-      },
+      }),
       copyPublicDir: false,
       emptyOutDir: false,
     },

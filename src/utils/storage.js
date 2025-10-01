@@ -7,6 +7,8 @@ class BrowserStorage {
     this.dbVersion = 7;
     this.siteKey = siteKey;
     this.dbName = siteKey ? `media_${this.normalizeSiteKey(siteKey)}` : 'MediaLibrary';
+    this.db = null;
+    this.isDestroyed = false;
   }
 
   normalizeSiteKey(siteKey) {
@@ -27,6 +29,14 @@ class BrowserStorage {
 
   async ensureDatabase() {
     if (this.type !== 'indexeddb') return null;
+    if (this.isDestroyed) {
+      throw new Error('Storage instance has been destroyed');
+    }
+
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
 
     return new Promise((resolve, reject) => {
       const request = indexedDB.open(this.dbName, this.dbVersion);
@@ -55,6 +65,7 @@ class BrowserStorage {
 
       request.onsuccess = (event) => {
         const db = event.target.result;
+        this.db = db;
         resolve(db);
       };
 
@@ -97,6 +108,11 @@ class BrowserStorage {
           return;
         }
 
+        transaction.onerror = () => {
+          this.closeConnection();
+          reject(transaction.error);
+        };
+
         items.forEach((item) => {
           const rowData = {
             ...item,
@@ -107,15 +123,19 @@ class BrowserStorage {
           saveRequest.onsuccess = () => {
             savedCount += 1;
             if (savedCount === totalItems) {
+              // Close connection after successful save to prevent database locks
+              this.closeConnection();
               resolve();
             }
           };
           saveRequest.onerror = () => {
+            this.closeConnection();
             reject(saveRequest.error);
           };
         });
       });
     } catch (error) {
+      this.closeConnection();
       logger.error('Failed to save items to IndexedDB:', error);
       throw error;
     }
@@ -170,20 +190,29 @@ class BrowserStorage {
         const store = transaction.objectStore('media');
         const request = store.getAll();
 
+        transaction.onerror = () => {
+          this.closeConnection();
+          reject(transaction.error);
+        };
+
         request.onsuccess = () => {
           const results = request.result || [];
           const cleanResults = results.map((item) => {
             const { timestamp: _, ...cleanItem } = item;
             return cleanItem;
           });
+          // Close connection after successful load to prevent database locks
+          this.closeConnection();
           resolve(cleanResults);
         };
 
         request.onerror = () => {
+          this.closeConnection();
           reject(request.error);
         };
       });
     } catch (error) {
+      this.closeConnection();
       logger.error('Failed to load raw data from IndexedDB:', error);
       return [];
     }
@@ -389,6 +418,8 @@ class BrowserStorage {
                 timestamp,
               });
             }
+
+            siteStorage.closeConnection();
           } catch (error) {
             // Skip databases that can't be accessed
           }
@@ -435,6 +466,7 @@ class BrowserStorage {
 
   async deleteSiteFromIndexedDB(siteKey) {
     try {
+      this.closeConnection();
       const normalizedSiteKey = this.normalizeSiteKey(siteKey);
       const dbName = `media_${normalizedSiteKey}`;
 
@@ -497,10 +529,17 @@ class BrowserStorage {
         const store = transaction.objectStore('media');
         const request = store.openCursor();
 
+        transaction.onerror = () => {
+          this.closeConnection();
+          reject(transaction.error);
+        };
+
         request.onsuccess = (event) => {
           const cursor = event.target.result;
 
           if (!cursor) {
+            // Close connection after successful cursor operation to prevent database locks
+            this.closeConnection();
             resolve();
             return;
           }
@@ -514,10 +553,12 @@ class BrowserStorage {
         };
 
         request.onerror = () => {
+          this.closeConnection();
           reject(request.error);
         };
       });
     } catch (error) {
+      this.closeConnection();
       logger.error('Failed to remove media for pages from IndexedDB:', error);
       throw error;
     }
@@ -570,7 +611,11 @@ class BrowserStorage {
 
           // Save the merged metadata
           const saveRequest = store.put(mergedMetadata);
-          saveRequest.onsuccess = () => resolve();
+          saveRequest.onsuccess = () => {
+            // Close connection after successful save to prevent database locks
+            this.closeConnection();
+            resolve();
+          };
           saveRequest.onerror = () => {
             reject(saveRequest.error);
           };
@@ -601,6 +646,8 @@ class BrowserStorage {
 
         getRequest.onsuccess = () => {
           const { result } = getRequest;
+          // Close connection after successful load to prevent database locks
+          this.closeConnection();
           resolve(result || null);
         };
 
@@ -628,6 +675,25 @@ class BrowserStorage {
       logger.error('Failed to clear all sites:', error);
       throw error;
     }
+  }
+
+  closeConnection() {
+    if (this.db) {
+      this.db.close();
+      this.db = null;
+    }
+  }
+
+  destroy() {
+    if (this.isDestroyed) return;
+
+    this.isDestroyed = true;
+    this.closeConnection();
+    logger.debug(`BrowserStorage instance destroyed for ${this.dbName}`);
+  }
+
+  isValid() {
+    return !this.isDestroyed;
   }
 }
 

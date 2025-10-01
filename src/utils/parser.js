@@ -134,7 +134,12 @@ class ContentParser {
           type: `img > ${extension}`,
           doc: url.loc,
           ctx: this.captureContext(img, 'img'),
-          hash: this.createUniqueHash(actualSrc, url.loc, img.alt, this.getOccurrenceIndex(actualSrc, url.loc)),
+          hash: this.createUniqueHash(
+            actualSrc,
+            url.loc,
+            img.alt,
+            this.getOccurrenceIndex(actualSrc, url.loc),
+          ),
           firstUsedAt: timestamp,
           lastUsedAt: timestamp,
           domWidth,
@@ -263,7 +268,12 @@ class ContentParser {
             type: `link > ${this.getFileExtension(href)}`,
             doc: url.loc,
             ctx: this.captureContext(link, 'link'),
-            hash: this.createUniqueHash(href, url.loc, link.textContent, this.getOccurrenceIndex(href, url.loc)),
+            hash: this.createUniqueHash(
+              href,
+              url.loc,
+              link.textContent,
+              this.getOccurrenceIndex(href, url.loc),
+            ),
             firstUsedAt: timestamp,
             lastUsedAt: timestamp,
           });
@@ -512,7 +522,7 @@ class ContentParser {
 
   createUniqueHash(mediaUrl, pageUrl, altText = '', occurrenceIndex = 0) {
     const baseString = this.normalizeUrlForHash(mediaUrl) + altText + pageUrl;
-    const occurrenceString = baseString + `_${occurrenceIndex}`;
+    const occurrenceString = `${baseString}_${occurrenceIndex}`;
     return this.createHash(occurrenceString);
   }
 

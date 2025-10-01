@@ -26,6 +26,12 @@ async function loadAvailableSites() {
     const sites = await storage.getAllSites();
 
     const siteSelector = document.getElementById('site-selector');
+    const deleteSiteBtn = document.getElementById('delete-site-btn');
+    const clearStorageBtn = document.getElementById('clear-storage-btn');
+
+    // Store current selection before rebuilding
+    const currentSelection = siteSelector.value;
+
     siteSelector.innerHTML = '<option value="">Select a site...</option>';
 
     sites.forEach((site) => {
@@ -41,6 +47,20 @@ async function loadAvailableSites() {
       option.textContent = 'No sites found';
       option.disabled = true;
       siteSelector.appendChild(option);
+      deleteSiteBtn.style.display = 'none';
+      clearStorageBtn.style.display = 'none';
+    } else {
+      // Restore selection if it was valid
+      if (currentSelection && sites.some(site => site.siteKey === currentSelection)) {
+        siteSelector.value = currentSelection;
+        // Show Clear Data button and hide Clear All Storage button when site is selected
+        deleteSiteBtn.style.display = 'inline-block';
+        clearStorageBtn.style.display = 'none';
+      } else {
+        // No valid selection, hide both buttons (Clear All should never show)
+        clearStorageBtn.style.display = 'none';
+        deleteSiteBtn.style.display = 'none';
+      }
     }
   } catch (error) {
     console.error('Failed to load available sites:', error);
@@ -110,6 +130,8 @@ function setupControls() {
   const siteSelector = document.getElementById('site-selector');
   const scanBtn = document.getElementById('scan-btn');
   const clearBtn = document.getElementById('clear-btn');
+  const deleteSiteBtn = document.getElementById('delete-site-btn');
+  const clearStorageBtn = document.getElementById('clear-storage-btn');
 
 
   storageSelect.addEventListener('change', async (e) => {
@@ -143,8 +165,14 @@ function setupControls() {
     if (selectedSite) {
       await mediaLibrary.loadFromStorage(selectedSite);
       showNotification(`Loaded data for site: ${selectedSite}`, 'success');
+      // Show Clear Data button and hide Clear All Storage button when site is selected
+      deleteSiteBtn.style.display = 'inline-block';
+      clearStorageBtn.style.display = 'none';
     } else {
       await mediaLibrary.clearData();
+      // Hide Clear Data button and show Clear All Storage button when no site is selected
+      deleteSiteBtn.style.display = 'none';
+      clearStorageBtn.style.display = 'inline-block';
     }
   });
 
@@ -156,6 +184,39 @@ function setupControls() {
 
   clearBtn.addEventListener('click', () => {
     await mediaLibrary.clearData();
+  });
+
+  deleteSiteBtn.addEventListener('click', async () => {
+    const selectedSite = siteSelector.value;
+    if (selectedSite) {
+      // eslint-disable-next-line no-alert, no-restricted-globals
+      const confirmed = confirm(`Are you sure you want to delete all data for "${selectedSite}"? This action cannot be undone.`);
+      if (confirmed) {
+        try {
+          const storageType = document.getElementById('storage-type').value || 'indexeddb';
+          const storage = createStorage(storageType);
+          await storage.deleteSite(selectedSite);
+          
+          // Close the storage connection to prevent database locks
+          if (storage.closeConnection) {
+            storage.closeConnection();
+          }
+          
+          showNotification(`Deleted data for site: ${selectedSite}`, 'success');
+
+          // Clear the current display if the deleted site was loaded
+          await mediaLibrary.clearData();
+
+          // Reload the sites list
+          await loadAvailableSites();
+
+          // Reset the site selector
+          siteSelector.value = '';
+        } catch (error) {
+          showNotification(`Failed to delete site data: ${error.message}`, 'error');
+        }
+      }
+    }
   });
 
 
@@ -306,7 +367,8 @@ window.clearOldData = async () => {
       }
     }
 
-    await storage.clear();
+    // Use clearAllSites() instead of the non-existent clear() method
+    await storage.clearAllSites();
     await loadAvailableSites();
     showNotification('Old data cleared successfully', 'success');
   } catch (error) {

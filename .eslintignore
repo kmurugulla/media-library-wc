@@ -1,0 +1,27 @@
+# Build outputs
+dist/
+build/
+
+# Node modules
+node_modules/
+
+# Generated files
+*.min.js
+*.bundle.js
+*.iife.js
+
+# Specific built files that should not be linted
+dist/media-library-min.iife.js
+dist/media-library.iife.js
+dist/media-library.es.js
+dist/media-library.umd.js
+dist/full.esm-*.js
+
+# Other generated files
+*.d.ts
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp

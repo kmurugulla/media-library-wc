@@ -2,7 +2,7 @@ import { html } from 'lit';
 import LocalizableElement from '../base-localizable.js';
 import getSvg from '../../utils/get-svg.js';
 import { getStyles } from '../../utils/get-styles.js';
-import { getVideoThumbnail, isExternalVideoUrl, isVideo } from '../../utils/utils.js';
+import { getVideoThumbnail, isExternalVideoUrl } from '../../utils/utils.js';
 import modalManagerStyles from './modal-manager.css?inline';
 
 class ModalManager extends LocalizableElement {
@@ -92,7 +92,7 @@ class ModalManager extends LocalizableElement {
     if (mediaType && (mediaType.startsWith('video') || mediaType === 'video')) {
       return 'N/A';
     }
-    
+
     if (!alt || alt === 'null') {
       return 'Missing Alt';
     }
@@ -560,10 +560,10 @@ class ModalManager extends LocalizableElement {
     this.requestUpdate();
   }
 
-  handleExternalVideoAction(e, url, name) {
+  handleExternalVideoAction(e, url) {
     e.preventDefault();
     e.stopPropagation();
-    
+
     if (e.ctrlKey || e.metaKey) {
       // Open in new tab
       window.open(url, '_blank', 'noopener,noreferrer');

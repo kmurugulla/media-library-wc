@@ -21,8 +21,7 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "vite build && npm run build:assets",
-    "build:full": "vite build --mode self-contained && npm run build:assets",
+    "build": "vite build --mode development && vite build --mode self-contained-unminified && vite build --mode self-contained && npm run build:assets",
     "build:assets": "node build-dist.js",
     "preview": "vite preview",
     "lint:js": "eslint src",

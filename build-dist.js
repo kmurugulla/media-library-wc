@@ -61,12 +61,19 @@ dataFiles.forEach(dataFile => {
 
 import { readFileSync, writeFileSync } from 'fs';
 
-const jsFile = join(distDir, 'media-library-full.iife.js');
-if (existsSync(jsFile)) {
-  let content = readFileSync(jsFile, 'utf8');
-  content = content.replace(/\/src\/icons\//g, './icons/');
-  writeFileSync(jsFile, content);
-  console.log('Fixed asset paths in media-library-full.iife.js');
-}
+const jsFiles = [
+  'media-library.iife.js',
+  'media-library-min.iife.js'
+];
+
+jsFiles.forEach(jsFile => {
+  const filePath = join(distDir, jsFile);
+  if (existsSync(filePath)) {
+    let content = readFileSync(filePath, 'utf8');
+    content = content.replace(/\/src\/icons\//g, './icons/');
+    writeFileSync(filePath, content);
+    console.log(`Fixed asset paths in ${jsFile}`);
+  }
+});
 
 console.log('Build complete!');

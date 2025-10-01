@@ -6,10 +6,8 @@ class R2API {
   async putObject(key, data) {
     const response = await fetch(`${this.apiUrl}/api/save`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ key, data })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key, data }),
     });
 
     if (!response.ok) {
@@ -20,9 +18,7 @@ class R2API {
   }
 
   async getObject(key) {
-    const response = await fetch(`${this.apiUrl}/api/load?key=${encodeURIComponent(key)}`, {
-      method: 'GET'
-    });
+    const response = await fetch(`${this.apiUrl}/api/load?key=${encodeURIComponent(key)}`, { method: 'GET' });
 
     if (!response.ok) {
       if (response.status === 404) {
@@ -37,10 +33,8 @@ class R2API {
   async deleteObject(key) {
     const response = await fetch(`${this.apiUrl}/api/delete`, {
       method: 'DELETE',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ key })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ key }),
     });
 
     if (!response.ok) {
@@ -51,9 +45,7 @@ class R2API {
   }
 
   async listObjects(prefix = '') {
-    const response = await fetch(`${this.apiUrl}/api/list?prefix=${encodeURIComponent(prefix)}`, {
-      method: 'GET'
-    });
+    const response = await fetch(`${this.apiUrl}/api/list?prefix=${encodeURIComponent(prefix)}`, { method: 'GET' });
 
     if (!response.ok) {
       throw new Error(`R2 API LIST failed: ${response.status} ${response.statusText}`);
@@ -66,10 +58,8 @@ class R2API {
   async batchSave(mediaUsages, mode = 'preview') {
     const response = await fetch(`${this.apiUrl}/api/batch-save`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ mediaUsages, mode })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mediaUsages, mode }),
     });
 
     if (!response.ok) {
@@ -82,10 +72,8 @@ class R2API {
   async batchLoad(keys) {
     const response = await fetch(`${this.apiUrl}/api/batch-load`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ keys })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keys }),
     });
 
     if (!response.ok) {
@@ -99,10 +87,8 @@ class R2API {
   async batchDelete(keys) {
     const response = await fetch(`${this.apiUrl}/api/batch-delete`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ keys })
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ keys }),
     });
 
     if (!response.ok) {

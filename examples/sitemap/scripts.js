@@ -32,6 +32,9 @@ async function loadAvailableSites() {
     const deleteSiteBtn = document.getElementById('delete-site-btn');
     const clearStorageBtn = document.getElementById('clear-storage-btn');
 
+    // Store current selection before rebuilding
+    const currentSelection = siteSelector.value;
+
     siteSelector.innerHTML = '<option value="">Select a site...</option>';
 
     sites.forEach((site) => {
@@ -50,8 +53,17 @@ async function loadAvailableSites() {
       deleteSiteBtn.style.display = 'none';
       clearStorageBtn.style.display = 'none';
     } else {
-      clearStorageBtn.style.display = 'inline-block';
-      deleteSiteBtn.style.display = 'none';
+      // Restore selection if it was valid
+      if (currentSelection && sites.some(site => site.siteKey === currentSelection)) {
+        siteSelector.value = currentSelection;
+        // Show Clear Data button and hide Clear All button when site is selected
+        deleteSiteBtn.style.display = 'inline-block';
+        clearStorageBtn.style.display = 'none';
+      } else {
+        // No valid selection, hide both buttons (Clear All should never show)
+        clearStorageBtn.style.display = 'none';
+        deleteSiteBtn.style.display = 'none';
+      }
     }
   } catch (error) {
     console.error('Failed to load available sites:', error);
@@ -242,7 +254,9 @@ function setupControls() {
         await mediaLibrary.loadMediaData(mediaData, null, false, metadata);
 
         showNotification(`Loaded data for site: ${selectedSite}`, 'success');
+        // Show Clear Data button and hide Clear All button when site is selected
         deleteSiteBtn.style.display = 'inline-block';
+        clearStorageBtn.style.display = 'none';
       } catch (error) {
         console.error(`Failed to load data for site: ${selectedSite}`, error);
         console.error('Error details:', {
@@ -255,7 +269,9 @@ function setupControls() {
       }
     } else {
       await mediaLibrary.clearData();
+      // Hide Clear Data button and show Clear All button when no site is selected
       deleteSiteBtn.style.display = 'none';
+      clearStorageBtn.style.display = 'inline-block';
     }
   });
 
@@ -272,6 +288,12 @@ function setupControls() {
           const storageType = document.getElementById('storage-type').value || 'indexeddb';
           const storage = createStorage(storageType);
           await storage.deleteSite(selectedSite);
+          
+          // Close the storage connection to prevent database locks
+          if (storage.closeConnection) {
+            storage.closeConnection();
+          }
+          
           showNotification(`Deleted data for site: ${selectedSite}`, 'success');
 
           await mediaLibrary.clearData();
