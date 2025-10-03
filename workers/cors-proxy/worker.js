@@ -1,8 +1,6 @@
 // workers/cors-proxy/worker.js
-addEventListener('fetch', (event) => {
-  event.respondWith(handleRequest(event.request));
-});
 
+// eslint-disable-next-line no-use-before-define
 async function handleRequest(request) {
   const url = new URL(request.url);
   const targetUrl = url.searchParams.get('url');
@@ -35,3 +33,7 @@ async function handleRequest(request) {
     return new Response(`Proxy error: ${error.message}`, { status: 500 });
   }
 }
+// eslint-disable-next-line no-restricted-globals
+addEventListener('fetch', (event) => {
+  event.respondWith(handleRequest(event.request));
+});

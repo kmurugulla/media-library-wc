@@ -53,6 +53,7 @@ class MediaBusAuditSource {
       try {
         return this.getMediaDataFromAuditAPI(baseUrl, options);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.warn('Audit API failed:', error.message);
         throw error;
       }
@@ -129,6 +130,7 @@ class MediaBusAuditSource {
 
       return response.ok;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn('Authentication check failed:', error.message);
       return false;
     }
@@ -204,6 +206,7 @@ class MediaBusAuditSource {
         parsedEntry = this.parseJsonLog(logEntry);
       }
       if (!parsedEntry) {
+        // eslint-disable-next-line no-console
         console.warn('Unknown log entry format:', logEntry);
         return;
       }
@@ -269,6 +272,7 @@ class MediaBusAuditSource {
   parseSpaceSeparatedLog(logEntry) {
     const parts = logEntry.split(' ');
     if (parts.length < 8) {
+      // eslint-disable-next-line no-console
       console.warn('Invalid log entry format:', logEntry);
       return null;
     }

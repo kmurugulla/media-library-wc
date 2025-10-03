@@ -1,7 +1,5 @@
-
-import '../../dist/media-library.es.js';
-import { SitemapSource, WordPressSource, AEMSource, AdobeDASource } from '../../sources/index.js';
 import { waitForMediaLibraryReady, createStorage } from '../../dist/media-library.es.js';
+import { SitemapSource, WordPressSource, AEMSource, AdobeDASource } from '../../sources/index.js';
 
 let mediaLibrary;
 
@@ -13,29 +11,36 @@ function setupControls() {
   const scanBtn = document.getElementById('scan-btn');
   const clearBtn = document.getElementById('clear-btn');
   const deleteSiteBtn = document.getElementById('delete-site-btn');
-  const clearStorageBtn = document.getElementById('clear-storage-btn');
+
+  // Load available sites on initialization
+  // eslint-disable-next-line no-use-before-define
+  loadAvailableSites();
 
   dataSourceSelect.addEventListener('change', (e) => {
+    // eslint-disable-next-line no-use-before-define
     updateDataSourceOptions(e.target.value);
   });
 
   storageSelect.addEventListener('change', async (e) => {
     const previousStorage = mediaLibrary.storage;
     const newStorage = e.target.value;
-    
+
     mediaLibrary.storage = newStorage;
-    
+
     // Recreate storage manager with new storage type
     mediaLibrary.storageManager = createStorage(newStorage);
-    
+
     await mediaLibrary.clearData();
-    
+
     if (previousStorage !== 'indexeddb' && newStorage === 'indexeddb') {
+      // eslint-disable-next-line no-use-before-define
       showNotification('Switched to IndexDB storage - future scans will be saved', 'info');
     } else if (previousStorage !== 'r2' && newStorage === 'r2') {
+      // eslint-disable-next-line no-use-before-define
       showNotification('Switched to R2 storage - future scans will be saved to cloud', 'info');
     }
-    
+
+    // eslint-disable-next-line no-use-before-define
     loadAvailableSites();
   });
 
@@ -47,23 +52,23 @@ function setupControls() {
     const selectedSite = e.target.value;
     if (selectedSite) {
       await mediaLibrary.loadFromStorage(selectedSite);
+      // eslint-disable-next-line no-use-before-define
       showNotification(`Loaded data for site: ${selectedSite}`, 'success');
       // Show Clear Data button and hide Clear All Storage button when site is selected
       deleteSiteBtn.style.display = 'inline-block';
-      clearStorageBtn.style.display = 'none';
     } else {
       await mediaLibrary.clearData();
       // Hide Clear Data button and show Clear All Storage button when no site is selected
       deleteSiteBtn.style.display = 'none';
-      clearStorageBtn.style.display = 'inline-block';
     }
   });
 
   scanBtn.addEventListener('click', async () => {
-    await performScan();
+    await // eslint-disable-next-line no-use-before-define
+    performScan();
   });
 
-  clearBtn.addEventListener('click', () => {
+  clearBtn.addEventListener('click', async () => {
     await mediaLibrary.clearData();
   });
 
@@ -77,37 +82,29 @@ function setupControls() {
           const storageType = document.getElementById('storage-type').value || 'indexeddb';
           const storage = createStorage(storageType);
           await storage.deleteSite(selectedSite);
-          
+
           // Close the storage connection to prevent database locks
           if (storage.closeConnection) {
             storage.closeConnection();
           }
-          
+
+          // eslint-disable-next-line no-use-before-define
           showNotification(`Deleted data for site: ${selectedSite}`, 'success');
 
           // Clear the current display if the deleted site was loaded
           await mediaLibrary.clearData();
 
           // Reload the sites list
-          await loadAvailableSites();
+          await // eslint-disable-next-line no-use-before-define
+          loadAvailableSites();
 
           // Reset the site selector
           siteSelector.value = '';
         } catch (error) {
+          // eslint-disable-next-line no-use-before-define
           showNotification(`Failed to delete site data: ${error.message}`, 'error');
         }
       }
-    }
-  });
-
-  configToggleBtn.addEventListener('click', () => {
-    const isCollapsed = configSection.classList.contains('collapsed');
-    if (isCollapsed) {
-      configSection.classList.remove('collapsed');
-      configToggleBtn.classList.remove('collapsed');
-    } else {
-      configSection.classList.add('collapsed');
-      configToggleBtn.classList.add('collapsed');
     }
   });
 
@@ -123,11 +120,14 @@ function setupControls() {
   websiteGroup.style.display = 'none';
   orDivider.style.display = 'none';
 
+  // eslint-disable-next-line no-use-before-define
   updateDataSourceOptions(dataSourceSelect.value);
+  // eslint-disable-next-line no-use-before-define
   loadAvailableSites();
 }
 
-function updateDataSourceOptions(dataSourceType) {
+function // eslint-disable-next-line no-use-before-define
+updateDataSourceOptions(dataSourceType) {
   const sitemapGroup = document.getElementById('sitemap-specific-group');
   const aemGroup = document.getElementById('aem-options-group');
   const adobeGroup = document.getElementById('adobe-options-group');
@@ -171,7 +171,7 @@ function updateDataSourceOptions(dataSourceType) {
       adobeGroup.style.display = 'block';
       break;
     default:
-  
+
       break;
   }
 
@@ -190,7 +190,7 @@ function updateDataSourceOptions(dataSourceType) {
       sourceInput.placeholder = 'https://your-company.scene7.com';
       break;
     default:
-  
+
       break;
   }
 }
@@ -198,11 +198,13 @@ function updateDataSourceOptions(dataSourceType) {
 function setupNotifications() {
   window.addEventListener('show-notification', (e) => {
     const { heading, message, type } = e.detail;
+    // eslint-disable-next-line no-use-before-define
     showNotification(`${heading}: ${message}`, type);
   });
 }
 
-function showNotification(message, type = 'info') {
+function // eslint-disable-next-line no-use-before-define
+showNotification(message, type = 'info') {
   const notification = document.createElement('div');
   notification.className = `notification ${type}`;
   notification.textContent = message;
@@ -217,17 +219,18 @@ function showNotification(message, type = 'info') {
 
 function normalizeUrl(url) {
   if (!url) return url;
-  
+
   let normalizedUrl = url.trim();
-  
+
   if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
     normalizedUrl = `https://${normalizedUrl}`;
   }
-  
+
   return normalizedUrl;
 }
 
-async function performScan() {
+async function // eslint-disable-next-line no-use-before-define
+performScan() {
   const dataSourceType = document.getElementById('data-source').value;
   const websiteUrlElement = document.getElementById('website-url');
   const sourceUrl = websiteUrlElement ? websiteUrlElement.value.trim() : '';
@@ -236,10 +239,12 @@ async function performScan() {
 
   if (dataSourceType === 'sitemap') {
     if (!sourceUrl && !sitemapUrl) {
+      // eslint-disable-next-line no-use-before-define
       showNotification('Please enter either a Website URL or Sitemap URL', 'error');
       return;
     }
   } else if (dataSourceType === 'wordpress' && !sourceUrl) {
+    // eslint-disable-next-line no-use-before-define
     showNotification('Please enter a website URL', 'error');
     return;
   }
@@ -253,17 +258,19 @@ async function performScan() {
     let options = {};
 
     switch (dataSourceType) {
-      case 'sitemap':
+      case 'sitemap': {
         dataSource = new SitemapSource();
         if (sitemapUrl) {
           options.sitemapUrl = sitemapUrl;
         }
         break;
-      case 'wordpress':
+      }
+      case 'wordpress': {
         dataSource = new WordPressSource();
         const postTypes = ['posts', 'pages', 'media'];
         options = { postTypes, perPage: 100, maxPages: 10 };
         break;
+      }
       case 'aem': {
         dataSource = new AEMSource();
         const aemOrgElement = document.getElementById('aem-org');
@@ -313,7 +320,9 @@ async function performScan() {
     await mediaLibrary.clearData();
     const mediaData = await mediaLibrary.loadFromPageList(pageList, null, siteKey);
 
+    // eslint-disable-next-line no-use-before-define
     showNotification(`Scan complete! Found ${mediaData.length} media items`, 'success');
+    // eslint-disable-next-line no-use-before-define
     loadAvailableSites();
   } catch (error) {
     // Log detailed error to console
@@ -325,11 +334,10 @@ async function performScan() {
       stack: error.stack,
       name: error.name,
       dataSourceType,
-      sourceUrl: normalizedSourceUrl,
-      sitemapUrl: normalizedSitemapUrl,
     });
 
     // Show generic error message to user
+    // eslint-disable-next-line no-use-before-define
     showNotification('Scan failed: Check console for detailed error information', 'error');
   } finally {
     const scanBtn = document.getElementById('scan-btn');
@@ -338,7 +346,8 @@ async function performScan() {
   }
 }
 
-async function loadAvailableSites() {
+async function // eslint-disable-next-line no-use-before-define
+loadAvailableSites() {
   try {
     const storageType = document.getElementById('storage-type').value || 'indexeddb';
     const storage = createStorage(storageType);
@@ -347,7 +356,6 @@ async function loadAvailableSites() {
 
     const siteSelector = document.getElementById('site-selector');
     const deleteSiteBtn = document.getElementById('delete-site-btn');
-    const clearStorageBtn = document.getElementById('clear-storage-btn');
 
     // Store current selection before rebuilding
     const currentSelection = siteSelector.value;
@@ -368,31 +376,26 @@ async function loadAvailableSites() {
       option.disabled = true;
       siteSelector.appendChild(option);
       deleteSiteBtn.style.display = 'none';
-      clearStorageBtn.style.display = 'none';
-    } else {
+    } else if (currentSelection && sites.some((site) => site.siteKey === currentSelection)) {
       // Restore selection if it was valid
-      if (currentSelection && sites.some(site => site.siteKey === currentSelection)) {
-        siteSelector.value = currentSelection;
-        // Show Clear Data button and hide Clear All Storage button when site is selected
-        deleteSiteBtn.style.display = 'inline-block';
-        clearStorageBtn.style.display = 'none';
-      } else {
-        // No valid selection, hide both buttons (Clear All should never show)
-        clearStorageBtn.style.display = 'none';
-        deleteSiteBtn.style.display = 'none';
-      }
+      siteSelector.value = currentSelection;
+      // Show Clear Data button and hide Clear All Storage button when site is selected
+      deleteSiteBtn.style.display = 'inline-block';
+    } else {
+      // No valid selection, hide both buttons (Clear All should never show)
+      deleteSiteBtn.style.display = 'none';
     }
   } catch (error) {
+    // eslint-disable-next-line no-console
     console.error('Failed to load available sites:', error);
+    // eslint-disable-next-line no-use-before-define
     showNotification(`Failed to load sites: ${error.message}`, 'error');
   }
 }
 
-
 function parseURLParameters() {
   const urlParams = new URLSearchParams(window.location.search);
   const params = {};
-
 
   for (const [key, value] of urlParams.entries()) {
     params[key] = decodeURIComponent(value);
@@ -409,15 +412,14 @@ function applyURLParameters() {
   }
 
   try {
-
     if (params.source) {
       const dataSourceSelect = document.getElementById('data-source');
       if (dataSourceSelect) {
         dataSourceSelect.value = params.source;
+        // eslint-disable-next-line no-use-before-define
         updateDataSourceOptions(params.source);
       }
     }
-
 
     if (params.url) {
       const websiteUrlInput = document.getElementById('website-url');
@@ -426,14 +428,12 @@ function applyURLParameters() {
       }
     }
 
-
     if (params.sitemap) {
       const sitemapUrlInput = document.getElementById('sitemap-url');
       if (sitemapUrlInput) {
         sitemapUrlInput.value = params.sitemap;
       }
     }
-
 
     if (params.org) {
       const aemOrgInput = document.getElementById('aem-org');
@@ -449,7 +449,6 @@ function applyURLParameters() {
       }
     }
 
-
     if (params.org) {
       const adobeOrgInput = document.getElementById('adobe-org');
       if (adobeOrgInput) {
@@ -464,31 +463,27 @@ function applyURLParameters() {
       }
     }
 
-
     if (params.storage) {
       const storageSelect = document.getElementById('storage-type');
       if (storageSelect) {
         storageSelect.value = params.storage;
-    
+
         storageSelect.dispatchEvent(new Event('change'));
       }
     }
-
 
     if (params.locale) {
       const localeSelect = document.getElementById('locale');
       if (localeSelect) {
         localeSelect.value = params.locale;
-    
+
         localeSelect.dispatchEvent(new Event('change'));
       }
     }
 
-
     if (params.load) {
       const siteSelector = document.getElementById('site-selector');
       if (siteSelector) {
-    
         setTimeout(() => {
           siteSelector.value = params.load;
           siteSelector.dispatchEvent(new Event('change'));
@@ -496,71 +491,32 @@ function applyURLParameters() {
       }
     }
 
-
     if (params.autoscan === 'true') {
-  
       setTimeout(() => {
+        // eslint-disable-next-line no-use-before-define
         performScan();
       }, 1000);
     }
 
+    // eslint-disable-next-line no-use-before-define
     showNotification('Configuration loaded from URL parameters', 'info');
-
-
-    if (configSection && configToggleBtn) {
-      configSection.classList.add('collapsed');
-      configToggleBtn.classList.add('collapsed');
-    }
   } catch (error) {
-    
+    // eslint-disable-next-line no-console
     console.error('Error applying URL parameters:', error);
+    // eslint-disable-next-line no-use-before-define
     showNotification(`Error loading URL parameters: ${error.message}`, 'error');
   }
 }
 
-
 window.refreshSites = loadAvailableSites;
-
-window.clearOldData = async () => {
-  try {
-    const storage = mediaLibrary.storageManager;
-
-    if (!storage) {
-      showNotification('Storage manager not available', 'error');
-      return;
-    }
-
-    const oldData = await storage.load('media-data');
-    if (oldData && oldData.length > 0) {
-      
-      const shouldMigrate = confirm(`Found ${oldData.length} items in old format. Would you like to migrate them to 'legacy-data' site before clearing?`);
-      if (shouldMigrate) {
-        await storage.save(oldData);
-        showNotification(`Migrated ${oldData.length} items to 'legacy-data' site`, 'success');
-      }
-    }
-
-    // Use clearAllSites() instead of the non-existent clear() method
-    await storage.clearAllSites();
-    await loadAvailableSites();
-    showNotification('Old data cleared successfully', 'success');
-  } catch (error) {
-    
-    console.error('Failed to clear old data:', error);
-    showNotification(`Failed to clear data: ${error.message}`, 'error');
-  }
-};
-
 
 document.addEventListener('DOMContentLoaded', async () => {
   mediaLibrary = document.getElementById('media-library');
-
 
   await waitForMediaLibraryReady(mediaLibrary);
 
   setupControls();
   setupNotifications();
-
 
   applyURLParameters();
 });

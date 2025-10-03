@@ -31,24 +31,28 @@ class Logger {
 
   error(message, ...args) {
     if (this.shouldLog('error')) {
+      // eslint-disable-next-line no-console
       console.error(`[ERROR] ${message}`, ...args);
     }
   }
 
   warn(message, ...args) {
     if (this.shouldLog('warn')) {
+      // eslint-disable-next-line no-console
       console.warn(`[WARN] ${message}`, ...args);
     }
   }
 
   info(message, ...args) {
     if (this.shouldLog('info')) {
+      // eslint-disable-next-line no-console
       console.info(`[INFO] ${message}`, ...args);
     }
   }
 
   debug(message, ...args) {
     if (this.shouldLog('debug')) {
+      // eslint-disable-next-line no-console
       console.debug(`[DEBUG] ${message}`, ...args);
     }
   }

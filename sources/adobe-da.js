@@ -56,6 +56,7 @@ class AdobeDASource {
       try {
         return this.getPageListFromDADiscovery(baseUrl);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.warn('DA discovery failed, falling back to sitemap:', error.message);
       }
     }
@@ -101,6 +102,7 @@ class AdobeDASource {
 
       return data.assets.map((asset) => this.convertAssetToPageObject(asset, baseUrl));
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.error(`Error fetching ${assetType} assets:`, error);
       return [];
     }
@@ -272,6 +274,7 @@ class AdobeDASource {
 
       return response.ok || response.status === 404;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn('Authentication check failed:', error.message);
       return false;
     }
@@ -293,6 +296,7 @@ class AdobeDASource {
         return data.data || data || [];
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn('Failed to load existing media data:', error.message);
     }
     return [];
@@ -320,6 +324,7 @@ class AdobeDASource {
         }
       }
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn('Crawl API failed, using fallback method:', error.message);
       urls.push(`${crawlPath}/index.html`);
     }
@@ -416,6 +421,7 @@ class AdobeDASource {
           options.headers.Authorization = `Bearer ${token}`;
         }
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.warn('Failed to get IMS token:', error.message);
       }
     }

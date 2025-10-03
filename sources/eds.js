@@ -54,6 +54,7 @@ class EDSSource {
       try {
         return this.getPageListFromEDSDiscovery(baseUrl);
       } catch (error) {
+        // eslint-disable-next-line no-console
         console.warn('EDS discovery failed, falling back to sitemap:', error.message);
       }
     }
@@ -106,9 +107,12 @@ class EDSSource {
     }
 
     return data.pageList.items.map((item) => ({
-      url: this.pathToUrl(item._path),       loc: this.pathToUrl(item._path),       lastmod: item['jcr:lastModified'],
+      url: this.pathToUrl(item._path), // eslint-disable-line no-underscore-dangle
+      loc: this.pathToUrl(item._path), // eslint-disable-line no-underscore-dangle
+      lastmod: item['jcr:lastModified'],
       title: item['jcr:title'],
-      path: item._path,       template: item['cq:template'],
+      path: item._path, // eslint-disable-line no-underscore-dangle
+      template: item['cq:template'],
       resourceType: item['sling:resourceType'],
     }));
   }
@@ -245,7 +249,9 @@ class EDSSource {
     }
 
     return data.assetList.items.map((item) => ({
-      url: this.pathToUrl(item._path),       path: item._path,       title: item['jcr:title'],
+      url: this.pathToUrl(item._path), // eslint-disable-line no-underscore-dangle
+      path: item._path, // eslint-disable-line no-underscore-dangle
+      title: item['jcr:title'],
       lastmod: item['jcr:lastModified'],
       mimeType: item['jcr:content']?.mimeType,
       width: item['jcr:content']?.width,
@@ -308,6 +314,7 @@ class EDSSource {
 
       return response.ok;
     } catch (error) {
+      // eslint-disable-next-line no-console
       console.warn('Authentication check failed:', error.message);
       return false;
     }

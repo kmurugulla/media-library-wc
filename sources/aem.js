@@ -97,12 +97,18 @@ class AEMSource {
       return [];
     }
 
-    return data.pageList.items.map((item) => ({
-      url: this.pathToUrl(item._path),       loc: this.pathToUrl(item._path),       lastmod: item['jcr:lastModified'],
-      title: item['jcr:title'],
-      path: item._path,       template: item['cq:template'],
-      resourceType: item['sling:resourceType'],
-    }));
+    return data.pageList.items.map((item) => {
+      const { _path: path } = item;
+      return {
+        url: this.pathToUrl(path),
+        loc: this.pathToUrl(path),
+        lastmod: item['jcr:lastModified'],
+        title: item['jcr:title'],
+        path,
+        template: item['cq:template'],
+        resourceType: item['sling:resourceType'],
+      };
+    });
   }
 
   /**
@@ -271,14 +277,19 @@ class AEMSource {
       return [];
     }
 
-    return data.assetList.items.map((item) => ({
-      url: this.pathToUrl(item._path),       path: item._path,       title: item['jcr:title'],
-      lastmod: item['jcr:lastModified'],
-      mimeType: item['jcr:content']?.mimeType,
-      width: item['jcr:content']?.width,
-      height: item['jcr:content']?.height,
-      size: item['jcr:content']?.size,
-    }));
+    return data.assetList.items.map((item) => {
+      const { _path: path } = item;
+      return {
+        url: this.pathToUrl(path),
+        path,
+        title: item['jcr:title'],
+        lastmod: item['jcr:lastModified'],
+        mimeType: item['jcr:content']?.mimeType,
+        width: item['jcr:content']?.width,
+        height: item['jcr:content']?.height,
+        size: item['jcr:content']?.size,
+      };
+    });
   }
 }
 

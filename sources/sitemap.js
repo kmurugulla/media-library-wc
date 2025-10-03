@@ -34,19 +34,19 @@ class SitemapSource {
 
     try {
       const response = await fetch(url, options);
-      
+
       // Check for Cloudflare protection
       if (response.status === 403) {
         const text = await response.text();
         if (text.includes('Cloudflare') || text.includes('Attention Required')) {
           throw new Error(
-            `Website is protected by Cloudflare security measures. `
+            'Website is protected by Cloudflare security measures. '
             + 'Please use the direct sitemap URL instead of the website URL. '
             + 'Try entering the full sitemap URL (e.g., https://www.durysta.com/sitemap.xml) in the "Direct Sitemap URL" field.',
           );
         }
       }
-      
+
       return response;
     } catch (error) {
       const isCorsError = error.message.includes('CORS')
@@ -61,12 +61,12 @@ class SitemapSource {
           if (response.ok) {
             return response;
           }
-          
+
           // Check if proxy also gets Cloudflare protection
           const text = await response.text();
           if (text.includes('Cloudflare') || text.includes('Attention Required')) {
             throw new Error(
-              `Website is protected by Cloudflare security measures. `
+              'Website is protected by Cloudflare security measures. '
               + 'Please use the direct sitemap URL instead of the website URL. '
               + 'Try entering the full sitemap URL (e.g., https://www.durysta.com/sitemap.xml) in the "Direct Sitemap URL" field.',
             );

@@ -52,6 +52,7 @@ class WordPressSource {
         const typePages = await this.fetchPostTypePages(baseApiUrl, postType, perPage, maxPages);
         pages.push(...typePages);
       } catch (error) {
+        // Ignore errors for individual post types
       }
     }
 

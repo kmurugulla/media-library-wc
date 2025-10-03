@@ -1,7 +1,5 @@
-import { build } from 'vite';
-import { copyFileSync, mkdirSync, existsSync, cpSync } from 'fs';
+import { copyFileSync, mkdirSync, existsSync, readFileSync, writeFileSync } from 'fs';
 import { join } from 'path';
-
 
 const distDir = 'dist';
 const iconsDir = join(distDir, 'icons');
@@ -15,16 +13,17 @@ if (!existsSync(iconsDir)) {
 }
 
 const icons = [
-  'close.svg', 'photo.svg', 'video.svg', 'pdf.svg', 
-  'external-link.svg', 'copy.svg', 'search.svg', 
-  'list.svg', 'grid.svg', 'refresh.svg', 'eye.svg', 'link.svg'
+  'close.svg', 'photo.svg', 'video.svg', 'pdf.svg',
+  'external-link.svg', 'copy.svg', 'search.svg',
+  'list.svg', 'grid.svg', 'refresh.svg', 'eye.svg', 'link.svg',
 ];
 
-icons.forEach(icon => {
+icons.forEach((icon) => {
   const srcPath = join('src', 'icons', icon);
   const destPath = join(iconsDir, icon);
   if (existsSync(srcPath)) {
     copyFileSync(srcPath, destPath);
+    // eslint-disable-next-line no-console
     console.log(`Copied ${icon}`);
   }
 });
@@ -35,11 +34,12 @@ if (!existsSync(localesDir)) {
 }
 
 const locales = ['en.json', 'es.json', 'de.json', 'fr.json'];
-locales.forEach(locale => {
+locales.forEach((locale) => {
   const srcPath = join('src', 'locales', locale);
   const destPath = join(localesDir, locale);
   if (existsSync(srcPath)) {
     copyFileSync(srcPath, destPath);
+    // eslint-disable-next-line no-console
     console.log(`Copied ${locale}`);
   }
 });
@@ -50,30 +50,31 @@ if (!existsSync(dataDir)) {
 }
 
 const dataFiles = ['category-patterns.json'];
-dataFiles.forEach(dataFile => {
+dataFiles.forEach((dataFile) => {
   const srcPath = join('src', 'data', dataFile);
   const destPath = join(dataDir, dataFile);
   if (existsSync(srcPath)) {
     copyFileSync(srcPath, destPath);
+    // eslint-disable-next-line no-console
     console.log(`Copied ${dataFile}`);
   }
 });
 
-import { readFileSync, writeFileSync } from 'fs';
-
 const jsFiles = [
   'media-library.iife.js',
-  'media-library-min.iife.js'
+  'media-library-min.iife.js',
 ];
 
-jsFiles.forEach(jsFile => {
+jsFiles.forEach((jsFile) => {
   const filePath = join(distDir, jsFile);
   if (existsSync(filePath)) {
     let content = readFileSync(filePath, 'utf8');
     content = content.replace(/\/src\/icons\//g, './icons/');
     writeFileSync(filePath, content);
+    // eslint-disable-next-line no-console
     console.log(`Fixed asset paths in ${jsFile}`);
   }
 });
 
+// eslint-disable-next-line no-console
 console.log('Build complete!');

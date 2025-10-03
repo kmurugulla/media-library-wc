@@ -1,7 +1,5 @@
-import '../../dist/media-library.es.js';
-import MediaBusAuditSource from '../../sources/mediabus-audit.js';
 import { waitForMediaLibraryReady } from '../../dist/media-library.es.js';
-
+import MediaBusAuditSource from '../../sources/mediabus-audit.js';
 
 const mediaLibrary = document.getElementById('media-library');
 
@@ -16,7 +14,6 @@ function showNotification(heading, message, type = 'info') {
   }));
 }
 
-
 document.getElementById('load-audit-logs').addEventListener('click', async () => {
   const org = document.getElementById('org-name').value;
   const repo = document.getElementById('repo-name').value;
@@ -27,7 +24,7 @@ document.getElementById('load-audit-logs').addEventListener('click', async () =>
   const limit = parseInt(document.getElementById('limit').value, 10);
 
   if (!org || !repo) {
-    
+    // eslint-disable-next-line no-alert
     alert('Please enter both organization and site names');
     return;
   }
@@ -39,12 +36,9 @@ document.getElementById('load-audit-logs').addEventListener('click', async () =>
     loadButton.disabled = true;
     loadButton.textContent = 'Loading...';
 
-
     await mediaLibrary.clearData();
 
-
     const auditSource = new MediaBusAuditSource();
-
 
     const mediaData = await auditSource.getMediaData(null, {
       org,
@@ -57,19 +51,15 @@ document.getElementById('load-audit-logs').addEventListener('click', async () =>
       requireAuth: true,
     });
 
-
     const siteKey = `audit-${org}-${repo}`;
     const useStorage = document.getElementById('use-storage').checked;
 
     await mediaLibrary.loadMediaData(mediaData, siteKey, useStorage);
 
-    
-
-
     const storageStatus = useStorage ? ' (saved to storage)' : ' (not saved)';
     showNotification('Success', `Loaded ${mediaData.length} media items from Media-Bus audit logs${storageStatus}`, 'success');
   } catch (error) {
-    
+    // eslint-disable-next-line no-console
     console.error('Failed to load audit logs:', error);
     showNotification('Error', `Failed to load audit logs: ${error.message}`, 'error');
   } finally {
@@ -77,9 +67,6 @@ document.getElementById('load-audit-logs').addEventListener('click', async () =>
     loadButton.textContent = originalText;
   }
 });
-
-
-
 
 const today = new Date();
 const thirtyDaysAgo = new Date(today.getTime() - (30 * 24 * 60 * 60 * 1000));
@@ -90,10 +77,8 @@ const [thirtyDaysAgoStr] = thirtyDaysAgo.toISOString().split('T');
 document.getElementById('end-date').value = todayStr;
 document.getElementById('start-date').value = thirtyDaysAgoStr;
 
-
 document.getElementById('org-name').placeholder = 'adobe';
 document.getElementById('repo-name').placeholder = 'theblog';
-
 
 document.addEventListener('keydown', (event) => {
   if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -102,7 +87,6 @@ document.addEventListener('keydown', (event) => {
     loadButton.click();
   }
 });
-
 
 function validateForm() {
   const org = document.getElementById('org-name').value;
@@ -123,7 +107,7 @@ function validateForm() {
     errors.push('Media base URL is required');
   } else {
     try {
-      
+      // eslint-disable-next-line no-new
       new URL(mediaBaseUrl);
     } catch {
       errors.push('Media base URL must be a valid URL');
@@ -132,7 +116,6 @@ function validateForm() {
 
   return errors;
 }
-
 
 function updateValidation() {
   const errors = validateForm();
@@ -151,13 +134,10 @@ document.getElementById('org-name').addEventListener('input', updateValidation);
 document.getElementById('repo-name').addEventListener('input', updateValidation);
 document.getElementById('media-base-url').addEventListener('input', updateValidation);
 
-
 updateValidation();
-
 
 document.addEventListener('DOMContentLoaded', async () => {
   try {
-
     await waitForMediaLibraryReady(mediaLibrary);
     showNotification('Success', 'Media library initialized successfully', 'success');
   } catch (error) {
