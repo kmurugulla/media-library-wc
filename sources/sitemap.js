@@ -28,7 +28,7 @@ class SitemapSource {
    * @returns {Promise<Response>} Fetch response
    */
   async fetchWithProxy(url, options = {}) {
-    if (!this.useCorsProxy) {
+    if (!this.useCorsProxy || url.includes('localhost') || url.includes('127.0.0.1')) {
       return fetch(url, options);
     }
 
