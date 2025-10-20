@@ -204,21 +204,6 @@ class MediaTopbar extends LocalizableElement {
           </svg>
         </button>
 
-        ${this.showAnalysisToggle ? html`
-          <div class="analysis-toggle-container">
-            <span class="analysis-toggle-text">EXIF</span>
-            <label class="analysis-toggle-label">
-              <input 
-                type="checkbox" 
-                class="analysis-toggle-input"
-                ?checked=${this.imageAnalysisEnabled}
-                @change=${this.toggleImageAnalysis}
-                ?disabled=${this.isActuallyScanning}
-              />
-              <span class="analysis-toggle-slider ${this.imageAnalysisEnabled ? 'enabled' : ''}"></span>
-            </label>
-          </div>
-        ` : ''}
 
       </div>
 

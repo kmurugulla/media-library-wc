@@ -3,17 +3,22 @@ import LocalizableElement from '../base-localizable.js';
 import getSvg from '../../utils/get-svg.js';
 import { getStyles } from '../../utils/get-styles.js';
 import { getVideoThumbnail, isExternalVideoUrl } from '../../utils/utils.js';
-import modalManagerStyles from './modal-manager.css?inline';
+import mediaDetailsStyles from './media-details.css?inline';
 
-class ModalManager extends LocalizableElement {
+class MediaDetails extends LocalizableElement {
   static properties = {
     locale: { type: String },
     isOpen: { type: Boolean },
     modalData: { type: Object },
     _activeTab: { state: true },
+    _mimeType: { state: true },
+    _fileSize: { state: true },
+    _mediaOrigin: { state: true },
+    _mediaPath: { state: true },
+    _exifData: { state: true },
   };
 
-  static styles = getStyles(modalManagerStyles);
+  static styles = getStyles(mediaDetailsStyles);
 
   constructor() {
     super();
@@ -21,12 +26,16 @@ class ModalManager extends LocalizableElement {
     this.isOpen = false;
     this.modalData = null;
     this._activeTab = 'usage';
+    this._mimeType = null;
+    this._fileSize = null;
+    this._mediaOrigin = null;
+    this._mediaPath = null;
+    this._exifData = null;
+    this.iconsLoaded = false;
   }
 
   async connectedCallback() {
     super.connectedCallback();
-
-    await this.loadIcons();
 
     window.addEventListener('open-modal', this.handleOpenModal);
     window.addEventListener('close-modal', this.handleCloseModal);
@@ -40,11 +49,29 @@ class ModalManager extends LocalizableElement {
       '/src/icons/pdf.svg',
       '/src/icons/external-link.svg',
       '/src/icons/copy.svg',
+      '/src/icons/eye.svg',
+      '/src/icons/reference.svg',
+      '/src/icons/info.svg',
+      '/src/icons/open-in.svg',
+      '/src/icons/play.svg',
     ];
 
     const existingIcons = this.shadowRoot.querySelectorAll('svg[id]');
-    if (existingIcons.length === 0) {
-      await getSvg({ parent: this.shadowRoot, paths: ICONS });
+    const loadedIconIds = Array.from(existingIcons).map((icon) => icon.id);
+    const missingIcons = ICONS.filter((iconPath) => {
+      const iconId = iconPath.split('/').pop().replace('.svg', '');
+      return !loadedIconIds.includes(iconId);
+    });
+
+    if (missingIcons.length > 0) {
+      await getSvg({ parent: this.shadowRoot, paths: missingIcons });
+    }
+  }
+
+  updated(changedProperties) {
+    if (changedProperties.has('isOpen') && this.isOpen && !this.iconsLoaded) {
+      this.loadIcons();
+      this.iconsLoaded = true;
     }
   }
 
@@ -54,17 +81,31 @@ class ModalManager extends LocalizableElement {
     window.removeEventListener('close-modal', this.handleCloseModal);
   }
 
-  handleOpenModal = (e) => {
+  handleOpenModal = async (e) => {
     window.dispatchEvent(new Event('close-modal'));
 
     this.modalData = e.detail;
     this.isOpen = true;
+
+    // Load metadata and EXIF when modal opens
+    const { media } = e.detail.data;
+    if (media) {
+      await this.loadFileMetadata(media);
+      if (this.isImage(media.url)) {
+        await this.loadExifData(media.url);
+      }
+    }
   };
 
   handleCloseModal = () => {
     this.isOpen = false;
     this.modalData = null;
     this._activeTab = 'usage';
+    this._mimeType = null;
+    this._fileSize = null;
+    this._mediaOrigin = null;
+    this._mediaPath = null;
+    this._exifData = null;
   };
 
   handleTabChange = (e) => {
@@ -77,29 +118,42 @@ class ModalManager extends LocalizableElement {
     return usageCount;
   }
 
-  shouldShowPreviewEditButtons() {
-    const previewEditDomains = [
-      'content.da.live',
-    ];
-
-    const source = this.modalData?.data?.source || '';
-
-    return previewEditDomains.some((domain) => source.includes(domain));
-  }
-
   getAltTextDisplay(alt, mediaType = null) {
-    // For videos, alt text is not applicable
-    if (mediaType && (mediaType.startsWith('video') || mediaType === 'video')) {
-      return 'N/A';
+    // Alt text is only applicable for images
+    // For videos, PDFs, links, and other non-image types, show N/A
+    if (mediaType && !mediaType.startsWith('img')) {
+      return html`<span class="alt-na">N/A</span>`;
     }
 
-    if (!alt || alt === 'null') {
-      return 'Missing Alt';
+    if (!alt || alt === null) {
+      return html`
+        <span class="alt-missing">
+          <svg class="alt-status-icon missing" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0C3.6 0 0 3.6 0 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm1 13H7V7h2v6zm0-8H7V3h2v2z"/>
+          </svg>
+          Missing Alt
+        </span>
+      `;
     }
     if (alt === '') {
-      return 'Decorative';
+      return html`
+        <span class="alt-decorative">
+          <svg class="alt-status-icon decorative" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+            <circle cx="8" cy="8" r="7" stroke="currentColor" fill="none" stroke-width="2"/>
+            <circle cx="8" cy="8" r="3" fill="currentColor"/>
+          </svg>
+          Decorative
+        </span>
+      `;
     }
-    return alt;
+    return html`
+      <span class="alt-filled">
+        <svg class="alt-status-icon filled" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
+          <path d="M8 0C3.6 0 0 3.6 0 8s3.6 8 8 8 8-3.6 8-8-3.6-8-8-8zm-1.5 12L3 8.5l1.4-1.4 2.1 2.1 4.1-4.1L12 6.5 6.5 12z"/>
+        </svg>
+        ${alt}
+      </span>
+    `;
   }
 
   formatContextAsHtml(context) {
@@ -215,41 +269,52 @@ class ModalManager extends LocalizableElement {
     return html`
       <div class="modal-overlay" ?open=${this.isOpen} @click=${this.handleOverlayClick}>
         <div class="modal-content" @click=${this.handleContentClick}>
-          <div class="modal-header">
-            <h2 class="modal-title">${this.getModalTitle()}</h2>
-            <button class="close-button" @click=${this.handleCloseModal} title="Close">
-              <svg class="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="18" y1="6" x2="6" y2="18"></line>
-                <line x1="6" y1="6" x2="18" y2="18"></line>
-              </svg>
-            </button>
-          </div>
-          
+          <!-- Left Column: Preview -->
           <div class="media-preview-section">
             ${this.renderModalPreview()}
           </div>
           
-          <div class="modal-tabs">
-            <button 
-              type="button"
-              class="tab-btn ${this._activeTab === 'usage' ? 'active' : ''}"
-              data-tab="usage"
-              @click=${this.handleTabChange}
-            >
-              Usage (${this.getUsageCount()})
-            </button>
-            <button 
-              type="button"
-              class="tab-btn ${this._activeTab === 'metadata' ? 'active' : ''}"
-              data-tab="metadata"
-              @click=${this.handleTabChange}
-            >
-              Metadata
-            </button>
-          </div>
-          
-          <div class="modal-body">
-            ${this._activeTab === 'usage' ? this.renderUsageTab() : this.renderMetadataTab()}
+          <!-- Right Column: Details -->
+          <div class="modal-details">
+            <div class="modal-header">
+              <h2 class="modal-title">${this.getModalTitle()}</h2>
+              <div class="media-source">${this.getMediaOriginFilename()}</div>
+              <button class="close-button" @click=${this.handleCloseModal} title="Close">
+                <svg class="close-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="18" y1="6" x2="6" y2="18"></line>
+                  <line x1="6" y1="6" x2="18" y2="18"></line>
+                </svg>
+              </button>
+            </div>
+            
+            <div class="modal-tabs">
+              <button 
+                type="button"
+                class="tab-btn ${this._activeTab === 'usage' ? 'active' : ''}"
+                data-tab="usage"
+                @click=${this.handleTabChange}
+              >
+                <svg class="tab-icon" width="20" height="20">
+                  <use href="#reference"></use>
+                </svg>
+                ${this.getUsageCount()} ${this.getUsageCount() === 1 ? 'Reference' : 'References'}
+              </button>
+              <button 
+                type="button"
+                class="tab-btn ${this._activeTab === 'metadata' ? 'active' : ''}"
+                data-tab="metadata"
+                @click=${this.handleTabChange}
+              >
+                <svg class="tab-icon" width="20" height="20">
+                  <use href="#info"></use>
+                </svg>
+                Metadata
+              </button>
+            </div>
+            
+            <div class="modal-body">
+              ${this._activeTab === 'usage' ? this.renderUsageTab() : this.renderMetadataTab()}
+            </div>
           </div>
         </div>
       </div>
@@ -281,50 +346,43 @@ class ModalManager extends LocalizableElement {
         ${Object.entries(groupedUsages).map(([doc, usages]) => html`
           <div class="usage-section">
             <div class="document-heading">
-              <h3>${doc}</h3>
+              <div>
+                <h3>${doc}</h3>
+                <div class="document-path">${usages.length} ${usages.length === 1 ? 'usage' : 'usages'}</div>
+              </div>
+              <button 
+                class="action-button open-page-button" 
+                @click=${() => this.handleViewDocument(doc)} 
+                title="Open page in new tab"
+              >
+                <svg class="action-icon" width="16" height="16" viewBox="0 0 20 20">
+                  <use href="#open-in"></use>
+                </svg>
+              </button>
             </div>
-            <div class="usage-table-container">
-              <table class="usage-table">
-                <thead>
-                  <tr>
-                    <th>Alt Text</th>
-                    <th>Context</th>
-                    <th>Actions</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  ${usages.map((usage) => {
-    const shouldShowPreviewEdit = this.shouldShowPreviewEditButtons();
-    return html`
-                    <tr class="usage-row">
-                      <td class="alt-cell">
-                        <div class="alt-text">${this.getAltTextDisplay(usage.alt, usage.type)}</div>
-                      </td>
-                      <td class="context-cell">
-                        <div class="context-text">${this.formatContextAsHtml(usage.ctx)}</div>
-                      </td>
-                      <td class="actions-cell">
-                        <div class="actions-container">
-                          ${shouldShowPreviewEdit ? html`
-                            <button class="action-button" @click=${() => this.handleViewDocument(doc)}>
-                              Preview
-                            </button>
-                            <button class="action-button" @click=${() => this.handleEditDocument(doc)}>
-                              Edit
-                            </button>
-                          ` : html`
-                            <button class="action-button" @click=${() => this.handleViewDocument(doc)}>
-                              Open
-                            </button>
-                          `}
-                        </div>
-                      </td>
-                    </tr>
-                    `;
-  })}
-                </tbody>
-              </table>
-            </div>
+            ${usages[0]?.type?.startsWith('img') ? html`
+              <h5 class="usage-title">Alt</h5>
+              <div class="usage-container">
+                ${usages.map((usage) => html`
+                  <div class="usage-row">
+                    <div class="usage-alt">
+                      ${this.getAltTextDisplay(usage.alt, usage.type)}
+                    </div>
+                    <div class="usage-actions">
+                      <button 
+                        class="action-button" 
+                        @click=${() => this.handleViewMedia(this.modalData.data.media.url)} 
+                        title="Open media in new tab"
+                      >
+                        <svg class="action-icon" width="16" height="16" viewBox="0 0 20 20">
+                          <use href="#open-in"></use>
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                `)}
+              </div>
+            ` : ''}
           </div>
         `)}
       </div>
@@ -332,8 +390,6 @@ class ModalManager extends LocalizableElement {
   }
 
   renderMetadataTab() {
-    const { media } = this.modalData.data;
-
     return html`
       <div class="metadata-section">
         <div class="metadata-table-container">
@@ -346,19 +402,23 @@ class ModalManager extends LocalizableElement {
             </thead>
             <tbody>
               <tr class="metadata-row">
-                <td class="metadata-label">File Name</td>
-                <td class="metadata-value">${media.name}</td>
+                <td class="metadata-label">MIME Type</td>
+                <td class="metadata-value">${this._mimeType || 'Loading...'}</td>
               </tr>
               <tr class="metadata-row">
-                <td class="metadata-label">URL</td>
-                <td class="metadata-value">${media.url}</td>
+                <td class="metadata-label">File Size</td>
+                <td class="metadata-value">${this._fileSize || 'Loading...'}</td>
               </tr>
               <tr class="metadata-row">
-                <td class="metadata-label">Type</td>
-                <td class="metadata-value">${media.type}</td>
+                <td class="metadata-label">Origin</td>
+                <td class="metadata-value">${this._mediaOrigin || 'Loading...'}</td>
+              </tr>
+              <tr class="metadata-row">
+                <td class="metadata-label">Path</td>
+                <td class="metadata-value">${this._mediaPath || 'Loading...'}</td>
               </tr>
               
-              ${this.renderAnalysisMetadata(media)}
+              ${this.renderExifSection()}
             </tbody>
           </table>
         </div>
@@ -431,17 +491,183 @@ class ModalManager extends LocalizableElement {
     `;
   }
 
+  async loadFileMetadata(media) {
+    if (!media || !media.url) return;
+
+    try {
+      const url = new URL(media.url);
+
+      // Set origin and path
+      this._mediaOrigin = url.origin;
+      this._mediaPath = url.pathname;
+
+      // Get file extension and set MIME type
+      const ext = this.getFileExtension(media.url).toLowerCase();
+      const mimeTypes = {
+        jpg: 'image/jpeg',
+        jpeg: 'image/jpeg',
+        png: 'image/png',
+        gif: 'image/gif',
+        webp: 'image/webp',
+        svg: 'image/svg+xml',
+        mp4: 'video/mp4',
+        webm: 'video/webm',
+        pdf: 'application/pdf',
+      };
+      this._mimeType = mimeTypes[ext] || 'Unknown';
+
+      // Try to get file size using CORS proxy
+      try {
+        const corsProxyUrl = `https://media-library-cors-proxy.aem-poc-lab.workers.dev/?url=${encodeURIComponent(media.url)}`;
+
+        // Try HEAD request first
+        let response = await fetch(corsProxyUrl, { method: 'HEAD' });
+
+        if (response.ok) {
+          const size = response.headers.get('content-length');
+          if (size) {
+            this._fileSize = this.formatFileSize(parseInt(size, 10));
+          } else {
+            // If HEAD doesn't return content-length, try GET
+            response = await fetch(corsProxyUrl, { method: 'GET' });
+            if (response.ok) {
+              const blob = await response.blob();
+              this._fileSize = this.formatFileSize(blob.size);
+            } else {
+              this._fileSize = 'Unknown';
+            }
+          }
+        } else {
+          this._fileSize = 'Unknown';
+        }
+      } catch (error) {
+        this._fileSize = 'Unknown';
+      }
+    } catch {
+      this._mediaOrigin = 'Unknown';
+      this._mediaPath = 'Unknown';
+      this._mimeType = 'Unknown';
+      this._fileSize = 'Unknown';
+    }
+  }
+
+  async loadExifData(imageUrl) {
+    if (!imageUrl) return;
+
+    try {
+      // Load EXIF.js library if not already loaded
+      if (!window.EXIF) {
+        await this.loadExifLibrary();
+      }
+
+      // Use CORS proxy
+      const corsProxyUrl = `https://media-library-cors-proxy.aem-poc-lab.workers.dev/?url=${encodeURIComponent(imageUrl)}`;
+
+      const img = new Image();
+      img.crossOrigin = 'anonymous';
+
+      await new Promise((resolve) => {
+        img.onload = () => {
+          try {
+            window.EXIF.getData(img, () => {
+              const allTags = window.EXIF.getAllTags(img);
+              this._exifData = allTags && Object.keys(allTags).length > 0 ? allTags : null;
+              resolve();
+            });
+          } catch {
+            this._exifData = null;
+            resolve();
+          }
+        };
+        img.onerror = () => {
+          this._exifData = null;
+          resolve();
+        };
+        img.src = corsProxyUrl;
+      });
+    } catch {
+      this._exifData = null;
+    }
+  }
+
+  async loadExifLibrary() {
+    return new Promise((resolve, reject) => {
+      if (window.EXIF) {
+        resolve();
+        return;
+      }
+
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/exif-js';
+      script.onload = () => resolve();
+      script.onerror = () => reject(new Error('Failed to load EXIF library'));
+      document.head.appendChild(script);
+    });
+  }
+
+  renderExifSection() {
+    if (!this._exifData || Object.keys(this._exifData).length === 0) {
+      return '';
+    }
+
+    const exifRows = [];
+    const displayKeys = {
+      Make: 'Camera Make',
+      Model: 'Camera Model',
+      DateTime: 'Date Taken',
+      FNumber: 'F-Number',
+      ExposureTime: 'Exposure Time',
+      ISOSpeedRatings: 'ISO',
+      FocalLength: 'Focal Length',
+      LensModel: 'Lens',
+    };
+
+    Object.keys(displayKeys).forEach((key) => {
+      if (this._exifData[key]) {
+        const value = this._exifData[key];
+        exifRows.push(html`
+          <tr class="metadata-row exif-row">
+            <td class="metadata-label">${displayKeys[key]}</td>
+            <td class="metadata-value">${value}</td>
+          </tr>
+        `);
+      }
+    });
+
+    if (exifRows.length === 0) return '';
+
+    return html`
+      <tr class="metadata-row exif-section">
+        <td class="metadata-label">EXIF Data</td>
+        <td class="metadata-value"></td>
+      </tr>
+      ${exifRows}
+    `;
+  }
+
+  formatFileSize(bytes) {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return `${Math.round((bytes / (k ** i)) * 100) / 100} ${sizes[i]}`;
+  }
+
   renderModalPreview() {
     const { media } = this.modalData.data;
 
     if (this.isImage(media.url)) {
+      const ext = this.getFileExtension(media.url).toUpperCase();
       return html`
-        <img 
-          class="media-preview" 
-          src=${media.url} 
-          alt=${media.alt || media.name}
-          @error=${(e) => this.handleImageError(e, media)}
-        />
+        <div class="image-preview-container">
+          <img 
+            class="media-preview" 
+            src=${media.url} 
+            alt=${media.alt || media.name}
+            @error=${(e) => this.handleImageError(e, media)}
+          />
+          ${ext ? html`<div class="subtype-label">${ext}</div>` : ''}
+        </div>
       `;
     }
 
@@ -485,6 +711,8 @@ class ModalManager extends LocalizableElement {
   }
 
   renderVideoPreview(media) {
+    const ext = this.getFileExtension(media.url).toUpperCase();
+
     // Check if it's an external video URL (YouTube, Vimeo, etc.)
     if (isExternalVideoUrl(media.url)) {
       const thumbnail = getVideoThumbnail(media.url);
@@ -507,9 +735,10 @@ class ModalManager extends LocalizableElement {
             `}
             <div class="video-play-overlay">
               <svg class="play-icon">
-                <use href="#external-link"></use>
+                <use href="#play"></use>
               </svg>
             </div>
+            ${ext ? html`<div class="subtype-label">${ext}</div>` : ''}
           </div>
           <div class="video-info">
             <h3>External Video</h3>
@@ -531,15 +760,18 @@ class ModalManager extends LocalizableElement {
 
     // Regular video file
     return html`
-      <video 
-        class="media-preview video-preview" 
-        src=${media.url} 
-        controls
-        preload="metadata"
-        @error=${(e) => this.handleVideoError(e, media)}
-      >
-        <p>Your browser does not support the video tag.</p>
-      </video>
+      <div class="video-preview-container">
+        <video 
+          class="media-preview video-preview" 
+          src=${media.url} 
+          controls
+          preload="metadata"
+          @error=${(e) => this.handleVideoError(e, media)}
+        >
+          <p>Your browser does not support the video tag.</p>
+        </video>
+        ${ext ? html`<div class="subtype-label">${ext}</div>` : ''}
+      </div>
     `;
   }
 
@@ -574,15 +806,21 @@ class ModalManager extends LocalizableElement {
   }
 
   getModalTitle() {
-    const { type, data } = this.modalData;
+    const { data } = this.modalData;
+    return data?.media?.name || 'Media Details';
+  }
 
-    switch (type) {
-      case 'details':
-        return data?.media?.name || 'Media Details';
-      case 'edit':
-        return this.t('media.editAltText');
-      default:
-        return 'Modal';
+  getMediaOriginFilename() {
+    const { data } = this.modalData;
+    const media = data?.media;
+    if (!media?.url) return 'Unknown';
+    try {
+      const url = new URL(media.url);
+      // Extract domain from origin (e.g., "https://www.sling.com" -> "www.sling.com")
+      const originParts = url.origin.split('/');
+      return originParts[originParts.length - 1] || 'Unknown';
+    } catch {
+      return 'Unknown';
     }
   }
 
@@ -644,13 +882,6 @@ class ModalManager extends LocalizableElement {
     e.stopPropagation();
   }
 
-  handleEdit() {
-    this.modalData = {
-      type: 'edit',
-      data: this.modalData.data,
-    };
-  }
-
   handleCopy() {
     const { media } = this.modalData.data;
     navigator.clipboard.writeText(media.url);
@@ -666,12 +897,12 @@ class ModalManager extends LocalizableElement {
 
   handleViewDocument(docPath) {
     if (!docPath) return;
-    window.open(docPath, '_blank');
+    window.open(docPath, '_blank', 'noopener,noreferrer');
   }
 
-  handleEditDocument(docPath) {
-    if (!docPath) return;
-    window.open(docPath, '_blank');
+  handleViewMedia(mediaUrl) {
+    if (!mediaUrl) return;
+    window.open(mediaUrl, '_blank', 'noopener,noreferrer');
   }
 
   handlePdfAction(event, pdfUrl, fileName) {
@@ -691,26 +922,6 @@ class ModalManager extends LocalizableElement {
       window.open(pdfUrl, '_blank');
     }
   }
-
-  handleSave(e) {
-    e.preventDefault();
-    const formData = new FormData(e.target);
-    const altText = formData.get('altText');
-
-    window.dispatchEvent(new CustomEvent('save-alt-text', {
-      detail: {
-        media: this.modalData.data.media,
-        altText,
-      },
-    }));
-
-    this.handleCloseModal();
-  }
-
-  handleFormSubmit(e) {
-    e.preventDefault();
-    this.handleSave(e);
-  }
 }
 
-customElements.define('modal-manager', ModalManager);
+customElements.define('media-details', MediaDetails);

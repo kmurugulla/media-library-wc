@@ -3,9 +3,9 @@ import { VirtualScrollManager } from './base.js';
 class GridVirtualScrollManager extends VirtualScrollManager {
   constructor(options = {}) {
     super({
-      itemHeight: 400,
-      itemWidth: 410,
-      cardSpacing: 20,
+      itemHeight: 300,
+      itemWidth: 324,
+      cardSpacing: 24,
       ...options,
     });
   }

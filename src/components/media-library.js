@@ -10,7 +10,7 @@ import './topbar/topbar.js';
 import './sidebar/sidebar.js';
 import './grid/grid.js';
 import './list/list.js';
-import './modal-manager/modal-manager.js';
+import './media-details/media-details.js';
 import getSvg from '../utils/get-svg.js';
 import mediaLibraryStyles from './media-library.css?inline';
 
@@ -774,7 +774,7 @@ class MediaLibrary extends LocalizableElement {
           ${this._error ? this.renderErrorState() : this.renderCurrentView()}
         </div>
 
-        <modal-manager .locale=${this.locale}></modal-manager>
+        <media-details .locale=${this.locale}></media-details>
       </div>
     `;
   }

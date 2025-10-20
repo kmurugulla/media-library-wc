@@ -118,6 +118,9 @@ class MediaGrid extends LocalizableElement {
       '/src/icons/pdf.svg',
       '/src/icons/external-link.svg',
       '/src/icons/copy.svg',
+      '/src/icons/share.svg',
+      '/src/icons/accessibility.svg',
+      '/src/icons/play.svg',
     ];
 
     const existingIcons = this.shadowRoot.querySelectorAll('svg[id]');
@@ -130,6 +133,8 @@ class MediaGrid extends LocalizableElement {
     if (missingIcons.length > 0) {
       await getSvg({ parent: this.shadowRoot, paths: missingIcons });
     }
+
+    this.iconsLoaded = true;
   }
 
   setupScrollListener() {
@@ -176,44 +181,74 @@ class MediaGrid extends LocalizableElement {
 
   renderMediaCard(media, index, position) {
     const mediaType = getMediaType(media);
-    this.getMediaTypeIcon(mediaType);
+    const usageCount = media.usageCount || 0;
+    const subtype = this.getSubtype(media);
 
     return html`
       <div 
         class="media-card" 
         data-index="${index}"
         style="position: absolute; top: ${position.top}px; left: ${position.left}px; width: ${this.virtualScroll.itemWidth - this.virtualScroll.cardSpacing}px; height: ${this.virtualScroll.itemHeight - this.virtualScroll.cardSpacing}px;"
-        @click=${() => this.handleMediaClick(media)}
       >
-        <div class="media-preview">
+        <div class="media-preview clickable" @click=${() => this.handleMediaClick(media)}>
           ${this.renderMediaPreview(media, mediaType)}
-          <div class="media-type-badge">
-            <svg class="media-type-icon">
-              <use href="#${this.getMediaTypeIcon(mediaType)}"></use>
-            </svg>
-          </div>
-        </div>
-        
-        <div class="media-info">
-          <div class="media-details">
-            <h4 class="media-name" title=${media.name} .innerHTML=${this.highlightSearchTerm(this.truncateText(media.name, 35), this.searchQuery)}></h4>
-          </div>
           
-          <div class="media-actions">
-            <span class="usage-count">${this.getUsageCount(media)} uses</span>
-            <button 
-              class="action-button"
-              @click=${(e) => this.handleAction(e, 'copy', media)}
-              title=${this.t('media.copyUrl')}
-            >
-              <svg class="action-icon">
-                <use href="#copy"></use>
-              </svg>
-            </button>
+          <div class="media-info clickable" @click=${() => this.handleMediaClick(media)}>
+            <div class="media-meta">
+              <span class="media-label media-used">${usageCount}</span>
+              ${subtype ? html`<span class="media-label media-subtype">${subtype}</span>` : ''}
+            </div>
+            
+            <div class="media-actions">
+              ${this.renderAltStatus(media, mediaType)}
+              <button 
+                class="share-button"
+                @click=${(e) => this.handleAction(e, 'copy', media)}
+                title=${this.t('media.copyUrl')}
+              >
+                <svg>
+                  <use href="#share"></use>
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
     `;
+  }
+
+  renderAltStatus(media, mediaType) {
+    // Only show alt indicator for images (not videos or documents)
+    if (mediaType === 'image' && media.alt && media.alt !== '' && media.alt !== null) {
+      return html`
+        <div class="filled-alt-indicator" title="Has alt text: ${media.alt}">
+          <svg>
+            <use href="#accessibility"></use>
+          </svg>
+        </div>
+      `;
+    }
+    return '';
+  }
+
+  getSubtype(media) {
+    if (!media.type) return '';
+    const parts = media.type.split(' > ');
+    if (parts.length > 1) {
+      return parts[1].toUpperCase();
+    }
+    return '';
+  }
+
+  getDisplayMediaType(mediaType) {
+    const typeMap = {
+      image: 'IMAGE',
+      video: 'VIDEO',
+      document: 'PDF',
+      link: 'LINK',
+      icon: 'SVG',
+    };
+    return typeMap[mediaType] || mediaType.toUpperCase();
   }
 
   renderMediaPreview(media, mediaType) {
@@ -289,15 +324,6 @@ class MediaGrid extends LocalizableElement {
     }
   }
 
-  truncateText(text, maxLength = 30) {
-    if (!text || text.length <= maxLength) return text;
-    return `${text.substring(0, maxLength)}...`;
-  }
-
-  getUsageCount(media) {
-    return media.usageCount || 0;
-  }
-
   handleMediaClick(media) {
     this.dispatchEvent(new CustomEvent('mediaClick', {
       detail: { media },
@@ -337,23 +363,30 @@ class MediaGrid extends LocalizableElement {
           `}
           <div class="video-play-overlay">
             <svg class="play-icon">
-              <use href="#external-link"></use>
+              <use href="#play"></use>
             </svg>
           </div>
         </div>
       `;
     }
 
-    // Regular video file - show first frame
+    // Regular video file - show first frame with play overlay
     return html`
-      <video 
-        class="media-video" 
-        src=${media.url} 
-        preload="metadata"
-        muted
-        @error=${(e) => this.handleVideoError(e, media)}
-        @loadedmetadata=${(e) => this.handleVideoLoaded(e, media)}
-      />
+      <div class="video-preview-container">
+        <video 
+          class="media-video" 
+          src=${media.url} 
+          preload="metadata"
+          muted
+          @error=${(e) => this.handleVideoError(e, media)}
+          @loadedmetadata=${(e) => this.handleVideoLoaded(e, media)}
+        />
+        <div class="video-play-overlay">
+          <svg class="play-icon">
+            <use href="#play"></use>
+          </svg>
+        </div>
+      </div>
     `;
   }
 
@@ -380,23 +413,6 @@ class MediaGrid extends LocalizableElement {
     if (video.duration > 0) {
       video.currentTime = 0.1;
     }
-  }
-
-  highlightSearchTerm(text, query) {
-    if (!query || !text) return text;
-
-    let searchTerm = query;
-    if (query.includes(':')) {
-      const parts = query.split(':');
-      if (parts.length > 1) {
-        searchTerm = parts[1].trim();
-      }
-    }
-
-    if (!searchTerm) return text;
-
-    const regex = new RegExp(`(${searchTerm})`, 'gi');
-    return text.replace(regex, '<mark>$1</mark>');
   }
 }
 

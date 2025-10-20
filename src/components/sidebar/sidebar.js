@@ -63,13 +63,13 @@ class MediaSidebar extends LocalizableElement {
           </ul>
         </div>
 
-        ${(counts.filled > 0 || counts.decorative > 0 || counts.missingAlt > 0) ? html`
+        ${(counts.filled > 0 || counts.decorative > 0 || counts.empty > 0) ? html`
           <div class="filter-section">
             <h3>Accessibility</h3>
             <ul class="filter-list">
               ${this.renderFilterItem('filled', counts.filled)}
               ${this.renderFilterItem('decorative', counts.decorative)}
-              ${this.renderFilterItem('missingAlt', counts.missingAlt, 'No Alt Text')}
+              ${this.renderFilterItem('empty', counts.empty)}
             </ul>
           </div>
         ` : ''}
