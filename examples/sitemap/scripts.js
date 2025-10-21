@@ -1,5 +1,7 @@
 /* eslint-disable no-console, no-alert, no-restricted-globals */
-import { waitForMediaLibraryReady } from '../../dist/media-library.es.js';
+// MediaLibrary is available globally from the IIFE
+const { waitForMediaLibraryReady } = window.MediaLibrary;
+
 import { SitemapSource } from '../../sources/index.js';
 import { createStorage } from '../../src/utils/storage.js';
 

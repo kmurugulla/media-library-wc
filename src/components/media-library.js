@@ -101,12 +101,12 @@ class MediaLibrary extends LocalizableElement {
 
   async _initialize() {
     const ICONS = [
-      '/src/icons/close.svg',
-      '/src/icons/photo.svg',
-      '/src/icons/video.svg',
-      '/src/icons/pdf.svg',
-      '/src/icons/external-link.svg',
-      '/src/icons/copy.svg',
+      '/dist/icons/close.svg',
+      '/dist/icons/photo.svg',
+      '/dist/icons/video.svg',
+      '/dist/icons/pdf.svg',
+      '/dist/icons/external-link.svg',
+      '/dist/icons/copy.svg',
     ];
 
     await getSvg({ parent: this.shadowRoot, paths: ICONS });

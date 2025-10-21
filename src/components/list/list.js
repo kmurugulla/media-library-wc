@@ -1,11 +1,10 @@
 import { html } from 'lit';
-import { repeat } from 'lit/directives/repeat.js';
-import { ref, createRef } from 'lit/directives/ref.js';
+// eslint-disable-next-line import/no-extraneous-dependencies -- virtualizer in deps
+import { virtualize } from '@lit-labs/virtualizer/virtualize.js';
 import LocalizableElement from '../base-localizable.js';
 import getSvg from '../../utils/get-svg.js';
 import { getMediaType, isImage } from '../../utils/utils.js';
 import { getStyles } from '../../utils/get-styles.js';
-import { ListVirtualScrollManager } from '../../utils/virtual-scroll/scroll.js';
 import listStyles from './list.css?inline';
 
 class MediaList extends LocalizableElement {
@@ -13,8 +12,6 @@ class MediaList extends LocalizableElement {
     mediaData: { type: Array },
     searchQuery: { type: String },
     locale: { type: String },
-    visibleStart: { type: Number },
-    visibleEnd: { type: Number },
   };
 
   static styles = getStyles(listStyles);
@@ -24,106 +21,24 @@ class MediaList extends LocalizableElement {
     this.mediaData = [];
     this.searchQuery = '';
     this.locale = 'en';
-
-    this.visibleStart = 0;
-    this.visibleEnd = 50;
-
-    this.containerRef = createRef();
-
-    this.virtualScroll = new ListVirtualScrollManager({
-      onRangeChange: (range) => {
-        this.visibleStart = range.start;
-        this.visibleEnd = range.end;
-        requestAnimationFrame(() => {
-          this.requestUpdate();
-        });
-      },
-    });
   }
 
-  async connectedCallback() {
-    super.connectedCallback();
-
-    await this.loadIcons();
-  }
-
-  firstUpdated() {
-    this.setupScrollListener();
-    window.addEventListener('resize', () => {
-      this.virtualScroll.updateContainerDimensions();
-    });
+  async firstUpdated() {
+    // Load icons after first render when shadowRoot is fully ready
+    const ICONS = [
+      '/dist/icons/photo.svg',
+      '/dist/icons/video.svg',
+      '/dist/icons/pdf.svg',
+      '/dist/icons/external-link.svg',
+      '/dist/icons/copy.svg',
+    ];
+    await getSvg({ parent: this.shadowRoot, paths: ICONS });
   }
 
   shouldUpdate(changedProperties) {
     return changedProperties.has('mediaData')
            || changedProperties.has('searchQuery')
-           || changedProperties.has('visibleStart')
-           || changedProperties.has('visibleEnd')
            || changedProperties.has('locale');
-  }
-
-  willUpdate(changedProperties) {
-    if (changedProperties.has('mediaData')) {
-      if (this.mediaData && this.mediaData.length > 0) {
-        this.virtualScroll.resetState(this.mediaData.length);
-      } else {
-        this.visibleStart = 0;
-        this.visibleEnd = 0;
-      }
-    }
-  }
-
-  updated(changedProperties) {
-    if (changedProperties.has('mediaData')) {
-      this.updateComplete.then(() => {
-        if (this.mediaData && this.mediaData.length > 0) {
-          if (!this.virtualScroll.scrollListenerAttached) {
-            this.setupScrollListener();
-          } else {
-            this.virtualScroll.updateTotalItems(this.mediaData.length);
-            this.virtualScroll.calculateVisibleRange();
-            this.virtualScroll.onVisibleRangeChange();
-          }
-        }
-      });
-    }
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    this.virtualScroll.cleanup();
-  }
-
-  setupScrollListener() {
-    requestAnimationFrame(() => {
-      const container = this.containerRef.value;
-      if (container) {
-        this.virtualScroll.init(container, this.mediaData?.length || 0);
-        this.virtualScroll.calculateVisibleRange();
-        this.virtualScroll.onVisibleRangeChange();
-      }
-    });
-  }
-
-  async loadIcons() {
-    const ICONS = [
-      '/src/icons/photo.svg',
-      '/src/icons/video.svg',
-      '/src/icons/pdf.svg',
-      '/src/icons/external-link.svg',
-      '/src/icons/copy.svg',
-    ];
-
-    const existingIcons = this.shadowRoot.querySelectorAll('svg[id]');
-    const loadedIconIds = Array.from(existingIcons).map((icon) => icon.id);
-    const missingIcons = ICONS.filter((iconPath) => {
-      const iconId = iconPath.split('/').pop().replace('.svg', '');
-      return !loadedIconIds.includes(iconId);
-    });
-
-    if (missingIcons.length > 0) {
-      await getSvg({ parent: this.shadowRoot, paths: missingIcons });
-    }
   }
 
   render() {
@@ -139,9 +54,6 @@ class MediaList extends LocalizableElement {
       `;
     }
 
-    const totalHeight = this.virtualScroll.getTotalHeight();
-    const visibleItems = this.mediaData.slice(this.visibleStart, this.visibleEnd);
-
     return html`
       <main class="list-main">
         <div class="list-header">
@@ -152,27 +64,26 @@ class MediaList extends LocalizableElement {
           <div class="header-cell">Alt Text</div>
           <div class="header-cell">Actions</div>
         </div>
-        <div class="list-content" ${ref(this.containerRef)}>
-          <div class="list-grid" style="height: ${totalHeight}px;">
-            ${repeat(visibleItems, (media) => media.url, (media, i) => {
-    const index = this.visibleStart + i;
-    const offset = this.virtualScroll.getItemOffset(index);
-    return this.renderListItem(media, index, offset);
+        <div class="list-content" id="list-scroller">
+          ${virtualize({
+    items: this.mediaData,
+    renderItem: (media) => this.renderListItem(media),
+    keyFunction: (media) => media?.url || '',
+    scroller: true,
   })}
-          </div>
         </div>
       </main>
     `;
   }
 
-  renderListItem(media, index, offset) {
+  renderListItem(media) {
+    if (!media) return html``;
+
     const mediaType = getMediaType(media);
 
     return html`
       <div 
-        class="media-item" 
-        data-index="${index}"
-        style="position: absolute; top: ${offset}px; left: 0; right: 0;"
+        class="media-item"
         @click=${() => this.handleMediaClick(media)}
       >
         <div class="media-thumbnail">
@@ -306,9 +217,7 @@ class MediaList extends LocalizableElement {
 
   handleImageError(e, media) {
     media.hasError = true;
-
     e.target.style.display = 'none';
-
     this.requestUpdate();
   }
 

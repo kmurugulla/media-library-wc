@@ -1,10 +1,11 @@
 import { html } from 'lit';
-import { repeat } from 'lit/directives/repeat.js';
-import { ref, createRef } from 'lit/directives/ref.js';
+// eslint-disable-next-line import/no-extraneous-dependencies -- virtualizer in deps
+import { virtualize } from '@lit-labs/virtualizer/virtualize.js';
+// eslint-disable-next-line import/no-extraneous-dependencies -- virtualizer in deps
+import { grid } from '@lit-labs/virtualizer/layouts/grid.js';
 import LocalizableElement from '../base-localizable.js';
 import { getMediaType, isImage, isVideo, getVideoThumbnail, isExternalVideoUrl } from '../../utils/utils.js';
 import { getStyles } from '../../utils/get-styles.js';
-import { GridVirtualScrollManager } from '../../utils/virtual-scroll/scroll.js';
 import getSvg from '../../utils/get-svg.js';
 import gridStyles from './grid.css?inline';
 
@@ -14,9 +15,6 @@ class MediaGrid extends LocalizableElement {
     searchQuery: { type: String },
     locale: { type: String },
     isProcessing: { type: Boolean },
-    visibleStart: { type: Number },
-    visibleEnd: { type: Number },
-    colCount: { type: Number },
   };
 
   static styles = getStyles(gridStyles);
@@ -27,126 +25,28 @@ class MediaGrid extends LocalizableElement {
     this.searchQuery = '';
     this.locale = 'en';
     this.isProcessing = false;
-
-    this.visibleStart = 0;
-    this.visibleEnd = 50;
-    this.colCount = 4;
-
-    this.iconsLoaded = false;
-
-    this.containerRef = createRef();
-
-    this.virtualScroll = new GridVirtualScrollManager({
-      onRangeChange: (range) => {
-        this.visibleStart = range.start;
-        this.visibleEnd = range.end;
-        requestAnimationFrame(() => {
-          this.requestUpdate();
-        });
-      },
-      onColCountChange: (colCount) => {
-        this.colCount = colCount;
-        requestAnimationFrame(() => {
-          this.requestUpdate();
-        });
-      },
-    });
-  }
-
-  connectedCallback() {
-    super.connectedCallback();
   }
 
   async firstUpdated() {
-    this.setupScrollListener();
-    window.addEventListener('resize', () => {
-      this.virtualScroll.updateColCount();
-    });
+    // Load icons after first render when shadowRoot is fully ready
+    const ICONS = [
+      '/dist/icons/photo.svg',
+      '/dist/icons/video.svg',
+      '/dist/icons/pdf.svg',
+      '/dist/icons/external-link.svg',
+      '/dist/icons/copy.svg',
+      '/dist/icons/share.svg',
+      '/dist/icons/accessibility.svg',
+      '/dist/icons/play.svg',
+    ];
+    await getSvg({ parent: this.shadowRoot, paths: ICONS });
   }
 
   shouldUpdate(changedProperties) {
     return changedProperties.has('mediaData')
            || changedProperties.has('searchQuery')
            || changedProperties.has('isProcessing')
-           || changedProperties.has('visibleStart')
-           || changedProperties.has('visibleEnd')
-           || changedProperties.has('colCount')
            || changedProperties.has('locale');
-  }
-
-  willUpdate(changedProperties) {
-    if (changedProperties.has('mediaData')) {
-      if (this.mediaData && this.mediaData.length > 0) {
-        this.virtualScroll.resetState(this.mediaData.length);
-      } else {
-        this.visibleStart = 0;
-        this.visibleEnd = 0;
-      }
-    }
-  }
-
-  updated(changedProperties) {
-    if (changedProperties.has('mediaData') && this.mediaData?.length > 0 && !this.iconsLoaded) {
-      this.loadIcons();
-      this.iconsLoaded = true;
-    }
-
-    if (changedProperties.has('mediaData')) {
-      this.updateComplete.then(() => {
-        if (this.mediaData && this.mediaData.length > 0) {
-          if (!this.virtualScroll.scrollListenerAttached) {
-            this.setupScrollListener();
-          } else {
-            this.virtualScroll.updateTotalItems(this.mediaData.length);
-            this.virtualScroll.calculateVisibleRange();
-            this.virtualScroll.onVisibleRangeChange();
-          }
-        }
-      });
-    }
-  }
-
-  disconnectedCallback() {
-    super.disconnectedCallback();
-    this.virtualScroll.cleanup();
-  }
-
-  async loadIcons() {
-    const ICONS = [
-      '/src/icons/photo.svg',
-      '/src/icons/video.svg',
-      '/src/icons/pdf.svg',
-      '/src/icons/external-link.svg',
-      '/src/icons/copy.svg',
-      '/src/icons/share.svg',
-      '/src/icons/accessibility.svg',
-      '/src/icons/play.svg',
-    ];
-
-    const existingIcons = this.shadowRoot.querySelectorAll('svg[id]');
-    const loadedIconIds = Array.from(existingIcons).map((icon) => icon.id);
-    const missingIcons = ICONS.filter((iconPath) => {
-      const iconId = iconPath.split('/').pop().replace('.svg', '');
-      return !loadedIconIds.includes(iconId);
-    });
-
-    if (missingIcons.length > 0) {
-      await getSvg({ parent: this.shadowRoot, paths: missingIcons });
-    }
-
-    this.iconsLoaded = true;
-  }
-
-  setupScrollListener() {
-    requestAnimationFrame(() => {
-      const container = this.containerRef.value;
-      if (container) {
-        this.virtualScroll.init(container, this.mediaData?.length || 0);
-        this.virtualScroll.updateColCount();
-        this.virtualScroll.calculateVisibleRange();
-        this.virtualScroll.onVisibleRangeChange();
-      }
-    });
   }
 
   render() {
@@ -162,34 +62,32 @@ class MediaGrid extends LocalizableElement {
       `;
     }
 
-    const totalHeight = this.virtualScroll.calculateTotalHeight(this.mediaData.length);
-    const visibleItems = this.mediaData.slice(this.visibleStart, this.visibleEnd);
-
     return html`
-      <main class="media-main" ${ref(this.containerRef)}>
-        <div class="media-grid" style="height: ${totalHeight}px;">
-          ${repeat(visibleItems, (media) => media.url, (media, i) => {
-    const index = this.visibleStart + i;
-    const position = this.virtualScroll.calculateItemPosition(index);
-
-    return this.renderMediaCard(media, index, position);
+      <main class="media-main" id="grid-scroller">
+        ${virtualize({
+    items: this.mediaData,
+    renderItem: (media) => this.renderMediaCard(media),
+    keyFunction: (media) => media?.url || '',
+    scroller: true,
+    layout: grid({
+      gap: '24px',
+      minColumnWidth: '240px',
+      maxColumnWidth: '350px',
+    }),
   })}
-        </div>
       </main>
     `;
   }
 
-  renderMediaCard(media, index, position) {
+  renderMediaCard(media) {
+    if (!media) return html``;
+
     const mediaType = getMediaType(media);
     const usageCount = media.usageCount || 0;
     const subtype = this.getSubtype(media);
 
     return html`
-      <div 
-        class="media-card" 
-        data-index="${index}"
-        style="position: absolute; top: ${position.top}px; left: ${position.left}px; width: ${this.virtualScroll.itemWidth - this.virtualScroll.cardSpacing}px; height: ${this.virtualScroll.itemHeight - this.virtualScroll.cardSpacing}px;"
-      >
+      <div class="media-card">
         <div class="media-preview clickable" @click=${() => this.handleMediaClick(media)}>
           ${this.renderMediaPreview(media, mediaType)}
           

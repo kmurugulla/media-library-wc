@@ -62,12 +62,12 @@ class MediaTopbar extends LocalizableElement {
     super.connectedCallback();
 
     const ICONS = [
-      '/src/icons/search.svg',
-      '/src/icons/close.svg',
-      '/src/icons/list.svg',
-      '/src/icons/grid.svg',
-      '/src/icons/refresh.svg',
-      '/src/icons/photo.svg',
+      '/dist/icons/search.svg',
+      '/dist/icons/close.svg',
+      '/dist/icons/list.svg',
+      '/dist/icons/grid.svg',
+      '/dist/icons/refresh.svg',
+      '/dist/icons/photo.svg',
     ];
 
     getSvg({ parent: this.shadowRoot, paths: ICONS });

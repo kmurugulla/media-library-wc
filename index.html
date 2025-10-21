@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Media Library - Dev Examples</title>
+    <link rel="icon" type="image/svg+xml" href="/public/favicon.svg">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: #f5f5f5;
+            padding: 2rem;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2563eb;
+            margin-bottom: 1rem;
+        }
+        p {
+            color: #64748b;
+            margin-bottom: 2rem;
+        }
+        .examples-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        .example-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 6px;
+            padding: 1.5rem;
+            transition: all 0.2s;
+            text-decoration: none;
+            color: inherit;
+        }
+        .example-card:hover {
+            border-color: #3b82f6;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+            transform: translateY(-2px);
+        }
+        .example-card h3 {
+            color: #3b82f6;
+            font-size: 1.1rem;
+            margin-bottom: 0.5rem;
+        }
+        .example-card p {
+            font-size: 0.875rem;
+            color: #64748b;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Media Library Examples</h1>
+        <p>Select an example to test the media library with different data sources:</p>
+        
+        <div class="examples-grid">
+            <a href="/examples/sitemap/index.html" class="example-card">
+                <h3>📄 Sitemap</h3>
+                <p>Scan websites by parsing sitemap.xml files</p>
+            </a>
+            
+            <a href="/examples/aem/index.html" class="example-card">
+                <h3>🏢 Adobe AEM</h3>
+                <p>Connect to Adobe Experience Manager</p>
+            </a>
+            
+            <a href="/examples/adobe-da/index.html" class="example-card">
+                <h3>📦 Adobe DA</h3>
+                <p>Adobe Digital Assets integration</p>
+            </a>
+            
+            <a href="/examples/eds/index.html" class="example-card">
+                <h3>⚡ Adobe EDS</h3>
+                <p>Edge Delivery Services integration</p>
+            </a>
+            
+            <a href="/examples/wordpress/index.html" class="example-card">
+                <h3>📰 WordPress</h3>
+                <p>Connect to WordPress media library</p>
+            </a>
+            
+            <a href="/examples/mediabus-audit/index.html" class="example-card">
+                <h3>🔍 Mediabus Audit</h3>
+                <p>Audit media usage and accessibility</p>
+            </a>
+            
+            <a href="/examples/multi-source/index.html" class="example-card">
+                <h3>🔄 Multi-Source</h3>
+                <p>Combine multiple data sources</p>
+            </a>
+            
+            <a href="/examples/custom-cors-proxy/index.html" class="example-card">
+                <h3>🔐 Custom CORS Proxy</h3>
+                <p>Configure custom CORS proxy settings</p>
+            </a>
+        </div>
+    </div>
+</body>
+</html>
+

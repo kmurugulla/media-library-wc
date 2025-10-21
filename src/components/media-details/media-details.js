@@ -31,47 +31,38 @@ class MediaDetails extends LocalizableElement {
     this._mediaOrigin = null;
     this._mediaPath = null;
     this._exifData = null;
-    this.iconsLoaded = false;
   }
 
-  async connectedCallback() {
+  connectedCallback() {
     super.connectedCallback();
 
     window.addEventListener('open-modal', this.handleOpenModal);
     window.addEventListener('close-modal', this.handleCloseModal);
   }
 
-  async loadIcons() {
-    const ICONS = [
-      '/src/icons/close.svg',
-      '/src/icons/photo.svg',
-      '/src/icons/video.svg',
-      '/src/icons/pdf.svg',
-      '/src/icons/external-link.svg',
-      '/src/icons/copy.svg',
-      '/src/icons/eye.svg',
-      '/src/icons/reference.svg',
-      '/src/icons/info.svg',
-      '/src/icons/open-in.svg',
-      '/src/icons/play.svg',
-    ];
+  async updated(changedProperties) {
+    // Load icons when modal opens (check if they're missing each time)
+    if (changedProperties.has('isOpen') && this.isOpen) {
+      // Check if icons are already in shadowRoot
+      const existingIcons = this.shadowRoot.querySelectorAll('svg[id], g[id]');
 
-    const existingIcons = this.shadowRoot.querySelectorAll('svg[id]');
-    const loadedIconIds = Array.from(existingIcons).map((icon) => icon.id);
-    const missingIcons = ICONS.filter((iconPath) => {
-      const iconId = iconPath.split('/').pop().replace('.svg', '');
-      return !loadedIconIds.includes(iconId);
-    });
-
-    if (missingIcons.length > 0) {
-      await getSvg({ parent: this.shadowRoot, paths: missingIcons });
-    }
-  }
-
-  updated(changedProperties) {
-    if (changedProperties.has('isOpen') && this.isOpen && !this.iconsLoaded) {
-      this.loadIcons();
-      this.iconsLoaded = true;
+      if (existingIcons.length === 0) {
+        // Icons missing, load them
+        const ICONS = [
+          '/dist/icons/close.svg',
+          '/dist/icons/photo.svg',
+          '/dist/icons/video.svg',
+          '/dist/icons/pdf.svg',
+          '/dist/icons/external-link.svg',
+          '/dist/icons/copy.svg',
+          '/dist/icons/eye.svg',
+          '/dist/icons/reference.svg',
+          '/dist/icons/info.svg',
+          '/dist/icons/open-in.svg',
+          '/dist/icons/play.svg',
+        ];
+        await getSvg({ parent: this.shadowRoot, paths: ICONS });
+      }
     }
   }
 

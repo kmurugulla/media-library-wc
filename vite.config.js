@@ -59,6 +59,9 @@ export default defineConfig(({ mode }) => {
     optimizeDeps: {
       include: [
         'exifr',
+        '@lit-labs/virtualizer',
+        '@lit-labs/virtualizer/virtualize.js',
+        '@lit-labs/virtualizer/layouts/grid.js',
       ],
       exclude: isSelfContained ? [] : ['lit'],
     },
@@ -90,9 +93,9 @@ export default defineConfig(({ mode }) => {
         formats: (isSelfContained || isSelfContainedUnminified) ? ['iife'] : ['es', 'umd'],
       },
       rollupOptions: {
-        external: (isSelfContained || isSelfContainedUnminified) ? [] : ['lit', 'lit/directives/repeat.js', 'lit/directives/ref.js'],
+        external: (isSelfContained || isSelfContainedUnminified) ? [] : ['lit'],
         output: {
-          globals: (isSelfContained || isSelfContainedUnminified) ? {} : { lit: 'lit', 'lit/directives/repeat.js': 'lit', 'lit/directives/ref.js': 'lit' },
+          globals: (isSelfContained || isSelfContainedUnminified) ? {} : { lit: 'lit' },
           assetFileNames: (assetInfo) => {
             if (assetInfo.name && assetInfo.name.endsWith('.css')) {
               return 'style.css';

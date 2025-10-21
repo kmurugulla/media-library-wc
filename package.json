@@ -21,7 +21,10 @@
   },
   "scripts": {
     "dev": "vite",
+    "dev:watch": "concurrently \"vite build --mode self-contained-unminified --watch\" \"python3 -m http.server 3001\"",
+    "dev:test": "npm run build:fast && npm run dev:watch",
     "build": "vite build --mode development && vite build --mode self-contained-unminified && vite build --mode self-contained && npm run build:assets",
+    "build:fast": "vite build --mode self-contained-unminified && npm run build:assets",
     "build:assets": "node build-dist.js",
     "preview": "vite preview",
     "lint:js": "eslint src",
@@ -42,6 +45,7 @@
   "author": "Media Library Team",
   "license": "MIT",
   "dependencies": {
+    "@lit-labs/virtualizer": "^2.1.1",
     "exifr": "^7.1.3",
     "lit": "^3.0.0"
   },
