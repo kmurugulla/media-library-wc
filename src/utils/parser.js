@@ -130,7 +130,7 @@ class ContentParser {
         const mediaItem = {
           url: fixedUrl,
           name: cleanFilename,
-          alt: img.alt || null,
+          alt: img.alt !== undefined && img.alt !== null ? img.alt : null,
           type: `img > ${extension}`,
           doc: url.loc,
           ctx: this.captureContext(img, 'img'),

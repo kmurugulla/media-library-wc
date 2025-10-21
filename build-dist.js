@@ -17,6 +17,7 @@ const icons = [
   'external-link.svg', 'copy.svg', 'search.svg',
   'list.svg', 'grid.svg', 'refresh.svg', 'eye.svg', 'link.svg',
   'share.svg', 'accessibility.svg', 'reference.svg', 'info.svg', 'open-in.svg', 'play.svg',
+  'filter.svg', 'document.svg', 'all.svg', 'chevron-right.svg',
 ];
 
 icons.forEach((icon) => {

@@ -11,17 +11,8 @@ class MediaTopbar extends LocalizableElement {
     searchQuery: { type: String },
     currentView: { type: String },
     locale: { type: String },
-    isScanning: { type: Boolean },
-    scanProgress: { type: Object },
-    isBatchLoading: { type: Boolean },
-    realTimeStats: { type: Object },
-    lastScanDuration: { type: String },
-    scanStats: { type: Object },
-    imageAnalysisEnabled: { type: Boolean },
-    showAnalysisToggle: { type: Boolean },
     mediaData: { type: Array },
-    totalPages: { type: Number },
-    isActuallyScanning: { type: Boolean },
+    resultSummary: { type: String },
     _suggestions: { state: true },
     _activeIndex: { state: true },
     _originalQuery: { state: true },
@@ -35,17 +26,8 @@ class MediaTopbar extends LocalizableElement {
     this.searchQuery = '';
     this.currentView = 'grid';
     this.locale = 'en';
-    this.isScanning = false;
-    this.scanProgress = null;
-    this.isBatchLoading = false;
-    this.realTimeStats = { images: 0, pages: 0, elapsed: 0 };
-    this.lastScanDuration = null;
-    this.scanStats = null;
-    this.imageAnalysisEnabled = false;
-    this.showAnalysisToggle = true;
     this.mediaData = [];
-    this.totalPages = 0;
-    this.isActuallyScanning = false;
+    this.resultSummary = '';
     this._suggestions = [];
     this._activeIndex = -1;
     this._originalQuery = '';
@@ -119,9 +101,8 @@ class MediaTopbar extends LocalizableElement {
             <input 
               class="search-input"
               type="text"
-              placeholder=${this.isScanning ? this.t('mediaLibrary.searchDisabledDuringScan') : this.t('mediaLibrary.searchPlaceholder')}
+              placeholder="Search"
               .value=${this.searchQuery || ''}
-              ?disabled=${this.isScanning}
               @input=${this.handleSearchInput}
               @keydown=${this.handleKeyDown}
             />
@@ -159,54 +140,12 @@ class MediaTopbar extends LocalizableElement {
           ` : ''}
         </div>
 
-        ${this.isActuallyScanning ? html`
-          <div class="scan-stats">
-            <div class="stat-item">
-              <span class="stat-label">Found</span>
-              <span class="stat-value stat-number">${this.realTimeStats.images}</span>
-              <span class="stat-text">media in</span>
-              <span class="stat-value stat-number">${this.realTimeStats.pages}</span>
-              <span class="stat-text">/</span>
-              <span class="stat-value stat-number">${this.totalPages}</span>
-              <span class="stat-text">changed pages in</span>
-              <span class="stat-value stat-number">${this.realTimeStats.elapsed}</span>
-              <span class="stat-text">s</span>
-            </div>
+        ${this.resultSummary ? html`
+          <div class="result-summary">
+            ${this.resultSummary}
           </div>
         ` : ''}
-
-        ${this.scanStats ? html`
-          <div class="scan-stats">
-            <div class="stat-item">
-              <span class="stat-label">Pages:</span>
-              <span class="stat-value">${this.scanStats.pagesScanned}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">Media:</span>
-              <span class="stat-value">${this.scanStats.mediaFound}</span>
-            </div>
-            <div class="stat-item">
-              <span class="stat-label">Time:</span>
-              <span class="stat-value">${this.scanStats.duration}s</span>
-            </div>
-          </div>
-        ` : ''}
-
-        <button 
-          class="view-toggle-button"
-          @click=${this.toggleView}
-          ?disabled=${this.isScanning}
-          aria-label=${this.currentView === 'grid' ? this.t('views.list') : this.t('views.grid')}
-          title=${this.currentView === 'grid' ? this.t('views.list') : this.t('views.grid')}
-        >
-          <svg class="view-icon">
-            <use href="#${this.currentView === 'grid' ? 'list' : 'grid'}"></use>
-          </svg>
-        </button>
-
-
       </div>
-
     `;
   }
 
@@ -232,7 +171,7 @@ class MediaTopbar extends LocalizableElement {
       this.dispatchEvent(new CustomEvent('search', { detail: { query } }));
     }, 300);
 
-    if (!query || !query.trim() || this._suppressSuggestions || this.isScanning) {
+    if (!query || !query.trim() || this._suppressSuggestions) {
       this._suggestions = [];
       this._suppressSuggestions = false;
     } else {
@@ -366,19 +305,6 @@ class MediaTopbar extends LocalizableElement {
     this.dispatchEvent(new CustomEvent('search', { detail: { query: '' } }));
   }
 
-  handleViewChange(view) {
-    this.dispatchEvent(new CustomEvent('viewChange', { detail: { view } }));
-  }
-
-  toggleView() {
-    const newView = this.currentView === 'grid' ? 'list' : 'grid';
-    this.handleViewChange(newView);
-  }
-
-  toggleImageAnalysis(event) {
-    this.imageAnalysisEnabled = event.target.checked;
-    this.dispatchEvent(new CustomEvent('toggleImageAnalysis', { detail: { enabled: this.imageAnalysisEnabled } }));
-  }
 }
 
 customElements.define('media-topbar', MediaTopbar);

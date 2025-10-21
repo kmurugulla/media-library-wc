@@ -1,30 +1,98 @@
 .media-sidebar {
-  background: #f8fafc;
-  border: 1px solid #e2e8f0;
-  border-radius: 6px;
+  background: #fff;
+  border: none;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  padding: 16px;
+  height: 100vh;
+  overflow-x: hidden;
+  overflow-y: auto;
+  transition: width 0.3s ease;
+  width: 60px;
 }
 
-.sidebar-header {
-  margin-bottom: 24px;
+.media-sidebar.collapsed {
+  width: 60px;
 }
 
-.sidebar-title {
+.media-sidebar.expanded {
+  width: 160px;
+}
+
+.sidebar-icons {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 8px 8px 8px;
+}
+
+.sidebar-icons.secondary {
+  padding: 8px 8px 12px 8px;
+}
+
+.icon-btn {
+  align-items: center;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #64748b;
+  cursor: pointer;
+  display: flex;
+  font-size: 14px;
+  font-weight: 500;
+  gap: 12px;
+  justify-content: flex-start;
+  min-height: 40px;
+  padding: 10px 12px;
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.icon-btn:hover {
+  background: transparent;
   color: #1e293b;
-  font-size: 1.25rem;
-  font-weight: 600;
-  margin: 0;
+}
+
+.icon-btn.active {
+  background: transparent;
+  color: #3b82f6;
+}
+
+.icon-btn .icon {
+  flex-shrink: 0;
+  height: 20px;
+  width: 20px;
+}
+
+.icon-btn .icon-label {
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+.collapsed .icon-btn {
+  justify-content: center;
+  padding: 10px;
+  width: 44px;
+}
+
+.collapsed .icon-btn .icon-label {
+  display: none;
+}
+
+.filter-panel {
+  padding: 0 4px;
+}
+
+.filter-section {
+  margin-bottom: 24px;
 }
 
 .filter-section h3 {
   color: #64748b;
-  font-size: 0.875rem;
+  font-size: 0.75rem;
   font-weight: 600;
   letter-spacing: 0.05em;
-  margin: 24px 0 16px;
+  margin: 0 0 8px;
+  padding: 0 6px;
 }
 
 .filter-list {
@@ -39,23 +107,23 @@
 
 .filter-button {
   align-items: center;
-  background: #fff;
-  border: 1px solid #e2e8f0;
+  background: transparent;
+  border: none;
   border-radius: 6px;
   color: #1e293b;
   cursor: pointer;
   display: flex;
-  font-size: 0.875rem;
+  font-size: 0.813rem;
   justify-content: space-between;
-  padding: 8px 16px;
+  padding: 6px 8px;
   text-align: start;
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   width: 100%;
 }
 
 .filter-button:hover {
-  background: #f8fafc;
-  border-color: #3b82f6;
+  background: transparent;
+  color: #3b82f6;
 }
 
 .filter-button:focus-visible {
@@ -64,47 +132,47 @@
 }
 
 .filter-button[aria-pressed="true"] {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: #fff;
+  background: transparent;
+  color: #3b82f6;
+  font-weight: 600;
 }
 
 .filter-button[aria-pressed="true"]:hover {
-  background: #2563eb;
-  border-color: #2563eb;
+  background: transparent;
 }
 
 .filter-button.disabled {
-  background: #f8fafc;
-  border-color: #e2e8f0;
+  background: transparent;
   color: #94a3b8;
   cursor: not-allowed;
   opacity: 0.6;
 }
 
 .filter-button.disabled:hover {
-  background: #f8fafc;
-  border-color: #e2e8f0;
+  background: transparent;
+  color: #94a3b8;
 }
 
 .count {
-  background: #f8fafc;
+  background: transparent;
   border-radius: 4px;
   color: #64748b;
   font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
   font-weight: 500;
-  min-width: 1.5rem;
-  padding: 4px 8px;
-  text-align: center;
+  min-width: 2ch;
+  padding: 2px 6px;
+  text-align: right;
 }
 
 .filter-button[aria-pressed="true"] .count {
-  background: rgb(255 255 255 / 0.2);
-  color: #fff;
+  background: transparent;
+  color: #3b82f6;
+  font-weight: 600;
 }
 
 .filter-button:not([aria-pressed="true"]):hover .count {
-  background: #fff;
+  background: transparent;
   color: #3b82f6;
 }
 
@@ -122,4 +190,20 @@
 /* Category filter buttons - no bullets */
 .filter-button[data-category] {
   /* No special styling needed - bullets removed */
+}
+
+/* Index Panel Styles */
+.index-panel {
+  padding: 8px 16px 16px;
+}
+
+.index-message {
+  color: #64748b;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.index-message.empty {
+  color: #94a3b8;
+  font-style: italic;
 }

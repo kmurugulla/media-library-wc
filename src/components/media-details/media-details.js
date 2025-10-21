@@ -116,7 +116,7 @@ class MediaDetails extends LocalizableElement {
       return html`<span class="alt-na">N/A</span>`;
     }
 
-    if (!alt || alt === null) {
+    if (!alt || alt === null || alt === 'null' || alt === 'undefined') {
       return html`
         <span class="alt-missing">
           <svg class="alt-status-icon missing" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -725,8 +725,8 @@ class MediaDetails extends LocalizableElement {
               </div>
             `}
             <div class="video-play-overlay">
-              <svg class="play-icon">
-                <use href="#play"></use>
+              <svg class="play-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="64" height="64">
+                <path fill="#fff" d="M6.3 3.2C5.6 2.8 5 3.3 5 4.1v11.8c0 0.8 0.6 1.3 1.3 0.9l9.4-5.9c0.6-0.4 0.6-1.4 0-1.8L6.3 3.2z"/>
               </svg>
             </div>
             ${ext ? html`<div class="subtype-label">${ext}</div>` : ''}

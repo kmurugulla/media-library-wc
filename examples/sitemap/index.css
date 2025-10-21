@@ -1,51 +1,35 @@
 body {
-    background: #f8fafc;
+    background: #fff;
     font-family: system-ui, -apple-system, sans-serif;
     margin: 0;
     padding: 0;
 }
 
 .test-container {
-    margin: 50px;
+    height: 100vh;
+    margin: 0;
     max-width: 100%;
 }
 
-.test-container h1,
 .test-container h2 {
-    margin-bottom: 10px;
-    text-align: center;
-}
-
-.test-container p {
-    margin-bottom: 30px;
+    margin-bottom: 16px;
     text-align: center;
 }
 
 .test-section {
     background: #fff;
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    padding: 10px;
+    border: none;
+    border-radius: 0;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    padding-top: 20px;
 }
 
 .test-section h2 {
     color: #1e293b;
+    font-size: 1.25rem;
     margin-top: 0;
-}
-
-.test-section p {
-    color: #64748b;
-    margin-bottom: 20px;
-}
-
-.info-note {
-    background: #eff6ff;
-    border: 1px solid #bfdbfe;
-    border-radius: 6px;
-    color: #1e40af;
-    font-size: 14px;
-    margin-bottom: 20px;
-    padding: 12px 16px;
 }
 
 .controls {
@@ -55,11 +39,13 @@ body {
     border-radius: 8px;
     box-shadow: 0 1px 3px rgb(0 0 0 / 0.1);
     display: flex;
+    flex: 0 0 auto;
     flex-wrap: wrap;
     gap: 20px;
     justify-content: center;
-    margin-bottom: 20px;
-    padding: 20px;
+    margin: 0 auto 16px;
+    max-width: 80%;
+    padding: 16px;
 }
 
 .control-group {
@@ -109,9 +95,10 @@ body {
 }
 
 .media-library-container {
-    border: 1px solid #e2e8f0;
-    border-radius: 8px;
-    height: calc(100vh - 200px);
+    border: none;
+    border-radius: 0;
+    flex: 1;
+    min-height: 0;
     overflow: hidden;
 }
 

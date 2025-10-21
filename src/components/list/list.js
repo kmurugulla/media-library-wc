@@ -102,7 +102,7 @@ class MediaList extends LocalizableElement {
         <div class="media-doc" title=${media.doc || ''} .innerHTML=${this.highlightSearchTerm(this.getShortDoc(media.doc), this.searchQuery)}>
         </div>
         
-        <div class="media-alt" title=${media.alt || ''} .innerHTML=${this.highlightSearchTerm(this.getShortAlt(media.alt), this.searchQuery)}>
+        <div class="media-alt" title=${media.alt && media.alt !== 'null' ? media.alt : ''} .innerHTML=${this.highlightSearchTerm(this.getShortAlt(media.alt), this.searchQuery)}>
         </div>
         
         <div class="media-actions">
@@ -195,7 +195,7 @@ class MediaList extends LocalizableElement {
   }
 
   getShortAlt(alt) {
-    if (!alt || alt === 'null') return '—';
+    if (!alt || alt === null || alt === 'null' || alt === 'undefined') return '—';
     return alt;
   }
 

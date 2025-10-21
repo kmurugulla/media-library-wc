@@ -107,6 +107,9 @@ class MediaLibrary extends LocalizableElement {
       '/dist/icons/pdf.svg',
       '/dist/icons/external-link.svg',
       '/dist/icons/copy.svg',
+      '/dist/icons/filter.svg',
+      '/dist/icons/document.svg',
+      '/dist/icons/all.svg',
     ];
 
     await getSvg({ parent: this.shadowRoot, paths: ICONS });
@@ -666,6 +669,42 @@ class MediaLibrary extends LocalizableElement {
     return this._isScanning || !this._mediaData || this._mediaData.length === 0;
   }
 
+  getResultSummary() {
+    if (this._isScanning) {
+      return '';
+    }
+    const filteredCount = this.filteredMediaData?.length || 0;
+    const totalCount = this._mediaData?.length || 0;
+    
+    if (this._searchQuery || this._selectedFilterType !== 'all') {
+      return `${filteredCount} of ${totalCount} media`;
+    }
+    return `${totalCount} media`;
+  }
+
+  getScanProgress() {
+    if (this._isScanning) {
+      return {
+        pages: this._realTimeStats.pages || 0,
+        media: this._realTimeStats.images || 0,
+        duration: null,
+        hasChanges: null,
+      };
+    }
+
+    if (this._scanProgress || this._lastScanDuration) {
+      const mediaCount = this._mediaData?.length || 0;
+      return {
+        pages: this._totalPages || 0,
+        media: mediaCount,
+        duration: this._lastScanDuration,
+        hasChanges: true,
+      };
+    }
+
+    return { pages: 0, media: 0, duration: null, hasChanges: null };
+  }
+
   handleSearch(e) {
     if (this.isUIdisabled) return;
     this._searchQuery = e.detail.query;
@@ -742,20 +781,9 @@ class MediaLibrary extends LocalizableElement {
             .searchQuery=${this._searchQuery}
             .currentView=${this._currentView}
             .locale=${this.locale}
-            .isScanning=${this.isUIdisabled}
-            .scanProgress=${this._scanProgress}
-            .isActuallyScanning=${this._isScanning}
-            .isBatchLoading=${this._isBatchLoading}
-            .realTimeStats=${this._realTimeStats}
-            .lastScanDuration=${this._lastScanDuration}
-            .scanStats=${this._scanStats}
-            .imageAnalysisEnabled=${this._imageAnalysisEnabled}
-            .showAnalysisToggle=${this.showAnalysisToggle}
             .mediaData=${this._mediaData}
-            .totalPages=${this._totalPages}
+            .resultSummary=${this.getResultSummary()}
             @search=${this.handleSearch}
-            @viewChange=${this.handleViewChange}
-            @toggleImageAnalysis=${this.handleToggleImageAnalysis}
           ></media-topbar>
         </div>
 
@@ -765,7 +793,8 @@ class MediaLibrary extends LocalizableElement {
             .activeFilter=${this._selectedFilterType}
             .filterCounts=${this.filterCounts}
             .locale=${this.locale}
-            .isScanning=${this.isUIdisabled}
+            .isScanning=${this._isScanning}
+            .scanProgress=${this.getScanProgress()}
             @filter=${this.handleFilter}
           ></media-sidebar>
         </div>

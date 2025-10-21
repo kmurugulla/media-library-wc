@@ -117,7 +117,7 @@ class MediaGrid extends LocalizableElement {
 
   renderAltStatus(media, mediaType) {
     // Only show alt indicator for images (not videos or documents)
-    if (mediaType === 'image' && media.alt && media.alt !== '' && media.alt !== null) {
+    if (mediaType === 'image' && media.alt && media.alt !== '' && media.alt !== null && media.alt !== 'null') {
       return html`
         <div class="filled-alt-indicator" title="Has alt text: ${media.alt}">
           <svg>
@@ -155,7 +155,7 @@ class MediaGrid extends LocalizableElement {
         <img 
           class="media-image" 
           src=${media.url} 
-          alt=${media.alt || media.name}
+          alt=${(media.alt && media.alt !== 'null') ? media.alt : media.name}
           loading="lazy"
           @error=${(e) => this.handleImageError(e, media)}
         />
@@ -248,7 +248,7 @@ class MediaGrid extends LocalizableElement {
             <img 
               class="video-thumbnail" 
               src=${thumbnail} 
-              alt=${media.alt || media.name}
+              alt=${(media.alt && media.alt !== 'null') ? media.alt : media.name}
               loading="lazy"
               @error=${(e) => this.handleVideoThumbnailError(e, media)}
             />
@@ -260,8 +260,8 @@ class MediaGrid extends LocalizableElement {
             </div>
           `}
           <div class="video-play-overlay">
-            <svg class="play-icon">
-              <use href="#play"></use>
+            <svg class="play-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="48" height="48">
+              <path fill="#fff" d="M6.3 3.2C5.6 2.8 5 3.3 5 4.1v11.8c0 0.8 0.6 1.3 1.3 0.9l9.4-5.9c0.6-0.4 0.6-1.4 0-1.8L6.3 3.2z"/>
             </svg>
           </div>
         </div>
@@ -280,8 +280,8 @@ class MediaGrid extends LocalizableElement {
           @loadedmetadata=${(e) => this.handleVideoLoaded(e, media)}
         />
         <div class="video-play-overlay">
-          <svg class="play-icon">
-            <use href="#play"></use>
+          <svg class="play-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" width="48" height="48">
+            <path fill="#fff" d="M6.3 3.2C5.6 2.8 5 3.3 5 4.1v11.8c0 0.8 0.6 1.3 1.3 0.9l9.4-5.9c0.6-0.4 0.6-1.4 0-1.8L6.3 3.2z"/>
           </svg>
         </div>
       </div>

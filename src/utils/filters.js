@@ -73,11 +73,11 @@ export const FILTER_CONFIG = {
   icons: (item) => isSvgFile(item),
 
   empty: (item) => item.type?.startsWith('img >') && !item.type?.includes('svg')
-    && item.alt === null,
+    && (item.alt === null || item.alt === 'null' || item.alt === 'undefined'),
   decorative: (item) => item.type?.startsWith('img >') && !item.type?.includes('svg')
     && item.alt === '',
   filled: (item) => item.type?.startsWith('img >') && !item.type?.includes('svg')
-    && item.alt && item.alt !== '',
+    && item.alt && item.alt !== '' && item.alt !== 'null' && item.alt !== 'undefined',
   unused: (item) => !item.doc || item.doc.trim() === '',
 
   landscape: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
@@ -137,12 +137,12 @@ export const FILTER_CONFIG = {
   documentLinks: (item, selectedDocument) => FILTER_CONFIG.links(item)
     && item.doc === selectedDocument,
   documentEmpty: (item, selectedDocument) => item.type?.startsWith('img >')
-    && !item.type?.includes('svg') && item.alt === null && item.doc === selectedDocument,
+    && !item.type?.includes('svg') && (item.alt === null || item.alt === 'null' || item.alt === 'undefined') && item.doc === selectedDocument,
   documentDecorative: (item, selectedDocument) => item.type?.startsWith('img >')
     && !item.type?.includes('svg') && item.alt === '' && item.doc === selectedDocument,
   documentFilled: (item, selectedDocument) => item.doc === selectedDocument
     && item.type?.startsWith('img >') && !item.type?.includes('svg')
-    && item.alt && item.alt !== '',
+    && item.alt && item.alt !== '' && item.alt !== 'null' && item.alt !== 'undefined',
 
   documentTotal: () => true,
   all: (item) => !isSvgFile(item),
@@ -221,7 +221,7 @@ function filterByColonSyntax(mediaData, colonSyntax) {
         return nameMatch;
       }
       case 'alt': {
-        const altMatch = item.alt && item.alt.toLowerCase().includes(value);
+        const altMatch = item.alt && item.alt !== 'null' && item.alt !== 'undefined' && item.alt.toLowerCase().includes(value);
         return altMatch;
       }
       case 'url': {
@@ -470,7 +470,7 @@ export function generateSearchSuggestions(mediaData, query, createSuggestionFn, 
           break;
         }
         case 'alt': {
-          if (item.alt && item.alt.toLowerCase().includes(value) && !isSvgFile(item)) {
+          if (item.alt && item.alt !== 'null' && item.alt !== 'undefined' && item.alt.toLowerCase().includes(value) && !isSvgFile(item)) {
             suggestions.push(createSuggestionFn(item));
             if (suggestions.length >= maxResults) break;
           }
