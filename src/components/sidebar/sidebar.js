@@ -39,10 +39,10 @@ class MediaSidebar extends LocalizableElement {
   async firstUpdated() {
     // Load icons after first render when shadowRoot is fully ready
     const ICONS = [
-      '/dist/icons/filter.svg',
-      '/dist/icons/refresh.svg',
+      'deps/icons/filter.svg',
+      'deps/icons/refresh.svg',
     ];
-    
+
     await getSvg({ parent: this.shadowRoot, paths: ICONS });
   }
 
@@ -61,7 +61,7 @@ class MediaSidebar extends LocalizableElement {
       this.isIndexExpanded = false;
     }
     this.isExpanded = !this.isExpanded;
-    this.dispatchEvent(new CustomEvent('sidebarToggle', { 
+    this.dispatchEvent(new CustomEvent('sidebarToggle', {
       detail: { expanded: this.isExpanded },
       bubbles: true,
       composed: true,
@@ -162,7 +162,7 @@ class MediaSidebar extends LocalizableElement {
         ${this.isExpanded ? html`
           <div class="filter-panel">
             <div class="filter-section">
-              <h3>${this.t('common.filter')}</h3>
+              <h3>Types</h3>
               <ul class="filter-list">
                 ${this.renderFilterItem('all', counts.all)}
                 ${this.renderFilterItem('images', counts.images)}
@@ -201,7 +201,7 @@ class MediaSidebar extends LocalizableElement {
         ` : ''}
 
         <div class="sidebar-icons secondary">
-          ${this.renderIconButton('refresh', 'Index', this.isIndexExpanded, this.handleIndexToggle.bind(this))}
+          ${this.renderIconButton('refresh', 'Status', this.isIndexExpanded, this.handleIndexToggle.bind(this))}
         </div>
 
         ${this.isIndexExpanded ? this.renderIndexPanel() : ''}
@@ -211,8 +211,6 @@ class MediaSidebar extends LocalizableElement {
 
   renderFilterItem(filterType, count, customLabel = null) {
     const label = customLabel || this.t(`filters.${filterType}`);
-    const categoryFilters = getCategoryFilters();
-    const isCategoryFilter = categoryFilters.includes(filterType);
 
     logger.debug(`renderFilterItem - ${filterType}: count=${count}, isScanning=${this.isScanning}`);
 
@@ -224,7 +222,6 @@ class MediaSidebar extends LocalizableElement {
             class="filter-button disabled"
             disabled
             aria-pressed="false"
-            data-category=${isCategoryFilter ? filterType : ''}
           >
             <span>${label}</span>
           </button>
@@ -244,7 +241,6 @@ class MediaSidebar extends LocalizableElement {
           class="filter-button ${this.activeFilter === filterType ? 'active' : ''}"
           @click=${() => this.handleFilter(filterType)}
           aria-pressed=${this.activeFilter === filterType}
-          data-category=${isCategoryFilter ? filterType : ''}
         >
           <span>${label}</span>
           <span class="count">${this.formatNumber(count)}</span>

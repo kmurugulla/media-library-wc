@@ -22,11 +22,11 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
-  padding: 12px 8px 8px 8px;
+  padding: 12px 8px 8px;
 }
 
 .sidebar-icons.secondary {
-  padding: 8px 8px 12px 8px;
+  padding: 8px 8px 12px;
 }
 
 .icon-btn {
@@ -83,16 +83,17 @@
 }
 
 .filter-section {
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
 .filter-section h3 {
-  color: #64748b;
+  color: #334155;
   font-size: 0.75rem;
-  font-weight: 600;
+  font-weight: 700;
   letter-spacing: 0.05em;
   margin: 0 0 8px;
   padding: 0 6px;
+  text-transform: uppercase;
 }
 
 .filter-list {
@@ -110,7 +111,7 @@
   background: transparent;
   border: none;
   border-radius: 6px;
-  color: #1e293b;
+  color: #64748b;
   cursor: pointer;
   display: flex;
   font-size: 0.813rem;
@@ -122,8 +123,8 @@
 }
 
 .filter-button:hover {
-  background: transparent;
-  color: #3b82f6;
+  background: #f1f5f9;
+  color: #334155;
 }
 
 .filter-button:focus-visible {
@@ -132,31 +133,31 @@
 }
 
 .filter-button[aria-pressed="true"] {
-  background: transparent;
-  color: #3b82f6;
+  background: #e2e8f0;
+  color: #1e293b;
   font-weight: 600;
 }
 
 .filter-button[aria-pressed="true"]:hover {
-  background: transparent;
+  background: #cbd5e1;
 }
 
 .filter-button.disabled {
   background: transparent;
-  color: #94a3b8;
+  color: #cbd5e1;
   cursor: not-allowed;
   opacity: 0.6;
 }
 
 .filter-button.disabled:hover {
   background: transparent;
-  color: #94a3b8;
+  color: #cbd5e1;
 }
 
 .count {
   background: transparent;
   border-radius: 4px;
-  color: #64748b;
+  color: #94a3b8;
   font-size: 0.75rem;
   font-variant-numeric: tabular-nums;
   font-weight: 500;
@@ -167,29 +168,12 @@
 
 .filter-button[aria-pressed="true"] .count {
   background: transparent;
-  color: #3b82f6;
+  color: #475569;
   font-weight: 600;
 }
 
-.filter-button:not([aria-pressed="true"]):hover .count {
-  background: transparent;
-  color: #3b82f6;
-}
-
-/* Category section specific styles */
-.filter-section:has(.filter-list:has(.filter-button[data-category])) {
-  border-left: 3px solid #3b82f6;
-  padding-left: calc(16px - 3px);
-}
-
-.filter-section:has(.filter-list:has(.filter-button[data-category])) h3 {
-  color: #3b82f6;
-  font-weight: 700;
-}
-
-/* Category filter buttons - no bullets */
-.filter-button[data-category] {
-  /* No special styling needed - bullets removed */
+.filter-button:hover .count {
+  color: #64748b;
 }
 
 /* Index Panel Styles */

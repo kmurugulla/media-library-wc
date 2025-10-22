@@ -49,17 +49,17 @@ class MediaDetails extends LocalizableElement {
       if (existingIcons.length === 0) {
         // Icons missing, load them
         const ICONS = [
-          '/dist/icons/close.svg',
-          '/dist/icons/photo.svg',
-          '/dist/icons/video.svg',
-          '/dist/icons/pdf.svg',
-          '/dist/icons/external-link.svg',
-          '/dist/icons/copy.svg',
-          '/dist/icons/eye.svg',
-          '/dist/icons/reference.svg',
-          '/dist/icons/info.svg',
-          '/dist/icons/open-in.svg',
-          '/dist/icons/play.svg',
+          'deps/icons/close.svg',
+          'deps/icons/photo.svg',
+          'deps/icons/video.svg',
+          'deps/icons/pdf.svg',
+          'deps/icons/external-link.svg',
+          'deps/icons/copy.svg',
+          'deps/icons/eye.svg',
+          'deps/icons/reference.svg',
+          'deps/icons/info.svg',
+          'deps/icons/open-in.svg',
+          'deps/icons/play.svg',
         ];
         await getSvg({ parent: this.shadowRoot, paths: ICONS });
       }
@@ -116,7 +116,7 @@ class MediaDetails extends LocalizableElement {
       return html`<span class="alt-na">N/A</span>`;
     }
 
-    if (!alt || alt === null || alt === 'null' || alt === 'undefined') {
+    if (alt === null) {
       return html`
         <span class="alt-missing">
           <svg class="alt-status-icon missing" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
@@ -339,7 +339,7 @@ class MediaDetails extends LocalizableElement {
             <div class="document-heading">
               <div>
                 <h3>${doc}</h3>
-                <div class="document-path">${usages.length} ${usages.length === 1 ? 'usage' : 'usages'}</div>
+                <div class="document-path">${usages.length} ${usages.length === 1 ? 'Reference' : 'References'}</div>
               </div>
               <button 
                 class="action-button open-page-button" 
@@ -654,7 +654,7 @@ class MediaDetails extends LocalizableElement {
           <img 
             class="media-preview" 
             src=${media.url} 
-            alt=${media.alt || media.name}
+            alt=${media.alt !== null ? media.alt : ''}
             @error=${(e) => this.handleImageError(e, media)}
           />
           ${ext ? html`<div class="subtype-label">${ext}</div>` : ''}
@@ -714,7 +714,7 @@ class MediaDetails extends LocalizableElement {
               <img 
                 class="video-thumbnail" 
                 src=${thumbnail} 
-                alt=${media.alt || media.name}
+                alt=${media.alt !== null ? media.alt : ''}
                 @error=${(e) => this.handleVideoThumbnailError(e, media)}
               />
             ` : html`

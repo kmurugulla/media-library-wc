@@ -101,15 +101,15 @@ class MediaLibrary extends LocalizableElement {
 
   async _initialize() {
     const ICONS = [
-      '/dist/icons/close.svg',
-      '/dist/icons/photo.svg',
-      '/dist/icons/video.svg',
-      '/dist/icons/pdf.svg',
-      '/dist/icons/external-link.svg',
-      '/dist/icons/copy.svg',
-      '/dist/icons/filter.svg',
-      '/dist/icons/document.svg',
-      '/dist/icons/all.svg',
+      'deps/icons/close.svg',
+      'deps/icons/photo.svg',
+      'deps/icons/video.svg',
+      'deps/icons/pdf.svg',
+      'deps/icons/external-link.svg',
+      'deps/icons/copy.svg',
+      'deps/icons/filter.svg',
+      'deps/icons/document.svg',
+      'deps/icons/all.svg',
     ];
 
     await getSvg({ parent: this.shadowRoot, paths: ICONS });
@@ -675,11 +675,11 @@ class MediaLibrary extends LocalizableElement {
     }
     const filteredCount = this.filteredMediaData?.length || 0;
     const totalCount = this._mediaData?.length || 0;
-    
+
     if (this._searchQuery || this._selectedFilterType !== 'all') {
-      return `${filteredCount} of ${totalCount} media`;
+      return `${filteredCount} of ${totalCount} References`;
     }
-    return `${totalCount} media`;
+    return `${totalCount} References`;
   }
 
   getScanProgress() {

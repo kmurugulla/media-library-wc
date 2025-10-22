@@ -30,14 +30,14 @@ class MediaGrid extends LocalizableElement {
   async firstUpdated() {
     // Load icons after first render when shadowRoot is fully ready
     const ICONS = [
-      '/dist/icons/photo.svg',
-      '/dist/icons/video.svg',
-      '/dist/icons/pdf.svg',
-      '/dist/icons/external-link.svg',
-      '/dist/icons/copy.svg',
-      '/dist/icons/share.svg',
-      '/dist/icons/accessibility.svg',
-      '/dist/icons/play.svg',
+      'deps/icons/photo.svg',
+      'deps/icons/video.svg',
+      'deps/icons/pdf.svg',
+      'deps/icons/external-link.svg',
+      'deps/icons/copy.svg',
+      'deps/icons/share.svg',
+      'deps/icons/accessibility.svg',
+      'deps/icons/play.svg',
     ];
     await getSvg({ parent: this.shadowRoot, paths: ICONS });
   }
@@ -116,8 +116,8 @@ class MediaGrid extends LocalizableElement {
   }
 
   renderAltStatus(media, mediaType) {
-    // Only show alt indicator for images (not videos or documents)
-    if (mediaType === 'image' && media.alt && media.alt !== '' && media.alt !== null && media.alt !== 'null') {
+    // Only show alt indicator for images with filled alt text
+    if (mediaType === 'image' && media.alt !== null && media.alt !== '') {
       return html`
         <div class="filled-alt-indicator" title="Has alt text: ${media.alt}">
           <svg>
@@ -155,7 +155,7 @@ class MediaGrid extends LocalizableElement {
         <img 
           class="media-image" 
           src=${media.url} 
-          alt=${(media.alt && media.alt !== 'null') ? media.alt : media.name}
+          alt=${media.alt !== null ? media.alt : ''}
           loading="lazy"
           @error=${(e) => this.handleImageError(e, media)}
         />
@@ -248,7 +248,7 @@ class MediaGrid extends LocalizableElement {
             <img 
               class="video-thumbnail" 
               src=${thumbnail} 
-              alt=${(media.alt && media.alt !== 'null') ? media.alt : media.name}
+              alt=${media.alt !== null ? media.alt : ''}
               loading="lazy"
               @error=${(e) => this.handleVideoThumbnailError(e, media)}
             />

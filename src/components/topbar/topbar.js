@@ -44,12 +44,12 @@ class MediaTopbar extends LocalizableElement {
     super.connectedCallback();
 
     const ICONS = [
-      '/dist/icons/search.svg',
-      '/dist/icons/close.svg',
-      '/dist/icons/list.svg',
-      '/dist/icons/grid.svg',
-      '/dist/icons/refresh.svg',
-      '/dist/icons/photo.svg',
+      'deps/icons/search.svg',
+      'deps/icons/close.svg',
+      'deps/icons/list.svg',
+      'deps/icons/grid.svg',
+      'deps/icons/refresh.svg',
+      'deps/icons/photo.svg',
     ];
 
     getSvg({ parent: this.shadowRoot, paths: ICONS });
@@ -304,7 +304,6 @@ class MediaTopbar extends LocalizableElement {
     this._suppressSuggestions = false;
     this.dispatchEvent(new CustomEvent('search', { detail: { query: '' } }));
   }
-
 }
 
 customElements.define('media-topbar', MediaTopbar);

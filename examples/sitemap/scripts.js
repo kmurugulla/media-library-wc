@@ -1,9 +1,9 @@
 /* eslint-disable no-console, no-alert, no-restricted-globals */
-// MediaLibrary is available globally from the IIFE
-const { waitForMediaLibraryReady } = window.MediaLibrary;
-
 import { SitemapSource } from '../../sources/index.js';
 import { createStorage } from '../../src/utils/storage.js';
+
+// MediaLibrary is available globally from the IIFE
+const { waitForMediaLibraryReady } = window.MediaLibrary;
 
 let mediaLibrary;
 
@@ -41,7 +41,7 @@ async function loadAvailableSites() {
     sites.forEach((site) => {
       const option = document.createElement('option');
       option.value = site.siteKey;
-      option.textContent = `${site.siteKey} (${site.itemCount} items) - ${new Date(site.timestamp).toLocaleString()}`;
+      option.textContent = `${site.siteKey} (${site.itemCount} References) - ${new Date(site.timestamp).toLocaleString()}`;
       siteSelector.appendChild(option);
     });
 

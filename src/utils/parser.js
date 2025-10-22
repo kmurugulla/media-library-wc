@@ -102,9 +102,18 @@ class ContentParser {
 
       const mediaItems = [];
       const timestamp = new Date(url.lastmod).getTime();
+
+      // Track seen images to skip responsive variants (same base URL, different query params)
+      const seenImages = new Set();
+
       const images = doc.querySelectorAll('img');
 
       const imageItems = await Promise.all([...images].map(async (img) => {
+        // Skip images inside non-rendered elements (noscript, template, etc.)
+        if (this.isInNonRenderedElement(img)) {
+          return null;
+        }
+
         const rawSrc = img.getAttribute('src');
         const lazySrc = img.getAttribute('data-src')
                        || img.getAttribute('data-lazy-src')
@@ -127,18 +136,38 @@ class ContentParser {
         const domWidth = parseInt(img.getAttribute('width'), 10) || 0;
         const domHeight = parseInt(img.getAttribute('height'), 10) || 0;
 
+        // Determine alt text value - distinguish between missing, empty, and filled
+        let altValue = null;
+        if (img.hasAttribute('alt')) {
+          altValue = img.getAttribute('alt');
+          // If getAttribute returns null but hasAttribute is true, treat as empty string
+          if (altValue === null) {
+            altValue = '';
+          }
+        }
+
+        // Normalize URL for deduplication (removes query params for CDN images)
+        const normalizedSrc = this.normalizeUrlForHash(actualSrc);
+
+        // Skip responsive variants: same normalized URL + alt text on the same page
+        const dedupeKey = `${normalizedSrc}|${altValue}`;
+        if (seenImages.has(dedupeKey)) {
+          return null;
+        }
+        seenImages.add(dedupeKey);
+
         const mediaItem = {
           url: fixedUrl,
           name: cleanFilename,
-          alt: img.alt !== undefined && img.alt !== null ? img.alt : null,
+          alt: altValue,
           type: `img > ${extension}`,
           doc: url.loc,
           ctx: this.captureContext(img, 'img'),
           hash: this.createUniqueHash(
             actualSrc,
             url.loc,
-            img.alt,
-            this.getOccurrenceIndex(actualSrc, url.loc),
+            altValue,
+            this.getOccurrenceIndex(normalizedSrc, url.loc),
           ),
           firstUsedAt: timestamp,
           lastUsedAt: timestamp,
@@ -204,7 +233,11 @@ class ContentParser {
 
         // Set basic orientation from HTML attributes when deep analysis is disabled
         if (!this.enableImageAnalysis && domWidth > 0 && domHeight > 0) {
-          mediaItem.orientation = domWidth > domHeight ? 'landscape' : 'portrait';
+          if (domWidth === domHeight) {
+            mediaItem.orientation = 'square';
+          } else {
+            mediaItem.orientation = domWidth > domHeight ? 'landscape' : 'portrait';
+          }
           mediaItem.width = domWidth;
           mediaItem.height = domHeight;
         }
@@ -220,6 +253,7 @@ class ContentParser {
           const resolvedUrl = this.resolveUrl(video.src, url.loc);
           const documentDomain = new URL(url.loc).hostname;
           const fixedUrl = this.fixLocalhostUrl(resolvedUrl, documentDomain);
+          const normalizedSrc = this.normalizeUrlForHash(video.src);
           mediaItems.push({
             url: fixedUrl,
             name: this.getCleanFilename(video.src),
@@ -227,7 +261,7 @@ class ContentParser {
             type: `video > ${this.getFileExtension(video.src)}`,
             doc: url.loc,
             ctx: this.captureContext(video, 'video'),
-            hash: this.createUniqueHash(video.src, url.loc, '', this.getOccurrenceIndex(video.src, url.loc)),
+            hash: this.createUniqueHash(video.src, url.loc, '', this.getOccurrenceIndex(normalizedSrc, url.loc)),
             firstUsedAt: timestamp,
             lastUsedAt: timestamp,
           });
@@ -240,6 +274,7 @@ class ContentParser {
           const resolvedUrl = this.resolveUrl(source.src, url.loc);
           const documentDomain = new URL(url.loc).hostname;
           const fixedUrl = this.fixLocalhostUrl(resolvedUrl, documentDomain);
+          const normalizedSrc = this.normalizeUrlForHash(source.src);
           mediaItems.push({
             url: fixedUrl,
             name: this.getCleanFilename(source.src),
@@ -247,7 +282,7 @@ class ContentParser {
             type: `video-source > ${this.getFileExtension(source.src)}`,
             doc: url.loc,
             ctx: this.captureContext(source, 'video-source'),
-            hash: this.createUniqueHash(source.src, url.loc, '', this.getOccurrenceIndex(source.src, url.loc)),
+            hash: this.createUniqueHash(source.src, url.loc, '', this.getOccurrenceIndex(normalizedSrc, url.loc)),
             firstUsedAt: timestamp,
             lastUsedAt: timestamp,
           });
@@ -261,6 +296,7 @@ class ContentParser {
           const resolvedUrl = this.resolveUrl(href, url.loc);
           const documentDomain = new URL(url.loc).hostname;
           const fixedUrl = this.fixLocalhostUrl(resolvedUrl, documentDomain);
+          const normalizedHref = this.normalizeUrlForHash(href);
           mediaItems.push({
             url: fixedUrl,
             name: this.getCleanFilename(href),
@@ -272,7 +308,7 @@ class ContentParser {
               href,
               url.loc,
               link.textContent,
-              this.getOccurrenceIndex(href, url.loc),
+              this.getOccurrenceIndex(normalizedHref, url.loc),
             ),
             firstUsedAt: timestamp,
             lastUsedAt: timestamp,
@@ -306,6 +342,24 @@ class ContentParser {
     } catch (error) {
       return src;
     }
+  }
+
+  isInNonRenderedElement(element) {
+    // Check if element is inside non-rendered elements (noscript, template, etc.)
+    let current = element.parentElement;
+    let depth = 0;
+    const maxDepth = 10; // Prevent infinite loops
+
+    while (current && depth < maxDepth) {
+      const tagName = current.tagName?.toLowerCase();
+      if (tagName === 'noscript' || tagName === 'template') {
+        return true;
+      }
+      current = current.parentElement;
+      depth += 1;
+    }
+
+    return false;
   }
 
   captureContext(element, type) {

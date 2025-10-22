@@ -105,7 +105,11 @@ async function runAnalysisPipeline(imageUrl, context = '') {
     const dimensions = await getImageDimensions(imageUrl);
     analysis.width = dimensions.width;
     analysis.height = dimensions.height;
-    analysis.orientation = dimensions.width > dimensions.height ? 'landscape' : 'portrait';
+    if (dimensions.width === dimensions.height) {
+      analysis.orientation = 'square';
+    } else {
+      analysis.orientation = dimensions.width > dimensions.height ? 'landscape' : 'portrait';
+    }
   }
 
   if (ANALYSIS_CONFIG.categorizeFromFilename) {

@@ -26,11 +26,11 @@ class MediaList extends LocalizableElement {
   async firstUpdated() {
     // Load icons after first render when shadowRoot is fully ready
     const ICONS = [
-      '/dist/icons/photo.svg',
-      '/dist/icons/video.svg',
-      '/dist/icons/pdf.svg',
-      '/dist/icons/external-link.svg',
-      '/dist/icons/copy.svg',
+      'deps/icons/photo.svg',
+      'deps/icons/video.svg',
+      'deps/icons/pdf.svg',
+      'deps/icons/external-link.svg',
+      'deps/icons/copy.svg',
     ];
     await getSvg({ parent: this.shadowRoot, paths: ICONS });
   }
@@ -125,7 +125,7 @@ class MediaList extends LocalizableElement {
       return html`
         <img 
           src=${media.url} 
-          alt=${media.alt || media.name}
+          alt=${media.alt !== null ? media.alt : ''}
           loading="lazy"
           @error=${(e) => this.handleImageError(e, media)}
         />
@@ -195,7 +195,8 @@ class MediaList extends LocalizableElement {
   }
 
   getShortAlt(alt) {
-    if (!alt || alt === null || alt === 'null' || alt === 'undefined') return '—';
+    if (alt === null) return 'Missing';
+    if (alt === '') return 'Decorative';
     return alt;
   }
 
