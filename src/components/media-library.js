@@ -740,6 +740,7 @@ class MediaLibrary extends LocalizableElement {
         data: {
           media,
           usageData,
+          isScanning: this._isScanning,
         },
       },
     }));

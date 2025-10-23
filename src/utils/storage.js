@@ -4,7 +4,7 @@ import R2Storage from './r2-storage.js';
 class BrowserStorage {
   constructor(type = 'indexeddb', siteKey = null) {
     this.type = type;
-    this.dbVersion = 7;
+    this.dbVersion = 8;
     this.siteKey = siteKey;
     this.dbName = siteKey ? `media_${this.normalizeSiteKey(siteKey)}` : 'MediaLibrary';
     this.db = null;
@@ -53,10 +53,19 @@ class BrowserStorage {
         }
 
         const mediaStore = db.createObjectStore('media', { keyPath: 'id', autoIncrement: true });
+
         mediaStore.createIndex('hash', 'hash', { unique: false });
         mediaStore.createIndex('url', 'url', { unique: false });
         mediaStore.createIndex('doc', 'doc', { unique: false });
         mediaStore.createIndex('name', 'name', { unique: false });
+
+        mediaStore.createIndex('loading', 'loading', { unique: false });
+        mediaStore.createIndex('fetchpriority', 'fetchpriority', { unique: false });
+        mediaStore.createIndex('isLazyLoaded', 'isLazyLoaded', { unique: false });
+        mediaStore.createIndex('role', 'role', { unique: false });
+        mediaStore.createIndex('ariaHidden', 'ariaHidden', { unique: false });
+        mediaStore.createIndex('hasFigcaption', 'hasFigcaption', { unique: false });
+        mediaStore.createIndex('parentTag', 'parentTag', { unique: false });
 
         if (!db.objectStoreNames.contains('last-modified-data')) {
           db.createObjectStore('last-modified-data', { keyPath: 'siteKey' });

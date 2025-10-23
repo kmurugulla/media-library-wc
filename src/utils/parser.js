@@ -5,6 +5,39 @@ import {
   clearAnalysisCache,
 } from './image-analysis.js';
 import { detectCategory } from './category-detector.js';
+import logger from './logger.js';
+
+// Image attributes whitelist for single-pass extraction
+const REQUIRED_SOURCE_ATTRIBUTES = ['src'];
+
+const LAZY_LOAD_ATTRIBUTES = [
+  'data-src',
+  'data-lazy-src',
+  'data-original',
+  'data-sling-src',
+  'data-responsive-src',
+];
+
+const OPTIONAL_IMAGE_ATTRIBUTES = [
+  'alt',
+  'width',
+  'height',
+  'srcset',
+  'sizes',
+  'loading',
+  'fetchpriority',
+  'decoding',
+  'role',
+  'aria-hidden',
+  'aria-label',
+  'title',
+];
+
+const IMAGE_ATTRIBUTES_TO_CAPTURE = [
+  ...REQUIRED_SOURCE_ATTRIBUTES,
+  ...LAZY_LOAD_ATTRIBUTES,
+  ...OPTIONAL_IMAGE_ATTRIBUTES,
+];
 
 class ContentParser {
   constructor(options = {}) {
@@ -49,10 +82,11 @@ class ContentParser {
   }
 
   async scanPages(urls, onProgress, previousMetadata = null) {
+    const startTime = Date.now();
     const results = [];
     let completed = 0;
     const errors = [];
-    this.latestMediaItems = []; // Reset latest items for this scan
+    this.latestMediaItems = [];
 
     const urlsToScan = previousMetadata ? this.filterChangedUrls(urls, previousMetadata) : urls;
 
@@ -61,7 +95,6 @@ class ContentParser {
         const mediaItems = await this.scanPage(url);
         completed += 1;
 
-        // Store latest items for progressive display
         this.latestMediaItems = mediaItems;
 
         if (onProgress) {
@@ -72,12 +105,19 @@ class ContentParser {
       } catch (error) {
         completed += 1;
         errors.push({ url, error });
-        this.latestMediaItems = []; // Clear on error
+        this.latestMediaItems = [];
 
         if (onProgress) {
           onProgress(completed, urlsToScan.length, 0);
         }
       }
+    }
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    logger.info(`Scan completed: ${completed} pages, ${results.length} media items found in ${duration}s`);
+
+    if (errors.length > 0) {
+      logger.warn(`Scan had ${errors.length} error(s)`);
     }
 
     return results;
@@ -103,23 +143,30 @@ class ContentParser {
       const mediaItems = [];
       const timestamp = new Date(url.lastmod).getTime();
 
-      // Track seen images to skip responsive variants (same base URL, different query params)
       const seenImages = new Set();
+
+      const hasNonRenderedImages = doc.querySelector('noscript img, template img') !== null;
 
       const images = doc.querySelectorAll('img');
 
       const imageItems = await Promise.all([...images].map(async (img) => {
-        // Skip images inside non-rendered elements (noscript, template, etc.)
-        if (this.isInNonRenderedElement(img)) {
+        if (hasNonRenderedImages && this.isInNonRenderedElement(img)) {
           return null;
         }
 
-        const rawSrc = img.getAttribute('src');
-        const lazySrc = img.getAttribute('data-src')
-                       || img.getAttribute('data-lazy-src')
-                       || img.getAttribute('data-original')
-                       || img.getAttribute('data-sling-src')
-                       || img.getAttribute('data-responsive-src');
+        const attrs = {};
+        for (const attr of img.attributes) {
+          if (IMAGE_ATTRIBUTES_TO_CAPTURE.includes(attr.name)) {
+            attrs[attr.name] = attr.value;
+          }
+        }
+
+        const rawSrc = attrs.src;
+        const lazySrc = attrs['data-src']
+                     || attrs['data-lazy-src']
+                     || attrs['data-original']
+                     || attrs['data-sling-src']
+                     || attrs['data-responsive-src'];
 
         const actualSrc = rawSrc || lazySrc;
 
@@ -133,28 +180,43 @@ class ContentParser {
         const fixedUrl = this.fixLocalhostUrl(resolvedUrl, documentDomain);
         const cleanFilename = this.getCleanFilename(actualSrc);
 
-        const domWidth = parseInt(img.getAttribute('width'), 10) || 0;
-        const domHeight = parseInt(img.getAttribute('height'), 10) || 0;
+        const domWidth = attrs.width ? parseInt(attrs.width, 10) : undefined;
+        const domHeight = attrs.height ? parseInt(attrs.height, 10) : undefined;
 
-        // Determine alt text value - distinguish between missing, empty, and filled
+        // Alt text: null (missing), "" (empty), or "text" (filled)
         let altValue = null;
         if (img.hasAttribute('alt')) {
-          altValue = img.getAttribute('alt');
-          // If getAttribute returns null but hasAttribute is true, treat as empty string
-          if (altValue === null) {
-            altValue = '';
-          }
+          altValue = attrs.alt || '';
         }
 
-        // Normalize URL for deduplication (removes query params for CDN images)
         const normalizedSrc = this.normalizeUrlForHash(actualSrc);
 
-        // Skip responsive variants: same normalized URL + alt text on the same page
         const dedupeKey = `${normalizedSrc}|${altValue}`;
         if (seenImages.has(dedupeKey)) {
           return null;
         }
         seenImages.add(dedupeKey);
+
+        const {
+          srcset,
+          sizes,
+          loading,
+          fetchpriority,
+          role,
+          title,
+        } = attrs;
+        const isLazyLoaded = !!lazySrc;
+        const ariaHidden = attrs['aria-hidden'];
+        const ariaLabel = attrs['aria-label'];
+
+        const figureParent = img.closest('figure');
+        const hasFigcaption = figureParent ? !!figureParent.querySelector('figcaption') : false;
+
+        const classList = img.classList.length > 0 ? [...img.classList] : undefined;
+        const parentTag = img.parentElement?.tagName?.toLowerCase();
+        const parentHref = (parentTag === 'a' && img.parentElement.hasAttribute('href'))
+          ? img.parentElement.getAttribute('href')
+          : undefined;
 
         const mediaItem = {
           url: fixedUrl,
@@ -171,9 +233,23 @@ class ContentParser {
           ),
           firstUsedAt: timestamp,
           lastUsedAt: timestamp,
-          domWidth,
-          domHeight,
         };
+
+        if (srcset) mediaItem.srcset = srcset;
+        if (sizes) mediaItem.sizes = sizes;
+        if (loading) mediaItem.loading = loading;
+        if (fetchpriority) mediaItem.fetchpriority = fetchpriority;
+        if (isLazyLoaded) mediaItem.isLazyLoaded = isLazyLoaded;
+
+        if (role) mediaItem.role = role;
+        if (ariaHidden) mediaItem.ariaHidden = ariaHidden === 'true';
+        if (ariaLabel) mediaItem.ariaLabel = ariaLabel;
+        if (title) mediaItem.title = title;
+        if (hasFigcaption) mediaItem.hasFigcaption = hasFigcaption;
+
+        if (classList) mediaItem.classList = classList;
+        if (parentTag && parentTag !== 'body') mediaItem.parentTag = parentTag;
+        if (parentHref) mediaItem.parentHref = parentHref;
 
         if (this.enableCategorization) {
           try {
@@ -187,14 +263,8 @@ class ContentParser {
             );
 
             mediaItem.category = categoryResult.category;
-            mediaItem.categoryConfidence = categoryResult.confidence;
-            mediaItem.categoryScore = categoryResult.score;
-            mediaItem.categorySource = categoryResult.source;
           } catch (error) {
             mediaItem.category = 'other';
-            mediaItem.categoryConfidence = 'none';
-            mediaItem.categoryScore = 0;
-            mediaItem.categorySource = 'fallback';
           }
         }
 
@@ -211,9 +281,6 @@ class ContentParser {
 
             if (analysis.category) {
               mediaItem.category = analysis.category;
-              mediaItem.categoryConfidence = analysis.categoryConfidence;
-              mediaItem.categoryScore = analysis.categoryScore;
-              mediaItem.categorySource = analysis.categorySource;
             }
 
             if (analysis.exifError) {
@@ -227,12 +294,11 @@ class ContentParser {
               }
             }
           } catch (error) {
-            // Image analysis failed, continue without analysis
+            // Continue without analysis
           }
         }
 
-        // Set basic orientation from HTML attributes when deep analysis is disabled
-        if (!this.enableImageAnalysis && domWidth > 0 && domHeight > 0) {
+        if (!this.enableImageAnalysis && domWidth !== undefined && domHeight !== undefined) {
           if (domWidth === domHeight) {
             mediaItem.orientation = 'square';
           } else {
@@ -345,10 +411,9 @@ class ContentParser {
   }
 
   isInNonRenderedElement(element) {
-    // Check if element is inside non-rendered elements (noscript, template, etc.)
     let current = element.parentElement;
     let depth = 0;
-    const maxDepth = 10; // Prevent infinite loops
+    const maxDepth = 3;
 
     while (current && depth < maxDepth) {
       const tagName = current.tagName?.toLowerCase();
@@ -365,13 +430,11 @@ class ContentParser {
   captureContext(element, type) {
     const context = [type];
 
-    // Check if element is inside a picture element
     const pictureElement = element.closest('picture');
     if (pictureElement) {
       context.push('picture');
     }
 
-    // Check for semantic HTML elements
     const semanticParent = this.findSemanticParent(element);
     if (semanticParent) {
       context.push(`In: ${semanticParent}`);
@@ -387,7 +450,6 @@ class ContentParser {
       context.push(`text: ${nearbyText}`);
     }
 
-    // If no meaningful context found, try to get paragraph or section context
     if (context.length === 1) {
       const paragraphContext = this.getParagraphContext(element);
       if (paragraphContext) {
@@ -483,7 +545,6 @@ class ContentParser {
       if (parentText.length <= 200) {
         return parentText;
       }
-      // Return first 20 characters when text is longer than 200 chars
       return parentText.substring(0, 20);
     }
 
@@ -559,7 +620,6 @@ class ContentParser {
     if (!url) return '';
 
     try {
-      // Remove query parameters and fragments to normalize the URL for hashing
       const cleanUrl = url.split(/[?#]/)[0];
       return cleanUrl;
     } catch (error) {

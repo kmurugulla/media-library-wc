@@ -313,12 +313,12 @@ class MediaDetails extends LocalizableElement {
   }
 
   renderUsageTab() {
-    const { usageData } = this.modalData.data;
+    const { usageData, isScanning } = this.modalData.data;
 
     if (!usageData || usageData.length === 0) {
       return html`
         <div class="no-usage">
-          <p>Not Used</p>
+          <p>${isScanning ? 'Calculating references...' : 'Not Used'}</p>
         </div>
       `;
     }
