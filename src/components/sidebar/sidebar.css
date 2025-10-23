@@ -18,6 +18,10 @@
   width: 160px;
 }
 
+.media-sidebar.ai-expanded {
+  width: 400px;
+}
+
 .sidebar-icons {
   display: flex;
   flex-direction: column;

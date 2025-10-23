@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" stroke="none">
+  <g id="sparkle">
+    <path d="M12 2L13.5 8.5L20 10L13.5 11.5L12 18L10.5 11.5L4 10L10.5 8.5L12 2Z"/>
+    <path d="M17 16L17.75 18.25L20 19L17.75 19.75L17 22L16.25 19.75L14 19L16.25 18.25L17 16Z"/>
+    </g>
+</svg>

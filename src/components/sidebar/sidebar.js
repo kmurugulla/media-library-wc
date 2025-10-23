@@ -5,6 +5,7 @@ import { getCategoryFilters } from '../../utils/filters.js';
 import logger from '../../utils/logger.js';
 import getSvg from '../../utils/get-svg.js';
 import sidebarStyles from './sidebar.css?inline';
+import '../ai-chat-panel/ai-chat-panel.js';
 
 class MediaSidebar extends LocalizableElement {
   static properties = {
@@ -15,6 +16,7 @@ class MediaSidebar extends LocalizableElement {
     scanProgress: { type: Object },
     isExpanded: { type: Boolean, state: true },
     isIndexExpanded: { type: Boolean, state: true },
+    isAiExpanded: { type: Boolean, state: true },
   };
 
   static styles = getStyles(sidebarStyles);
@@ -28,6 +30,7 @@ class MediaSidebar extends LocalizableElement {
     this.scanProgress = { pages: 0, media: 0, duration: null, hasChanges: null };
     this.isExpanded = false;
     this.isIndexExpanded = false;
+    this.isAiExpanded = false;
   }
 
   connectedCallback() {
@@ -41,6 +44,7 @@ class MediaSidebar extends LocalizableElement {
     const ICONS = [
       'deps/icons/filter.svg',
       'deps/icons/refresh.svg',
+      'deps/icons/sparkle.svg',
     ];
 
     await getSvg({ parent: this.shadowRoot, paths: ICONS });
@@ -73,6 +77,16 @@ class MediaSidebar extends LocalizableElement {
       this.isExpanded = false;
     }
     this.isIndexExpanded = !this.isIndexExpanded;
+  }
+
+  handleAiToggle() {
+    if (this.isExpanded) {
+      this.isExpanded = false;
+    }
+    if (this.isIndexExpanded) {
+      this.isIndexExpanded = false;
+    }
+    this.isAiExpanded = !this.isAiExpanded;
   }
 
   renderIconButton(iconRef, label, isActive = false, customHandler = null) {
@@ -146,6 +160,15 @@ class MediaSidebar extends LocalizableElement {
     `;
   }
 
+  renderAiPanel() {
+    return html`
+      <ai-chat-panel 
+        .locale=${this.locale}
+        .onClose=${() => { this.isAiExpanded = false; }}
+      ></ai-chat-panel>
+    `;
+  }
+
   render() {
     const counts = this.filterCounts || {};
     logger.debug('Sidebar render - filterCounts:', counts);
@@ -153,13 +176,22 @@ class MediaSidebar extends LocalizableElement {
     logger.debug('Sidebar render - isExpanded:', this.isExpanded);
     logger.debug('Sidebar render - isIndexExpanded:', this.isIndexExpanded);
 
-    return html`
-      <aside class="media-sidebar ${this.isExpanded || this.isIndexExpanded ? 'expanded' : 'collapsed'}">
-        <div class="sidebar-icons">
-          ${this.renderIconButton('filter', this.t('common.filter'), this.isExpanded)}
-        </div>
+    let sidebarClass = 'collapsed';
+    if (this.isAiExpanded) {
+      sidebarClass = 'ai-expanded';
+    } else if (this.isExpanded || this.isIndexExpanded) {
+      sidebarClass = 'expanded';
+    }
 
-        ${this.isExpanded ? html`
+    return html`
+      <aside class="media-sidebar ${sidebarClass}">
+        ${!this.isAiExpanded ? html`
+          <div class="sidebar-icons">
+            ${this.renderIconButton('filter', this.t('common.filter'), this.isExpanded)}
+          </div>
+        ` : ''}
+
+        ${this.isExpanded && !this.isAiExpanded ? html`
           <div class="filter-panel">
             <div class="filter-section">
               <h3>Types</h3>
@@ -200,11 +232,15 @@ class MediaSidebar extends LocalizableElement {
           </div>
         ` : ''}
 
-        <div class="sidebar-icons secondary">
-          ${this.renderIconButton('refresh', 'Status', this.isIndexExpanded, this.handleIndexToggle.bind(this))}
-        </div>
+        ${!this.isAiExpanded ? html`
+          <div class="sidebar-icons secondary">
+            ${this.renderIconButton('refresh', 'Status', this.isIndexExpanded, this.handleIndexToggle.bind(this))}
+            ${this.renderIconButton('sparkle', 'AI Agent', this.isAiExpanded, this.handleAiToggle.bind(this))}
+          </div>
+        ` : ''}
 
-        ${this.isIndexExpanded ? this.renderIndexPanel() : ''}
+        ${this.isIndexExpanded && !this.isAiExpanded ? this.renderIndexPanel() : ''}
+        ${this.isAiExpanded ? this.renderAiPanel() : ''}
       </aside>
     `;
   }
