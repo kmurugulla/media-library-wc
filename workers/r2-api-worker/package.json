@@ -1,11 +1,16 @@
 {
   "name": "r2-api-worker",
   "version": "1.0.0",
-  "description": "R2 API Worker for Media Library",
+  "description": "R2 API Worker for Media Library - Optional Storage Backend",
   "main": "index.js",
   "scripts": {
+    "setup": "chmod +x setup.sh && ./setup.sh",
+    "cleanup": "chmod +x cleanup.sh && ./cleanup.sh",
+    "cleanup:data": "chmod +x cleanup.sh && ./cleanup.sh --data-only",
+    "cleanup:full": "chmod +x cleanup.sh && ./cleanup.sh --full",
     "deploy": "wrangler deploy",
-    "dev": "wrangler dev"
+    "dev": "wrangler dev",
+    "tail": "wrangler tail r2-api-worker"
   },
   "devDependencies": {
     "wrangler": "^3.0.0"

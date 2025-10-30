@@ -25,6 +25,8 @@
     "dev:test": "npm run build:fast && npm run dev:watch",
     "build": "vite build --mode development && vite build --mode self-contained-unminified && vite build --mode self-contained && npm run build:assets",
     "build:fast": "vite build --mode self-contained-unminified && npm run build:assets",
+    "build:ai": "VITE_AI_ENABLED=true VITE_AI_WORKER_URL=http://localhost:8787 vite build --mode self-contained-unminified && npm run build:assets",
+    "build:ai:prod": "VITE_AI_ENABLED=true VITE_AI_WORKER_URL=https://medialibrary-ai.kiran-murugulla.workers.dev VITE_AI_API_KEY=$VITE_AI_API_KEY vite build --mode self-contained-unminified && npm run build:assets",
     "build:assets": "node build-dist.js",
     "preview": "vite preview",
     "lint:js": "eslint src",

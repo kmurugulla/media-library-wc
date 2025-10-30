@@ -10,12 +10,18 @@ class MediaDetails extends LocalizableElement {
     locale: { type: String },
     isOpen: { type: Boolean },
     modalData: { type: Object },
+    aiEnabled: { type: Boolean },
+    aiWorkerUrl: { type: String },
+    aiApiKey: { type: String },
+    siteKey: { type: String },
     _activeTab: { state: true },
     _mimeType: { state: true },
     _fileSize: { state: true },
     _mediaOrigin: { state: true },
     _mediaPath: { state: true },
     _exifData: { state: true },
+    _aiSuggestions: { state: true },
+    _loadingSuggestion: { state: true },
   };
 
   static styles = getStyles(mediaDetailsStyles);
@@ -25,12 +31,17 @@ class MediaDetails extends LocalizableElement {
     this.locale = 'en';
     this.isOpen = false;
     this.modalData = null;
+    this.aiEnabled = false;
+    this.aiWorkerUrl = '';
+    this.aiApiKey = '';
     this._activeTab = 'usage';
     this._mimeType = null;
     this._fileSize = null;
     this._mediaOrigin = null;
     this._mediaPath = null;
     this._exifData = null;
+    this._aiSuggestions = {}; // Store by hash
+    this._loadingSuggestion = null; // Which occurrence is being analyzed
   }
 
   connectedCallback() {
@@ -60,6 +71,7 @@ class MediaDetails extends LocalizableElement {
           'deps/icons/info.svg',
           'deps/icons/open-in.svg',
           'deps/icons/play.svg',
+          'deps/icons/sparkle.svg',
         ];
         await getSvg({ parent: this.shadowRoot, paths: ICONS });
       }
@@ -83,7 +95,7 @@ class MediaDetails extends LocalizableElement {
     if (media) {
       await this.loadFileMetadata(media);
       if (this.isImage(media.url)) {
-        await this.loadExifData(media.url);
+        await this.loadExifData(media);
       }
     }
   };
@@ -354,24 +366,47 @@ class MediaDetails extends LocalizableElement {
             ${usages[0]?.type?.startsWith('img') ? html`
               <h5 class="usage-title">Alt</h5>
               <div class="usage-container">
-                ${usages.map((usage) => html`
-                  <div class="usage-row">
-                    <div class="usage-alt">
-                      ${this.getAltTextDisplay(usage.alt, usage.type)}
+                ${usages.map((usage, index) => {
+    const usageHash = `${doc}_${index}`;
+    const suggestion = this._aiSuggestions[usageHash];
+    const isLoading = this._loadingSuggestion === usageHash;
+
+    return html`
+                    <div class="usage-row ${suggestion ? 'has-suggestion' : ''}">
+                      <div class="usage-alt">
+                        ${this.getAltTextDisplay(usage.alt, usage.type)}
+                      </div>
+                      <div class="usage-actions">
+                        ${this.aiEnabled ? html`
+                          <button 
+                            class="action-button ai-suggest-button" 
+                            @click=${() => this.handleGetAISuggestion(doc, index, usageHash)}
+                            ?disabled=${isLoading}
+                            title="Get AI recommendation"
+                          >
+                            ${isLoading ? html`
+                              <span class="spinner"></span>
+                            ` : html`
+                              <svg class="action-icon" width="16" height="16" viewBox="0 0 20 20">
+                                <use href="#sparkle"></use>
+                              </svg>
+                            `}
+                          </button>
+                        ` : ''}
+                        <button 
+                          class="action-button" 
+                          @click=${() => this.handleViewMedia(this.modalData.data.media.url)} 
+                          title="Open media in new tab"
+                        >
+                          <svg class="action-icon" width="16" height="16" viewBox="0 0 20 20">
+                            <use href="#open-in"></use>
+                          </svg>
+                        </button>
+                      </div>
                     </div>
-                    <div class="usage-actions">
-                      <button 
-                        class="action-button" 
-                        @click=${() => this.handleViewMedia(this.modalData.data.media.url)} 
-                        title="Open media in new tab"
-                      >
-                        <svg class="action-icon" width="16" height="16" viewBox="0 0 20 20">
-                          <use href="#open-in"></use>
-                        </svg>
-                      </button>
-                    </div>
-                  </div>
-                `)}
+                    ${suggestion ? this.renderAISuggestion(suggestion) : ''}
+                  `;
+  })}
               </div>
             ` : ''}
           </div>
@@ -400,6 +435,25 @@ class MediaDetails extends LocalizableElement {
                 <td class="metadata-label">File Size</td>
                 <td class="metadata-value">${this._fileSize || 'Loading...'}</td>
               </tr>
+              ${this._imageDimensions ? html`
+                <tr class="metadata-row">
+                  <td class="metadata-label">Width</td>
+                  <td class="metadata-value">${this._imageDimensions.width}px</td>
+                </tr>
+                <tr class="metadata-row">
+                  <td class="metadata-label">Height</td>
+                  <td class="metadata-value">${this._imageDimensions.height}px</td>
+                </tr>
+                <tr class="metadata-row">
+                  <td class="metadata-label">Orientation</td>
+                  <td class="metadata-value">${(() => {
+    if (this._imageDimensions.width === this._imageDimensions.height) {
+      return 'square';
+    }
+    return this._imageDimensions.width > this._imageDimensions.height ? 'landscape' : 'portrait';
+  })()}</td>
+                </tr>
+              ` : ''}
               <tr class="metadata-row">
                 <td class="metadata-label">Origin</td>
                 <td class="metadata-value">${this._mediaOrigin || 'Loading...'}</td>
@@ -482,18 +536,37 @@ class MediaDetails extends LocalizableElement {
     `;
   }
 
+  getAbsoluteMediaUrl(media) {
+    if (!media || !media.url) return '';
+    try {
+      const u = new URL(media.url);
+      return u.toString();
+    } catch {
+      try {
+        if (media.doc) {
+          const base = new URL(media.doc, window.location.origin);
+          return new URL(media.url, base).toString();
+        }
+      } catch {
+        // fall through
+      }
+      return media.url;
+    }
+  }
+
   async loadFileMetadata(media) {
     if (!media || !media.url) return;
 
     try {
-      const url = new URL(media.url);
+      const absUrl = this.getAbsoluteMediaUrl(media);
+      const url = new URL(absUrl);
 
       // Set origin and path
       this._mediaOrigin = url.origin;
       this._mediaPath = url.pathname;
 
       // Get file extension and set MIME type
-      const ext = this.getFileExtension(media.url).toLowerCase();
+      const ext = this.getFileExtension(absUrl).toLowerCase();
       const mimeTypes = {
         jpg: 'image/jpeg',
         jpeg: 'image/jpeg',
@@ -509,7 +582,7 @@ class MediaDetails extends LocalizableElement {
 
       // Try to get file size using CORS proxy
       try {
-        const corsProxyUrl = `https://media-library-cors-proxy.aem-poc-lab.workers.dev/?url=${encodeURIComponent(media.url)}`;
+        const corsProxyUrl = `https://media-library-cors-proxy.aem-poc-lab.workers.dev/?url=${encodeURIComponent(absUrl)}`;
 
         // Try HEAD request first
         let response = await fetch(corsProxyUrl, { method: 'HEAD' });
@@ -542,56 +615,57 @@ class MediaDetails extends LocalizableElement {
     }
   }
 
-  async loadExifData(imageUrl) {
+  async loadExifData(media) {
+    const imageUrl = this.getAbsoluteMediaUrl(media);
     if (!imageUrl) return;
 
     try {
-      // Load EXIF.js library if not already loaded
-      if (!window.EXIF) {
-        await this.loadExifLibrary();
+      if (!window.exifr) {
+        await this.loadExifrLibrary();
       }
 
-      // Use CORS proxy
       const corsProxyUrl = `https://media-library-cors-proxy.aem-poc-lab.workers.dev/?url=${encodeURIComponent(imageUrl)}`;
 
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
+      const response = await fetch(corsProxyUrl, { method: 'GET' });
+      if (!response.ok) {
+        this._exifData = null;
+        return;
+      }
 
-      await new Promise((resolve) => {
-        img.onload = () => {
-          try {
-            window.EXIF.getData(img, () => {
-              const allTags = window.EXIF.getAllTags(img);
-              this._exifData = allTags && Object.keys(allTags).length > 0 ? allTags : null;
-              resolve();
-            });
-          } catch {
-            this._exifData = null;
-            resolve();
-          }
-        };
-        img.onerror = () => {
-          this._exifData = null;
-          resolve();
-        };
-        img.src = corsProxyUrl;
+      const blob = await response.blob();
+
+      const exifrData = await window.exifr.parse(blob, {
+        tiff: true,
+        xmp: true,
+        iptc: true,
+        icc: true,
       });
-    } catch {
+
+      const dimensions = await new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        img.onerror = () => resolve(null);
+        img.src = URL.createObjectURL(blob);
+      });
+
+      this._imageDimensions = dimensions;
+      this._exifData = exifrData || null;
+    } catch (error) {
       this._exifData = null;
     }
   }
 
-  async loadExifLibrary() {
+  async loadExifrLibrary() {
     return new Promise((resolve, reject) => {
-      if (window.EXIF) {
+      if (window.exifr) {
         resolve();
         return;
       }
 
       const script = document.createElement('script');
-      script.src = 'https://cdn.jsdelivr.net/npm/exif-js';
+      script.src = 'https://cdn.jsdelivr.net/npm/exifr/dist/full.umd.js';
       script.onload = () => resolve();
-      script.onerror = () => reject(new Error('Failed to load EXIF library'));
+      script.onerror = () => reject(new Error('Failed to load exifr library'));
       document.head.appendChild(script);
     });
   }
@@ -601,38 +675,58 @@ class MediaDetails extends LocalizableElement {
       return '';
     }
 
-    const exifRows = [];
-    const displayKeys = {
-      Make: 'Camera Make',
-      Model: 'Camera Model',
-      DateTime: 'Date Taken',
-      FNumber: 'F-Number',
-      ExposureTime: 'Exposure Time',
-      ISOSpeedRatings: 'ISO',
-      FocalLength: 'Focal Length',
-      LensModel: 'Lens',
-    };
+    const md = this._exifData || {};
 
-    Object.keys(displayKeys).forEach((key) => {
-      if (this._exifData[key]) {
-        const value = this._exifData[key];
-        exifRows.push(html`
-          <tr class="metadata-row exif-row">
-            <td class="metadata-label">${displayKeys[key]}</td>
-            <td class="metadata-value">${value}</td>
-          </tr>
-        `);
-      }
-    });
+    const cameraMake = md.Make;
+    const cameraModel = md.Model;
+    const lens = md.LensModel;
+    const iso = md.ISO || md.ISOSpeedRatings;
+    const aperture = md.FNumber;
+    const shutter = md.ExposureTime;
+    const focal = md.FocalLength;
+    const dateTime = md.DateTimeOriginal || md.DateTime;
+    const gpsLat = md.latitude;
+    const gpsLong = md.longitude;
+    const gpsAlt = md.GPSAltitude;
+    const iptcKeywords = md.Keywords;
+    const iptcCaption = md.Caption || md.ImageDescription;
+    const iptcCopyright = md.Copyright;
+    const iptcCreator = md.Creator || md.Artist;
+    const xmpRating = md.Rating;
+    const xmpSubject = md.Subject;
 
-    if (exifRows.length === 0) return '';
+    const rows = [];
+    if (cameraMake) rows.push(['Camera Make', cameraMake]);
+    if (cameraModel) rows.push(['Camera Model', cameraModel]);
+    if (lens) rows.push(['Lens', lens]);
+    if (iso) rows.push(['ISO', iso]);
+    if (aperture) rows.push(['Aperture', `f/${aperture}`]);
+    if (shutter) rows.push(['Shutter Speed', `${shutter}s`]);
+    if (focal) rows.push(['Focal Length', `${focal}mm`]);
+    if (dateTime) rows.push(['Date Captured', dateTime]);
+    if (gpsLat) rows.push(['Latitude', Number(gpsLat).toFixed(6)]);
+    if (gpsLong) rows.push(['Longitude', Number(gpsLong).toFixed(6)]);
+    if (gpsAlt) rows.push(['Altitude', `${gpsAlt}m`]);
+    if (iptcKeywords) rows.push(['Keywords', Array.isArray(iptcKeywords) ? iptcKeywords.join(', ') : iptcKeywords]);
+    if (iptcCaption) rows.push(['Caption', iptcCaption]);
+    if (iptcCopyright) rows.push(['Copyright', iptcCopyright]);
+    if (iptcCreator) rows.push(['Creator', iptcCreator]);
+    if (xmpRating) rows.push(['Rating', xmpRating]);
+    if (xmpSubject) rows.push(['Subject', xmpSubject]);
+
+    if (rows.length === 0) return '';
 
     return html`
       <tr class="metadata-row exif-section">
         <td class="metadata-label">EXIF Data</td>
         <td class="metadata-value"></td>
       </tr>
-      ${exifRows}
+      ${rows.map(([label, value]) => html`
+        <tr class="metadata-row exif-row">
+          <td class="metadata-label">${label}</td>
+          <td class="metadata-value">${value}</td>
+        </tr>
+      `)}
     `;
   }
 
@@ -894,6 +988,100 @@ class MediaDetails extends LocalizableElement {
   handleViewMedia(mediaUrl) {
     if (!mediaUrl) return;
     window.open(mediaUrl, '_blank', 'noopener,noreferrer');
+  }
+
+  async handleGetAISuggestion(pageUrl, occurrenceIndex, usageHash) {
+    if (!this.aiEnabled || !this.aiWorkerUrl) return;
+
+    // Validate siteKey before making AI calls
+    if (!this.siteKey) {
+      // eslint-disable-next-line no-console
+      console.error('[Media Details] ❌ BLOCKED: No siteKey available - cannot get AI suggestion');
+      this._aiSuggestions = {
+        ...this._aiSuggestions,
+        [usageHash]: {
+          error: 'Please scan a website first. AI analysis requires site data.',
+          suggestedAlt: null,
+        },
+      };
+      return;
+    }
+
+    // eslint-disable-next-line no-console
+    console.log('[Media Details] 🎨 Requesting AI alt text suggestion for siteKey:', this.siteKey);
+    // eslint-disable-next-line no-console
+    console.log('[Media Details] 📍 Page:', pageUrl, 'Occurrence:', occurrenceIndex);
+
+    this._loadingSuggestion = usageHash;
+
+    try {
+      const headers = { 'Content-Type': 'application/json' };
+      if (this.aiApiKey) {
+        headers['X-API-Key'] = this.aiApiKey;
+      }
+
+      const response = await fetch(`${this.aiWorkerUrl}/api/ai/analyze`, {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({
+          imageUrl: this.modalData.data.media.url,
+          pageUrl,
+          occurrence: occurrenceIndex,
+          siteKey: this.siteKey,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI analysis failed: ${response.status}`);
+      }
+
+      const suggestion = await response.json();
+
+      this._aiSuggestions = {
+        ...this._aiSuggestions,
+        [usageHash]: suggestion,
+      };
+    } catch (error) {
+      this._aiSuggestions = {
+        ...this._aiSuggestions,
+        [usageHash]: { error: error.message, suggestedAlt: null },
+      };
+    } finally {
+      this._loadingSuggestion = null;
+    }
+  }
+
+  renderAISuggestion(suggestion) {
+    if (suggestion.error) {
+      return html`<div class="ai-suggestion error"><p class="error-message">Failed: ${suggestion.error}</p></div>`;
+    }
+
+    const { suggestedAlt, reasoning, impact } = suggestion;
+
+    return html`
+      <div class="ai-suggestion">
+        <div class="suggestion-header">
+          <svg class="ai-icon" width="16" height="16"><use href="#sparkle"></use></svg>
+          <span>AI Recommendation</span>
+        </div>
+        <div class="suggested-alt"><strong>Suggested:</strong> "${suggestedAlt || '(empty)'}"</div>
+        ${reasoning ? html`<div class="reasoning"><strong>Why:</strong> ${reasoning}</div>` : ''}
+        ${impact ? html`
+          <div class="impact-scores">
+            <div class="score-group">
+              <span>A11y: ${impact.current.a11y} → ${impact.suggested.a11y} 
+                ${impact.improvement.a11y > 0 ? `(+${impact.improvement.a11y})` : ''}
+              </span>
+            </div>
+            <div class="score-group">
+              <span>SEO: ${impact.current.seo} → ${impact.suggested.seo} 
+                ${impact.improvement.seo > 0 ? `(+${impact.improvement.seo})` : ''}
+              </span>
+            </div>
+          </div>
+        ` : ''}
+      </div>
+    `;
   }
 
   handlePdfAction(event, pdfUrl, fileName) {

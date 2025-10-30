@@ -1,0 +1,33 @@
+{
+  "name": "ai-agent-worker",
+  "version": "1.0.0",
+  "description": "AI Agent Worker for Media Library - MCP Tool Orchestration",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "setup": "chmod +x scripts/setup.sh && ./scripts/setup.sh",
+    "cleanup": "chmod +x scripts/cleanup.sh && ./scripts/cleanup.sh",
+    "cleanup:data": "chmod +x scripts/cleanup.sh && ./scripts/cleanup.sh --data-only",
+    "cleanup:site": "chmod +x scripts/cleanup.sh && ./scripts/cleanup.sh --site",
+    "cleanup:full": "chmod +x scripts/cleanup.sh && ./scripts/cleanup.sh --full",
+    "generate-api-key": "node scripts/generate-api-key.js",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev",
+    "dev:remote": "wrangler dev --remote",
+    "tail": "wrangler tail"
+  },
+  "keywords": [
+    "cloudflare",
+    "workers",
+    "ai",
+    "mcp",
+    "vectorize",
+    "d1"
+  ],
+  "dependencies": {
+    "node-html-parser": "^6.1.13"
+  },
+  "devDependencies": {
+    "wrangler": "^3.0.0"
+  }
+}

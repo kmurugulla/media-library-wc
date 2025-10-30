@@ -249,7 +249,7 @@ function setupControls() {
         const mediaData = await siteStorageManager.load();
         const metadata = await siteStorageManager.loadScanMetadata();
 
-        await mediaLibrary.loadMediaData(mediaData, null, false, metadata);
+        await mediaLibrary.loadMediaData(mediaData, selectedSite, false, metadata);
 
         showNotification(`Loaded data for site: ${selectedSite}`, 'success');
         // Show Clear Data button when site is selected

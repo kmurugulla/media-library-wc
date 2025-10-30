@@ -13,6 +13,12 @@ export default defineConfig(({ mode }) => {
   process.env.LIT_DEV_MODE = 'false';
 
   return {
+    define: {
+      // AI Agent feature flags
+      __AI_ENABLED__: JSON.stringify(process.env.VITE_AI_ENABLED === 'true'),
+      __AI_WORKER_URL__: JSON.stringify(process.env.VITE_AI_WORKER_URL || ''),
+      __AI_API_KEY__: JSON.stringify(process.env.VITE_AI_API_KEY || ''),
+    },
     plugins: [
       litCss({
         include: ['**/*.css'],

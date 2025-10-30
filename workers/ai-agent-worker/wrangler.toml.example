@@ -1,0 +1,46 @@
+# workers/ai-agent-worker/wrangler.toml.example
+# Template configuration for AI Agent Worker
+# Copy this to wrangler.toml and run ./setup.sh
+
+name = "medialibrary-ai"
+main = "index.js"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat_v2"]
+
+# Your Cloudflare account ID (auto-detected by setup.sh)
+account_id = "YOUR_ACCOUNT_ID"
+
+# Workers AI binding (included in FREE plan!)
+[ai]
+binding = "AI"
+
+# D1 Database binding (created by setup.sh)
+[[d1_databases]]
+binding = "DB"
+database_name = "media-library-db"
+database_id = "TO_BE_CREATED"
+
+# Vectorize binding (created by setup.sh)
+[[vectorize]]
+binding = "VECTORIZE"
+index_name = "media-embeddings"
+
+# KV namespace for caching (created by setup.sh)
+[[kv_namespaces]]
+binding = "CACHE"
+id = "TO_BE_CREATED"
+
+# Environment variables
+[vars]
+ALLOWED_ORIGINS = "*"
+CORS_PROXY_URL = "https://YOUR_CORS_PROXY_URL"
+MAX_BATCH_SIZE = "500"
+CACHE_TTL_SECONDS = "604800"  # 7 days
+
+# Environment-specific settings
+[env.production]
+name = "media-library-ai-agent"
+
+[env.staging]
+name = "media-library-ai-agent-staging"
+

@@ -15,6 +15,7 @@ import getSvg from '../utils/get-svg.js';
 import mediaLibraryStyles from './media-library.css?inline';
 
 import { waitForMediaLibraryReady, createMediaLibrary, initializeMediaLibrary } from '../utils/initializer.js';
+import { createAIIndexer } from '../utils/ai-indexer.js';
 
 class MediaLibrary extends LocalizableElement {
   static properties = {
@@ -31,12 +32,17 @@ class MediaLibrary extends LocalizableElement {
     _scanProgress: { state: true },
     _lastScanDuration: { state: true },
     _scanStats: { state: true },
-    _imageAnalysisEnabled: { state: true },
     _isBatchLoading: { state: true },
     _realTimeStats: { state: true },
     _progressiveMediaData: { state: true },
     _progressiveLimit: { state: true },
     showAnalysisToggle: { type: Boolean },
+    _aiFilter: { state: true },
+    _aiEnabled: { state: true },
+    _aiWorkerUrl: { state: true },
+    _aiApiKey: { state: true },
+    _aiSyncStatus: { state: true },
+    _siteKey: { state: true },
   };
 
   static styles = getStyles(mediaLibraryStyles);
@@ -54,18 +60,18 @@ class MediaLibrary extends LocalizableElement {
     this._currentView = 'grid';
     this._isScanning = false;
     this._scanProgress = null;
-    this._imageAnalysisEnabled = false;
     this._isBatchLoading = false;
     this._realTimeStats = { images: 0, pages: 0, elapsed: 0 };
     this._progressiveMediaData = [];
     this._progressiveLimit = 0;
     this._progressiveGroupingKeys = new Set();
     this._totalPages = 0;
-    this.showAnalysisToggle = true;
+    this.showAnalysisToggle = false;
 
     this.storageManager = null;
     this.contentParser = null;
     this._processedData = null;
+    this._siteKey = null;
 
     this._filteredDataCache = null;
     this._lastFilterParams = null;
@@ -75,12 +81,24 @@ class MediaLibrary extends LocalizableElement {
 
     this._readyPromise = null;
     this._isReady = false;
+
+    // AI Agent configuration
+    this.aiIndexer = createAIIndexer();
+    this._aiEnabled = !!this.aiIndexer;
+    this._aiWorkerUrl = this.aiIndexer?.workerUrl || '';
+    this._aiApiKey = this.aiIndexer?.apiKey || '';
+    this._aiFilter = null;
+    this._aiSyncStatus = { state: 'idle', message: '', error: null };
   }
 
   async connectedCallback() {
     super.connectedCallback();
 
     this._readyPromise = this._initialize();
+
+    // Listen for AI events
+    this.addEventListener('ai-filter-applied', this.handleAiFilterApplied.bind(this));
+    this.addEventListener('clear-ai-filter', this.handleClearAiFilter.bind(this));
 
     try {
       await this._readyPromise;
@@ -125,13 +143,7 @@ class MediaLibrary extends LocalizableElement {
     }
     this.contentParser = new ContentParser({
       corsProxy: this.corsProxy,
-      enableImageAnalysis: this._imageAnalysisEnabled,
       enableCategorization: true,
-      analysisConfig: {
-        extractEXIF: true,
-        extractDimensions: true,
-        categorizeFromFilename: true,
-      },
       categorizationConfig: {
         useFilename: true,
         useContext: true,
@@ -218,6 +230,42 @@ class MediaLibrary extends LocalizableElement {
 
       this.updateAnalysisToggleVisibility();
       this.requestUpdate();
+
+      // Check if AI needs sync (non-blocking)
+      if (this.aiIndexer && this._mediaData.length > 0 && this._siteKey) {
+        // eslint-disable-next-line no-console
+        console.log('[Media Library] 🔍 Checking if AI sync needed for siteKey:', this._siteKey);
+        this._aiSyncStatus = { state: 'syncing', message: 'Checking AI sync...', error: null };
+        this.requestUpdate();
+
+        this.aiIndexer.syncIfNeeded(this._mediaData, this._siteKey)
+          .then((result) => {
+            if (result.synced) {
+              this._aiSyncStatus = {
+                state: 'success',
+                message: `Successfully synced ${result.count} items`,
+                error: null,
+              };
+              setTimeout(() => {
+                if (this._aiSyncStatus.state === 'success') {
+                  this._aiSyncStatus = { state: 'idle', message: '', error: null };
+                  this.requestUpdate();
+                }
+              }, 5000);
+            } else {
+              this._aiSyncStatus = { state: 'idle', message: '', error: null };
+            }
+            this.requestUpdate();
+          })
+          .catch((syncError) => {
+            this._aiSyncStatus = {
+              state: 'error',
+              message: 'Failed to sync to AI',
+              error: syncError.message,
+            };
+            this.requestUpdate();
+          });
+      }
     } catch (error) {
       this._mediaData = [];
       this._processedData = await processMediaData([]);
@@ -245,9 +293,13 @@ class MediaLibrary extends LocalizableElement {
     completePageList = null,
     existingMediaData = null,
   ) {
+    // Update the current site key for AI queries
     if (siteKey) {
-      // siteKey is used by calling code to set up site-specific storage
+      this._siteKey = siteKey;
+      // eslint-disable-next-line no-console
+      console.log('[Media Library] ✅ siteKey set from scan:', this._siteKey);
     }
+
     if (!pageList || pageList.length === 0) {
       this._error = 'No pages provided to scan';
       return [];
@@ -400,6 +452,44 @@ class MediaLibrary extends LocalizableElement {
       this._scanProgress = null;
       this._lastScanDuration = durationSeconds;
 
+      // Sync to AI if enabled (non-blocking, delta-based)
+      if (this.aiIndexer && this._siteKey) {
+        // eslint-disable-next-line no-console
+        console.log('[Media Library] 🚀 Starting AI delta sync for siteKey:', this._siteKey);
+        // eslint-disable-next-line no-console
+        console.log('[Media Library] 📊 Delta: old items:', currentExistingMediaData.length, 'new items:', completeMediaData.length);
+        this._aiSyncStatus = { state: 'syncing', message: 'Syncing changes to AI...', error: null };
+        this.requestUpdate();
+
+        this.aiIndexer.syncDelta(currentExistingMediaData, completeMediaData, this._siteKey)
+          .then((result) => {
+            if (result.added === 0 && result.deleted === 0) {
+              this._aiSyncStatus = { state: 'idle', message: '', error: null };
+            } else {
+              this._aiSyncStatus = {
+                state: 'success',
+                message: `Successfully synced: ${result.added} added, ${result.deleted} removed`,
+                error: null,
+              };
+              setTimeout(() => {
+                if (this._aiSyncStatus.state === 'success') {
+                  this._aiSyncStatus = { state: 'idle', message: '', error: null };
+                  this.requestUpdate();
+                }
+              }, 5000);
+            }
+            this.requestUpdate();
+          })
+          .catch((error) => {
+            this._aiSyncStatus = {
+              state: 'error',
+              message: 'Failed to sync to AI',
+              error: error.message,
+            };
+            this.requestUpdate();
+          });
+      }
+
       this.updateAnalysisToggleVisibility();
 
       this._filteredDataCache = null;
@@ -446,6 +536,20 @@ class MediaLibrary extends LocalizableElement {
     if (!mediaData || !Array.isArray(mediaData)) {
       this._error = 'No media data provided';
       return [];
+    }
+
+    // Update the current site key for AI queries
+    if (siteKey) {
+      this._siteKey = siteKey;
+      // eslint-disable-next-line no-console
+      console.log('[Media Library] ✅ siteKey set from loadMediaData param:', this._siteKey);
+    } else if (this.storageManager && this.storageManager.siteKey) {
+      this._siteKey = this.storageManager.siteKey;
+      // eslint-disable-next-line no-console
+      console.log('[Media Library] ✅ siteKey set from storageManager:', this._siteKey);
+    } else {
+      // eslint-disable-next-line no-console
+      console.warn('[Media Library] ⚠️ No siteKey available - AI features will be disabled');
     }
 
     try {
@@ -537,6 +641,27 @@ class MediaLibrary extends LocalizableElement {
     this.requestUpdate();
   }
 
+  async deleteSite(siteKey) {
+    if (!this.storageManager) {
+      throw new Error('Storage manager not initialized');
+    }
+
+    // Delete from IndexedDB
+    await this.storageManager.deleteSite(siteKey);
+
+    // Delete from AI worker (non-blocking)
+    if (this.aiIndexer) {
+      this.aiIndexer.clearSite(siteKey)
+        .catch((error) => {
+          // eslint-disable-next-line no-console
+          console.warn('[Media Library] Failed to clear site from AI:', error.message);
+        });
+    }
+
+    // Clear current data if it matches the deleted site
+    await this.clearData();
+  }
+
   generateSiteKey(source) {
     if (!source) return 'media-data';
 
@@ -552,27 +677,32 @@ class MediaLibrary extends LocalizableElement {
     }
   }
 
-  handleToggleImageAnalysis(event) {
-    this._imageAnalysisEnabled = event.detail.enabled;
-
-    if (this.contentParser) {
-      this.contentParser.setImageAnalysis(this._imageAnalysisEnabled, {
-        extractEXIF: true,
-        extractDimensions: true,
-        categorizeFromFilename: true,
-      });
-    }
-  }
-
+  // Removed image analysis toggle behavior; EXIF runs on-demand in modal only
   updateAnalysisToggleVisibility() {
-    const shouldShow = this._mediaData.length === 0 || this._isScanning;
-
+    const shouldShow = false;
     if (this.showAnalysisToggle !== shouldShow) {
       this.showAnalysisToggle = shouldShow;
     }
   }
 
   get filteredMediaData() {
+    // If AI filter is active, it overrides all other filters
+    if (this._aiFilter && this._aiFilter.hashes) {
+      const aiFilteredData = this._mediaData.filter((item) => this._aiFilter.hashes.has(item.hash));
+
+      // Deduplicate by URL
+      const deduplicatedData = [];
+      const seenUrls = new Set();
+      aiFilteredData.forEach((item) => {
+        if (item.url && !seenUrls.has(item.url)) {
+          seenUrls.add(item.url);
+          deduplicatedData.push(item);
+        }
+      });
+
+      return deduplicatedData;
+    }
+
     const currentParams = {
       filterType: this._selectedFilterType,
       searchQuery: this._searchQuery,
@@ -715,6 +845,40 @@ class MediaLibrary extends LocalizableElement {
     this._currentView = e.detail.view;
   }
 
+  handleAiFilterApplied(e) {
+    if (this.isUIdisabled) return;
+
+    const { query, data, count, tool } = e.detail;
+
+    // Validate data exists and is an array
+    if (!data || !Array.isArray(data) || data.length === 0) {
+      // eslint-disable-next-line no-console
+      console.warn('[AI Filter] No data returned from AI query');
+      return;
+    }
+
+    // Store AI filter data
+    this._aiFilter = {
+      query,
+      data,
+      count,
+      tool,
+      hashes: new Set(data.map((item) => item.hash)),
+    };
+
+    // Clear other filters when AI filter is applied
+    this._searchQuery = '';
+    this._selectedFilterType = null;
+
+    // Force re-render
+    this.requestUpdate();
+  }
+
+  handleClearAiFilter() {
+    this._aiFilter = null;
+    this.requestUpdate();
+  }
+
   handleFilter(e) {
     if (this.isUIdisabled) return;
     this._selectedFilterType = e.detail.type;
@@ -796,6 +960,12 @@ class MediaLibrary extends LocalizableElement {
             .locale=${this.locale}
             .isScanning=${this._isScanning}
             .scanProgress=${this.getScanProgress()}
+            .hasActiveAiFilter=${!!this._aiFilter}
+            .aiEnabled=${this._aiEnabled}
+            .aiWorkerUrl=${this._aiWorkerUrl}
+            .aiApiKey=${this._aiApiKey}
+            .aiSyncStatus=${this._aiSyncStatus}
+            .siteKey=${this._siteKey}
             @filter=${this.handleFilter}
           ></media-sidebar>
         </div>
@@ -804,7 +974,13 @@ class MediaLibrary extends LocalizableElement {
           ${this._error ? this.renderErrorState() : this.renderCurrentView()}
         </div>
 
-        <media-details .locale=${this.locale}></media-details>
+        <media-details 
+          .locale=${this.locale}
+          .aiEnabled=${this._aiEnabled}
+          .aiWorkerUrl=${this._aiWorkerUrl}
+          .aiApiKey=${this._aiApiKey}
+          .siteKey=${this._siteKey}
+        ></media-details>
       </div>
     `;
   }

@@ -1,11 +1,11 @@
 import { detectCategory } from './category-detector.js';
 
 export const ANALYSIS_CONFIG = {
-  enabled: true,
-  extractEXIF: true,
-  extractDimensions: true,
-  categorizeFromFilename: true,
-  analyzeUsage: true,
+  enabled: false,
+  extractEXIF: false,
+  extractDimensions: false,
+  categorizeFromFilename: false,
+  analyzeUsage: false,
 };
 
 const analysisCache = new Map();

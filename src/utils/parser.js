@@ -1,9 +1,3 @@
-import {
-  analyzeImage,
-  updateAnalysisConfig,
-  getAnalysisConfig,
-  clearAnalysisCache,
-} from './image-analysis.js';
 import { detectCategory } from './category-detector.js';
 import logger from './logger.js';
 
@@ -44,41 +38,10 @@ class ContentParser {
     this.throttleDelay = 50;
     this.maxConcurrency = 20;
     this.corsProxy = options.corsProxy || 'https://media-library-cors-proxy.aem-poc-lab.workers.dev/';
-    this.enableImageAnalysis = options.enableImageAnalysis || false;
     this.enableCategorization = options.enableCategorization !== false;
-    this.analysisConfig = options.analysisConfig || {};
     this.categorizationConfig = options.categorizationConfig || {};
     this.latestMediaItems = [];
     this.occurrenceCounters = new Map();
-
-    if (this.enableImageAnalysis) {
-      updateAnalysisConfig({
-        enabled: true,
-        ...this.analysisConfig,
-      });
-    }
-  }
-
-  setImageAnalysis(enabled, config = {}) {
-    this.enableImageAnalysis = enabled;
-    this.analysisConfig = config;
-
-    if (enabled) {
-      updateAnalysisConfig({
-        enabled: true,
-        ...config,
-      });
-    } else {
-      updateAnalysisConfig({ enabled: false });
-    }
-  }
-
-  getImageAnalysisConfig() {
-    return {
-      enabled: this.enableImageAnalysis,
-      config: this.analysisConfig,
-      analysisConfig: getAnalysisConfig(),
-    };
   }
 
   async scanPages(urls, onProgress, previousMetadata = null) {
@@ -267,38 +230,7 @@ class ContentParser {
             mediaItem.category = 'other';
           }
         }
-
-        if (this.enableImageAnalysis) {
-          try {
-            const analysis = await analyzeImage(fixedUrl, null, mediaItem.ctx);
-
-            mediaItem.orientation = analysis.orientation;
-            mediaItem.width = analysis.width;
-            mediaItem.height = analysis.height;
-            mediaItem.exifCamera = analysis.exifCamera;
-            mediaItem.exifDate = analysis.exifDate;
-            mediaItem.analysisConfidence = analysis.confidence;
-
-            if (analysis.category) {
-              mediaItem.category = analysis.category;
-            }
-
-            if (analysis.exifError) {
-              mediaItem.hasError = true;
-              mediaItem.errorType = analysis.exifError.errorType;
-              mediaItem.errorMessage = analysis.exifError.errorMessage;
-              mediaItem.statusCode = analysis.exifError.statusCode;
-
-              if (analysis.exifError.errorType === '404') {
-                mediaItem.category = '404-media';
-              }
-            }
-          } catch (error) {
-            // Continue without analysis
-          }
-        }
-
-        if (!this.enableImageAnalysis && domWidth !== undefined && domHeight !== undefined) {
+        if (domWidth !== undefined && domHeight !== undefined) {
           if (domWidth === domHeight) {
             mediaItem.orientation = 'square';
           } else {
@@ -688,7 +620,3 @@ class ContentParser {
 }
 
 export default ContentParser;
-
-if (typeof window !== 'undefined') {
-  window.clearAnalysisCache = clearAnalysisCache;
-}

@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Media Assistant</title>
+  <link rel="icon" type="image/svg+xml" href="../../dist/icons/sparkle.svg">
+  <link rel="stylesheet" href="index.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <h2>✨ AI Media Assistant</h2>
+        <div class="site-selector">
+          <label for="site-select">Select Site</label>
+          <select id="site-select">
+            <option value="">Loading sites...</option>
+          </select>
+          <div class="site-info" id="site-info"></div>
+        </div>
+      </div>
+      <div class="sidebar-content">
+        <div id="suggested-prompts" class="suggested-prompts" style="display: none;">
+          <h3 class="prompts-title">💡 Try asking...</h3>
+          <div id="prompts-list" class="prompts-list"></div>
+        </div>
+      </div>
+      <div class="sidebar-footer">
+        Powered by Cloudflare Workers AI
+      </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <div class="chat-container">
+        <div class="chat-messages" id="chat-messages">
+          <!-- Messages will be inserted here -->
+        </div>
+
+        <div class="chat-input-container">
+          <div class="chat-input-wrapper">
+            <form class="chat-input-form" id="chat-form">
+              <textarea 
+                id="chat-input" 
+                placeholder="Ask about images, alt text, performance..."
+                rows="1"
+              ></textarea>
+              <button type="submit" id="send-btn" disabled aria-label="Send message">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M22 2L11 13"></path>
+                  <path d="M22 2l-7 20-4-9-9-4 20-7z"></path>
+                </svg>
+              </button>
+            </form>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script type="module" src="scripts.js"></script>
+</body>
+</html>
