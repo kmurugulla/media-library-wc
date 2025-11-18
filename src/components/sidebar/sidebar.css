@@ -90,10 +90,9 @@
   color: #334155;
   font-size: 0.75rem;
   font-weight: 700;
-  letter-spacing: 0.05em;
+  letter-spacing: 0.025em;
   margin: 0 0 8px;
   padding: 0 6px;
-  text-transform: uppercase;
 }
 
 .filter-list {

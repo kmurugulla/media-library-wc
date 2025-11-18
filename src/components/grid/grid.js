@@ -50,11 +50,8 @@ class MediaGrid extends LitElement {
     if (!this.mediaData || this.mediaData.length === 0) {
       return html`
         <div class="empty-state">
-          <svg class="empty-icon">
-            <use href="#photo"></use>
-          </svg>
           <h3>No media found</h3>
-          <p>Loading media...</p>
+          <p>Please scan or load previously scanned data</p>
         </div>
       `;
     }
