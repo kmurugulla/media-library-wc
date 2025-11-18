@@ -24,8 +24,7 @@ function normalizeUrl(url) {
 async function loadAvailableSites() {
   let storage = null;
   try {
-    const storageType = domCache.storageSelect?.value || CONFIG.DEFAULT_STORAGE;
-    storage = createStorage(storageType);
+    storage = createStorage('indexeddb');
 
     const sites = await storage.getAllSites();
     const currentSelection = domCache.siteSelector?.value;

@@ -1,14 +1,13 @@
-import { html } from 'lit';
-import LocalizableElement from '../base-localizable.js';
+import { html, LitElement } from 'lit';
 import getSvg from '../../utils/get-svg.js';
 import { getStyles } from '../../utils/get-styles.js';
 import { getVideoThumbnail, isExternalVideoUrl } from '../../utils/utils.js';
 import mediaDetailsStyles from './media-details.css?inline';
 
-class MediaDetails extends LocalizableElement {
+class MediaDetails extends LitElement {
   static properties = {
-    locale: { type: String },
     isOpen: { type: Boolean },
+    isScanning: { type: Boolean },
     modalData: { type: Object },
     _activeTab: { state: true },
     _mimeType: { state: true },
@@ -22,7 +21,6 @@ class MediaDetails extends LocalizableElement {
 
   constructor() {
     super();
-    this.locale = 'en';
     this.isOpen = false;
     this.modalData = null;
     this._activeTab = 'usage';
@@ -318,7 +316,7 @@ class MediaDetails extends LocalizableElement {
     if (!usageData || usageData.length === 0) {
       return html`
         <div class="no-usage">
-          <p>Not Used</p>
+          <p>${this.isScanning ? 'Scanning...' : 'Not Used'}</p>
         </div>
       `;
     }
@@ -418,7 +416,7 @@ class MediaDetails extends LocalizableElement {
   }
 
   renderAnalysisMetadata(media) {
-    const hasAnalysisData = media.orientation || media.category || media.width || media.height
+    const hasAnalysisData = media.orientation || media.width || media.height
       || media.exifCamera || media.exifDate;
 
     if (!hasAnalysisData) {
@@ -439,12 +437,6 @@ class MediaDetails extends LocalizableElement {
         <tr class="metadata-row analysis-subrow">
           <td class="metadata-label">Orientation</td>
           <td class="metadata-value">${media.orientation}</td>
-        </tr>
-      ` : ''}
-      ${media.category ? html`
-        <tr class="metadata-row analysis-subrow">
-          <td class="metadata-label">Category</td>
-          <td class="metadata-value">${media.category}</td>
         </tr>
       ` : ''}
       ${media.width && media.height ? html`
@@ -879,8 +871,8 @@ class MediaDetails extends LocalizableElement {
 
     window.dispatchEvent(new CustomEvent('show-notification', {
       detail: {
-        heading: this.t('common.success'),
-        message: this.t('media.copyUrl'),
+        heading: 'Success',
+        message: 'Copy URL',
         type: 'success',
       },
     }));

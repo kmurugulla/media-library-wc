@@ -1,6 +1,4 @@
-import { html } from 'lit';
-import LocalizableElement from './base-localizable.js';
-import i18n from '../utils/i18n.js';
+import { html, LitElement } from 'lit';
 import { createStorage } from '../utils/storage.js';
 import ContentParser from '../utils/parser.js';
 import { processMediaData, calculateFilteredMediaData, calculateFilteredMediaDataFromIndex, getGroupingKey } from '../utils/filters.js';
@@ -9,24 +7,21 @@ import { getStyles } from '../utils/get-styles.js';
 import './topbar/topbar.js';
 import './sidebar/sidebar.js';
 import './grid/grid.js';
-import './list/list.js';
 import './media-details/media-details.js';
 import getSvg from '../utils/get-svg.js';
 import mediaLibraryStyles from './media-library.css?inline';
 
 import { waitForMediaLibraryReady, createMediaLibrary, initializeMediaLibrary } from '../utils/initializer.js';
 
-class MediaLibrary extends LocalizableElement {
+class MediaLibrary extends LitElement {
   static properties = {
     storage: { type: String },
-    locale: { type: String },
     mode: { type: String },
     corsProxy: { type: String },
     _mediaData: { state: true },
     _error: { state: true },
     _searchQuery: { state: true },
     _selectedFilterType: { state: true },
-    _currentView: { state: true },
     _isScanning: { state: true },
     _scanProgress: { state: true },
     _lastScanDuration: { state: true },
@@ -44,14 +39,12 @@ class MediaLibrary extends LocalizableElement {
   constructor() {
     super();
     this.storage = 'none';
-    this.locale = 'en';
     this.mode = 'live';
     this.corsProxy = 'https://media-library-cors-proxy.aem-poc-lab.workers.dev/';
     this._mediaData = [];
     this._error = null;
     this._searchQuery = '';
     this._selectedFilterType = 'all';
-    this._currentView = 'grid';
     this._isScanning = false;
     this._scanProgress = null;
     this._imageAnalysisEnabled = false;
@@ -68,10 +61,7 @@ class MediaLibrary extends LocalizableElement {
     this._processedData = null;
 
     this._filteredDataCache = null;
-    this._lastFilterParams = null;
-
-    // REMOVED: _usageCountCache and _lastUsageCountParams
-    // Usage counts are now pre-calculated during initial processing
+    this._filterCacheKey = null;
 
     this._readyPromise = null;
     this._isReady = false;
@@ -114,29 +104,13 @@ class MediaLibrary extends LocalizableElement {
 
     await getSvg({ parent: this.shadowRoot, paths: ICONS });
 
-    await i18n.loadLocale(this.locale);
-    i18n.setLocale(this.locale);
-
     this.storageManager = createStorage(this.storage);
-
-    // Set the correct mode for R2Storage
-    if (this.storageManager && this.storageManager.setMode) {
-      this.storageManager.setMode(this.mode);
-    }
     this.contentParser = new ContentParser({
       corsProxy: this.corsProxy,
       enableImageAnalysis: this._imageAnalysisEnabled,
-      enableCategorization: true,
       analysisConfig: {
         extractEXIF: true,
         extractDimensions: true,
-        categorizeFromFilename: true,
-      },
-      categorizationConfig: {
-        useFilename: true,
-        useContext: true,
-        useAltText: true,
-        usePosition: true,
       },
     });
 
@@ -144,26 +118,28 @@ class MediaLibrary extends LocalizableElement {
   }
 
   shouldUpdate(changedProperties) {
-    return changedProperties.has('_mediaData')
-           || changedProperties.has('_searchQuery')
-           || changedProperties.has('_selectedFilterType')
-           || changedProperties.has('_currentView')
-           || changedProperties.has('_isScanning')
-           || changedProperties.has('_scanProgress')
-           || changedProperties.has('_error')
-           || changedProperties.has('locale')
-           || changedProperties.has('corsProxy')
-           || changedProperties.has('showAnalysisToggle')
-           || changedProperties.has('_isBatchLoading')
-           || changedProperties.has('_realTimeStats');
+    // Content/Data changes - require full re-render
+    const hasDataChange = changedProperties.has('_mediaData');
+    
+    // Filter/Search changes - require filtered view update
+    const hasFilterChange = changedProperties.has('_searchQuery')
+                         || changedProperties.has('_selectedFilterType');
+    
+    // UI state changes - require UI updates
+    const hasUIChange = changedProperties.has('_isScanning')
+                     || changedProperties.has('_scanProgress')
+                     || changedProperties.has('_error')
+                     || changedProperties.has('showAnalysisToggle')
+                     || changedProperties.has('_isBatchLoading')
+                     || changedProperties.has('_realTimeStats');
+    
+    // Configuration changes - require component reconfiguration
+    const hasConfigChange = changedProperties.has('corsProxy');
+
+    return hasDataChange || hasFilterChange || hasUIChange || hasConfigChange;
   }
 
   async updated(changedProperties) {
-    if (changedProperties.has('locale')) {
-      await i18n.loadLocale(this.locale);
-      i18n.setLocale(this.locale);
-    }
-
     if (changedProperties.has('corsProxy')) {
       // Update the ContentParser with the new CORS proxy
       if (this.contentParser) {
@@ -190,13 +166,8 @@ class MediaLibrary extends LocalizableElement {
       this._isBatchLoading = true;
       this.requestUpdate();
 
-      let data;
-      if (this.storage === 'r2') {
-        data = await this.storageManager.loadMediaUsages(this.mode);
-      } else {
-        const key = siteKey || 'media-data';
-        data = await this.storageManager.load(key);
-      }
+      const key = siteKey || 'media-data';
+      const data = await this.storageManager.load(key);
 
       if (data && data.length > 0) {
         this._mediaData = data;
@@ -212,9 +183,6 @@ class MediaLibrary extends LocalizableElement {
       this._progressiveMediaData = [];
 
       this._filteredDataCache = null;
-      this._lastFilterParams = null;
-      this._usageCountCache = null;
-      this._lastUsageCountParams = null;
 
       this.updateAnalysisToggleVisibility();
       this.requestUpdate();
@@ -228,7 +196,7 @@ class MediaLibrary extends LocalizableElement {
       this._progressiveMediaData = [];
 
       if (error.name !== 'NotFoundError' && !error.message.includes('object store')) {
-        this._error = this.t('errors.loadFailed');
+        this._error = 'Failed to load media data';
       }
 
       this.updateAnalysisToggleVisibility();
@@ -245,9 +213,6 @@ class MediaLibrary extends LocalizableElement {
     completePageList = null,
     existingMediaData = null,
   ) {
-    if (siteKey) {
-      // siteKey is used by calling code to set up site-specific storage
-    }
     if (!pageList || pageList.length === 0) {
       this._error = 'No pages provided to scan';
       return [];
@@ -274,11 +239,7 @@ class MediaLibrary extends LocalizableElement {
       let currentExistingMediaData = existingMediaData || this._mediaData || [];
 
       if (previousMetadata && currentExistingMediaData.length === 0) {
-        if (this.storage === 'r2') {
-          currentExistingMediaData = await this.storageManager.loadMediaUsages(this.mode) || [];
-        } else {
-          currentExistingMediaData = await this.storageManager.load() || [];
-        }
+        currentExistingMediaData = await this.storageManager.load() || [];
       }
 
       // Initialize progressive media data with existing media for incremental scans
@@ -374,11 +335,7 @@ class MediaLibrary extends LocalizableElement {
       const completeMediaData = [...filteredExistingMedia, ...newMediaItems];
 
       if (saveToStorage) {
-        if (this.storage === 'r2') {
-          await this.storageManager.saveMediaUsages(completeMediaData, this.mode);
-        } else {
-          await this.storageManager.save(completeMediaData);
-        }
+        await this.storageManager.save(completeMediaData);
       }
 
       const metadataPageList = completePageList || pageList;
@@ -403,9 +360,6 @@ class MediaLibrary extends LocalizableElement {
       this.updateAnalysisToggleVisibility();
 
       this._filteredDataCache = null;
-      this._lastFilterParams = null;
-      this._usageCountCache = null;
-      this._lastUsageCountParams = null;
 
       this.requestUpdate();
 
@@ -474,11 +428,7 @@ class MediaLibrary extends LocalizableElement {
       const totalPages = existingMetadata ? existingMetadata.totalPages : 0;
 
       if (saveToStorage && siteKey) {
-        if (this.storage === 'r2') {
-          await this.storageManager.saveMediaUsages(mediaData, this.mode);
-        } else {
-          await this.storageManager.save(mediaData);
-        }
+        await this.storageManager.save(mediaData);
         await this.storageManager.saveScanMetadata({
           totalPages: 0,
           pageLastModified: {},
@@ -498,9 +448,6 @@ class MediaLibrary extends LocalizableElement {
       this.updateAnalysisToggleVisibility();
 
       this._filteredDataCache = null;
-      this._lastFilterParams = null;
-      this._usageCountCache = null;
-      this._lastUsageCountParams = null;
 
       this.requestUpdate();
 
@@ -573,16 +520,11 @@ class MediaLibrary extends LocalizableElement {
   }
 
   get filteredMediaData() {
-    const currentParams = {
-      filterType: this._selectedFilterType,
-      searchQuery: this._searchQuery,
-      selectedDocument: this.selectedDocument,
-      dataLength: this._mediaData?.length || 0,
-    };
+    // Create efficient cache key
+    const cacheKey = `${this._selectedFilterType}|${this._searchQuery || ''}|${this.selectedDocument || ''}|${this._mediaData?.length || 0}`;
 
-    if (this._filteredDataCache
-        && this._lastFilterParams
-        && JSON.stringify(this._lastFilterParams) === JSON.stringify(currentParams)) {
+    // Return cached data if parameters haven't changed
+    if (this._filteredDataCache && this._filterCacheKey === cacheKey) {
       return this._filteredDataCache;
     }
 
@@ -607,7 +549,7 @@ class MediaLibrary extends LocalizableElement {
       });
 
       this._filteredDataCache = deduplicatedData;
-      this._lastFilterParams = currentParams;
+      this._filterCacheKey = cacheKey;
       return deduplicatedData;
     }
 
@@ -631,7 +573,7 @@ class MediaLibrary extends LocalizableElement {
     });
 
     this._filteredDataCache = deduplicatedData;
-    this._lastFilterParams = currentParams;
+    this._filterCacheKey = cacheKey;
 
     return deduplicatedData;
   }
@@ -641,7 +583,7 @@ class MediaLibrary extends LocalizableElement {
   // This eliminates the 7+ second delay on every filter change
 
   getProgressiveLimit() {
-    return this._currentView === 'grid' ? 500 : 750;
+    return 500;
   }
 
   get selectedDocument() {
@@ -710,11 +652,6 @@ class MediaLibrary extends LocalizableElement {
     this._searchQuery = e.detail.query;
   }
 
-  handleViewChange(e) {
-    if (this.isUIdisabled) return;
-    this._currentView = e.detail.view;
-  }
-
   handleFilter(e) {
     if (this.isUIdisabled) return;
     this._selectedFilterType = e.detail.type;
@@ -758,7 +695,7 @@ class MediaLibrary extends LocalizableElement {
       const result = await copyMediaToClipboard(media);
       this.showNotification(result.heading, result.message, 'success');
     } catch (error) {
-      this.showNotification(this.t('common.error'), this.t('errors.saveFailed'), 'error');
+      this.showNotification('Error', 'Failed to save changes', 'error');
     }
   }
 
@@ -780,7 +717,6 @@ class MediaLibrary extends LocalizableElement {
           <media-topbar
             .searchQuery=${this._searchQuery}
             .currentView=${this._currentView}
-            .locale=${this.locale}
             .mediaData=${this._mediaData}
             .resultSummary=${this.getResultSummary()}
             @search=${this.handleSearch}
@@ -792,7 +728,6 @@ class MediaLibrary extends LocalizableElement {
           <media-sidebar
             .activeFilter=${this._selectedFilterType}
             .filterCounts=${this.filterCounts}
-            .locale=${this.locale}
             .isScanning=${this._isScanning}
             .scanProgress=${this.getScanProgress()}
             @filter=${this.handleFilter}
@@ -803,7 +738,9 @@ class MediaLibrary extends LocalizableElement {
           ${this._error ? this.renderErrorState() : this.renderCurrentView()}
         </div>
 
-        <media-details .locale=${this.locale}></media-details>
+        <media-details 
+          .isScanning=${this._isScanning}>
+        </media-details>
       </div>
     `;
   }
@@ -814,7 +751,7 @@ class MediaLibrary extends LocalizableElement {
         <svg class="error-icon">
           <use href="#close"></use>
         </svg>
-        <h3>${this.t('common.error')}</h3>
+        <h3>Error</h3>
         <div class="error-message">${this._error}</div>
         <button class="retry-button" @click=${() => this.clearError()}>
           Try Again
@@ -839,7 +776,6 @@ class MediaLibrary extends LocalizableElement {
     const element = document.createElement('media-library');
 
     if (options.storage) element.storage = options.storage;
-    if (options.locale) element.locale = options.locale;
 
     document.body.appendChild(element);
 
@@ -861,7 +797,6 @@ class MediaLibrary extends LocalizableElement {
           <media-grid
             .mediaData=${this._progressiveMediaData}
             .searchQuery=${this._searchQuery}
-            .locale=${this.locale}
             .isProcessing=${true}
             @mediaClick=${this.handleMediaClick}
             @mediaAction=${this.handleMediaAction}
@@ -890,23 +825,10 @@ class MediaLibrary extends LocalizableElement {
 
     const mediaWithUsageCount = this.filteredMediaData;
 
-    if (this._currentView === 'list') {
-      return html`
-        <media-list
-          .mediaData=${mediaWithUsageCount}
-          .searchQuery=${this._searchQuery}
-          .locale=${this.locale}
-          @mediaClick=${this.handleMediaClick}
-          @mediaAction=${this.handleMediaAction}
-        ></media-list>
-      `;
-    }
-
     return html`
       <media-grid
         .mediaData=${mediaWithUsageCount}
         .searchQuery=${this._searchQuery}
-        .locale=${this.locale}
         .isProcessing=${false}
         @mediaClick=${this.handleMediaClick}
         @mediaAction=${this.handleMediaAction}

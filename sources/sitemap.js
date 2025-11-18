@@ -3,6 +3,8 @@
  * Provides page lists from XML sitemaps for the Media Library component
  */
 
+import { filterChangedUrls } from '../src/utils/utils.js';
+
 class SitemapSource {
   constructor(options = {}) {
     this.name = 'Sitemap Source';
@@ -380,23 +382,8 @@ class SitemapSource {
   }
 
   filterChangedUrls(urls, previousMetadata) {
-    if (!previousMetadata || !previousMetadata.pageLastModified) {
-      return urls;
-    }
-
-    const changedUrls = [];
-    const { pageLastModified } = previousMetadata;
-
-    for (const url of urls) {
-      const urlKey = url.loc;
-      const previousLastMod = pageLastModified[urlKey];
-
-      if (!previousLastMod || !url.lastmod || url.lastmod !== previousLastMod) {
-        changedUrls.push(url);
-      }
-    }
-
-    return changedUrls;
+    // Delegate to shared utility function
+    return filterChangedUrls(urls, previousMetadata);
   }
 }
 

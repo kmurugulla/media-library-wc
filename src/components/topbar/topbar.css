@@ -109,32 +109,6 @@
   white-space: nowrap;
 }
 
-.view-toggle-button:hover {
-  background: #f8fafc;
-  border-color: #3b82f6;
-  color: #1e293b;
-}
-
-.view-toggle-button:active {
-  background: #3b82f6;
-  border-color: #3b82f6;
-  color: #fff;
-}
-
-.view-toggle-button:disabled {
-  background: #f8fafc;
-  border-color: #e2e8f0;
-  color: #94a3b8;
-  cursor: not-allowed;
-  opacity: 0.6;
-}
-
-.view-toggle-button:disabled:hover {
-  background: #f8fafc;
-  border-color: #e2e8f0;
-  color: #94a3b8;
-}
-
 .scan-container {
   align-items: center;
   display: flex;
@@ -371,13 +345,9 @@ mark {
     min-width: 0;
     order: 1;
   }
-  
-  .view-toggle-button {
-    order: 2;
-  }
-  
+
   .scan-button {
-    order: 3;
+    order: 2;
   }
 }
 

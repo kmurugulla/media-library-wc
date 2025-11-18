@@ -36,16 +36,6 @@ export function applyURLParameters() {
       domCache.includeMedia.checked = params.media === 'true';
     }
 
-    if (params.storage && domCache.storageSelect) {
-      domCache.storageSelect.value = params.storage;
-      domCache.storageSelect.dispatchEvent(new Event('change'));
-    }
-
-    if (params.locale && domCache.localeSelect) {
-      domCache.localeSelect.value = params.locale;
-      domCache.localeSelect.dispatchEvent(new Event('change'));
-    }
-
     if (params.load && domCache.siteSelector) {
       requestAnimationFrame(() => {
         domCache.siteSelector.value = params.load;

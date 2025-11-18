@@ -1,10 +1,9 @@
 import logger from './logger.js';
-import R2Storage from './r2-storage.js';
 
 class BrowserStorage {
   constructor(type = 'indexeddb', siteKey = null) {
     this.type = type;
-    this.dbVersion = 7;
+    this.dbVersion = 11;
     this.siteKey = siteKey;
     this.dbName = siteKey ? `media_${this.normalizeSiteKey(siteKey)}` : 'MediaLibrary';
     this.db = null;
@@ -698,10 +697,6 @@ class BrowserStorage {
 }
 
 export function createStorage(type = 'indexeddb', siteKey = null) {
-  if (type === 'r2') {
-    const r2Storage = new R2Storage(type, siteKey);
-    return r2Storage;
-  }
   const browserStorage = new BrowserStorage(type, siteKey);
   return browserStorage;
 }

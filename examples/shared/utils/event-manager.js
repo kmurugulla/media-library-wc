@@ -24,11 +24,7 @@ export function setupEventDelegation() {
   document.addEventListener('change', (event) => {
     const { target } = event;
 
-    if (target.matches('#storage-type')) {
-      handleStorageChange();
-    } else if (target.matches('#locale')) {
-      handleLocaleChange();
-    } else if (target.matches('#site-selector')) {
+    if (target.matches('#site-selector')) {
       handleSiteSelectorChange();
     }
   });
@@ -72,31 +68,6 @@ function handleConfigToggleClick() {
       domCache.configSection.classList.add('collapsed');
       domCache.configToggleButton.classList.add('collapsed');
     }
-  }
-}
-
-function handleStorageChange() {
-  if (mediaLibrary && domCache.storageSelect) {
-    const newStorage = domCache.storageSelect.value;
-    const previousStorage = mediaLibrary.storage;
-
-    mediaLibrary.storage = newStorage;
-    mediaLibrary.storageManager = createStorage(newStorage);
-    mediaLibrary.clearData();
-
-    if (previousStorage !== 'indexeddb' && newStorage === 'indexeddb') {
-      createNotification('Switched to IndexDB storage - future scans will be saved', 'info');
-    } else if (previousStorage !== 'r2' && newStorage === 'r2') {
-      createNotification('Switched to R2 storage - future scans will be saved to cloud', 'info');
-    }
-
-    loadAvailableSites();
-  }
-}
-
-function handleLocaleChange() {
-  if (mediaLibrary && domCache.localeSelect) {
-    mediaLibrary.locale = domCache.localeSelect.value;
   }
 }
 

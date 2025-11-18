@@ -1,10 +1,7 @@
-import { detectCategory } from './category-detector.js';
-
 export const ANALYSIS_CONFIG = {
   enabled: true,
   extractEXIF: true,
   extractDimensions: true,
-  categorizeFromFilename: true,
   analyzeUsage: true,
 };
 
@@ -74,7 +71,6 @@ async function extractEXIFData(imageUrl) {
 function getBasicAnalysis() {
   return {
     orientation: 'unknown',
-    category: 'other',
     width: 0,
     height: 0,
     confidence: 'none',
@@ -109,20 +105,6 @@ async function runAnalysisPipeline(imageUrl, context = '') {
       analysis.orientation = 'square';
     } else {
       analysis.orientation = dimensions.width > dimensions.height ? 'landscape' : 'portrait';
-    }
-  }
-
-  if (ANALYSIS_CONFIG.categorizeFromFilename) {
-    const categoryResult = detectCategory(imageUrl, context, '', '', analysis.width, analysis.height);
-    analysis.category = categoryResult.category;
-    analysis.categoryConfidence = categoryResult.confidence;
-    analysis.categoryScore = categoryResult.score;
-    analysis.categorySource = categoryResult.source;
-
-    if (categoryResult.confidence === 'high') {
-      analysis.confidence = 'high';
-    } else if (categoryResult.confidence === 'medium' && analysis.confidence === 'low') {
-      analysis.confidence = 'medium';
     }
   }
 

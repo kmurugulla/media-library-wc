@@ -25,8 +25,7 @@ function showNotification(message, type = 'info') {
 
 async function loadAvailableSites() {
   try {
-    const storageType = document.getElementById('storage-type').value || 'indexeddb';
-    const storage = createStorage(storageType);
+    const storage = createStorage('indexeddb');
 
     const sites = await storage.getAllSites();
 
@@ -89,15 +88,11 @@ function normalizeUrl(url) {
 function disableFormFields() {
   document.getElementById('website-url').disabled = true;
   document.getElementById('sitemap-url').disabled = true;
-  document.getElementById('storage-type').disabled = true;
-  document.getElementById('locale').disabled = true;
 }
 
 function enableFormFields() {
   document.getElementById('website-url').disabled = false;
   document.getElementById('sitemap-url').disabled = false;
-  document.getElementById('storage-type').disabled = false;
-  document.getElementById('locale').disabled = false;
 }
 
 async function performSitemapScan() {
@@ -145,12 +140,10 @@ async function performSitemapScan() {
     scanBtn.textContent = 'Scanning...';
 
     // Use the selected storage type instead of hardcoding IndexedDB
-    const selectedStorageType = document.getElementById('storage-type').value || 'indexeddb';
-
-    mediaLibrary.storage = selectedStorageType;
+    mediaLibrary.storage = 'indexeddb';
     await mediaLibrary.initialize();
 
-    const siteStorageManager = createStorage(selectedStorageType, siteKey);
+    const siteStorageManager = createStorage('indexeddb', siteKey);
     mediaLibrary.storageManager = siteStorageManager;
 
     const existingMediaData = await siteStorageManager.load();
@@ -174,12 +167,11 @@ async function performSitemapScan() {
       return;
     }
 
-    const shouldSaveMedia = document.getElementById('storage-type').value !== 'none';
     const mediaData = await mediaLibrary.loadFromPageList(
       changedPages,
       null,
       siteKey,
-      shouldSaveMedia,
+      true,
       previousMetadata,
       pageList,
       existingMediaData,
@@ -206,8 +198,6 @@ async function performSitemapScan() {
 }
 
 function setupControls() {
-  const storageSelect = document.getElementById('storage-type');
-  const localeSelect = document.getElementById('locale');
   const siteSelector = document.getElementById('site-selector');
   const scanBtn = document.getElementById('scan-btn');
   const deleteSiteBtn = document.getElementById('delete-site-btn');
@@ -215,36 +205,11 @@ function setupControls() {
   // Load available sites on initialization
   loadAvailableSites();
 
-  storageSelect.addEventListener('change', async (e) => {
-    const previousStorage = mediaLibrary.storage;
-    const newStorage = e.target.value;
-
-    mediaLibrary.storage = newStorage;
-
-    // Recreate storage manager with new storage type
-    mediaLibrary.storageManager = createStorage(newStorage);
-
-    await mediaLibrary.clearData();
-
-    if (previousStorage !== 'indexeddb' && newStorage === 'indexeddb') {
-      showNotification('Switched to IndexDB storage - future scans will be saved', 'info');
-    } else if (previousStorage !== 'r2' && newStorage === 'r2') {
-      showNotification('Switched to R2 storage - future scans will be saved to cloud', 'info');
-    }
-
-    loadAvailableSites();
-  });
-
-  localeSelect.addEventListener('change', (e) => {
-    mediaLibrary.locale = e.target.value;
-  });
-
   siteSelector.addEventListener('change', async (e) => {
     const selectedSite = e.target.value;
     if (selectedSite) {
       try {
-        const storageType = document.getElementById('storage-type').value || 'indexeddb';
-        const siteStorageManager = createStorage(storageType, selectedSite);
+        const siteStorageManager = createStorage('indexeddb', selectedSite);
 
         const mediaData = await siteStorageManager.load();
         const metadata = await siteStorageManager.loadScanMetadata();
@@ -281,8 +246,7 @@ function setupControls() {
       const confirmed = confirm(`Are you sure you want to delete all data for "${selectedSite}"? This action cannot be undone.`);
       if (confirmed) {
         try {
-          const storageType = document.getElementById('storage-type').value || 'indexeddb';
-          const storage = createStorage(storageType);
+          const storage = createStorage('indexeddb');
           await storage.deleteSite(selectedSite);
 
           // Close the storage connection to prevent database locks
@@ -334,6 +298,35 @@ function setupNotifications() {
   });
 }
 
+function setupScanProgressFeedback() {
+  // Listen for scan progress changes for incremental scan feedback
+  const observer = new MutationObserver(() => {
+    if (mediaLibrary._isScanning && mediaLibrary._scanProgress) {
+      const { current, total, found } = mediaLibrary._scanProgress;
+      const statusEl = document.getElementById('status');
+      if (statusEl && total > 0) {
+        const percentage = Math.round((current / total) * 100);
+        statusEl.textContent = `Scanning: ${current}/${total} pages (${found} media found) - ${percentage}%`;
+        statusEl.className = 'status scanning';
+      }
+    } else {
+      const statusEl = document.getElementById('status');
+      if (statusEl && statusEl.classList.contains('scanning')) {
+        statusEl.textContent = '';
+        statusEl.className = 'status';
+      }
+    }
+  });
+
+  // Observe the media-library element for attribute changes
+  if (mediaLibrary) {
+    observer.observe(mediaLibrary, { 
+      attributes: true, 
+      attributeFilter: ['_isscanning', '_scanprogress'] 
+    });
+  }
+}
+
 function parseURLParameters() {
   const urlParams = new URLSearchParams(window.location.search);
   const params = {};
@@ -364,22 +357,6 @@ function applyURLParameters() {
       const sitemapUrlInput = document.getElementById('sitemap-url');
       if (sitemapUrlInput) {
         sitemapUrlInput.value = params.sitemap;
-      }
-    }
-
-    if (params.storage) {
-      const storageSelect = document.getElementById('storage-type');
-      if (storageSelect) {
-        storageSelect.value = params.storage;
-        storageSelect.dispatchEvent(new Event('change'));
-      }
-    }
-
-    if (params.locale) {
-      const localeSelect = document.getElementById('locale');
-      if (localeSelect) {
-        localeSelect.value = params.locale;
-        localeSelect.dispatchEvent(new Event('change'));
       }
     }
 
@@ -421,6 +398,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
   setupControls();
   setupNotifications();
+  setupScanProgressFeedback();
 
   applyURLParameters();
 });

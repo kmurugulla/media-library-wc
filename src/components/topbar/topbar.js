@@ -1,16 +1,13 @@
-import { html } from 'lit';
+import { html, LitElement } from 'lit';
 import { ref, createRef } from 'lit/directives/ref.js';
-import LocalizableElement from '../base-localizable.js';
 import getSvg from '../../utils/get-svg.js';
 import { getStyles } from '../../utils/get-styles.js';
 import { generateSearchSuggestions, createSearchSuggestion } from '../../utils/filters.js';
 import topbarStyles from './topbar.css?inline';
 
-class MediaTopbar extends LocalizableElement {
+class MediaTopbar extends LitElement {
   static properties = {
     searchQuery: { type: String },
-    currentView: { type: String },
-    locale: { type: String },
     mediaData: { type: Array },
     resultSummary: { type: String },
     _suggestions: { state: true },
@@ -24,8 +21,6 @@ class MediaTopbar extends LocalizableElement {
   constructor() {
     super();
     this.searchQuery = '';
-    this.currentView = 'grid';
-    this.locale = 'en';
     this.mediaData = [];
     this.resultSummary = '';
     this._suggestions = [];
@@ -46,8 +41,6 @@ class MediaTopbar extends LocalizableElement {
     const ICONS = [
       'deps/icons/search.svg',
       'deps/icons/close.svg',
-      'deps/icons/list.svg',
-      'deps/icons/grid.svg',
       'deps/icons/refresh.svg',
       'deps/icons/photo.svg',
     ];
@@ -110,7 +103,7 @@ class MediaTopbar extends LocalizableElement {
               <button 
                 class="clear-button"
                 @click=${this.clearSearch}
-                aria-label=${this.t('common.clear')}
+                aria-label="Clear"
               >
                 <svg class="clear-icon">
                   <use href="#close"></use>

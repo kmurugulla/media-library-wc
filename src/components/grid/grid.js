@@ -1,19 +1,17 @@
-import { html } from 'lit';
+import { html, LitElement } from 'lit';
 // eslint-disable-next-line import/no-extraneous-dependencies -- virtualizer in deps
 import { virtualize } from '@lit-labs/virtualizer/virtualize.js';
 // eslint-disable-next-line import/no-extraneous-dependencies -- virtualizer in deps
 import { grid } from '@lit-labs/virtualizer/layouts/grid.js';
-import LocalizableElement from '../base-localizable.js';
 import { getMediaType, isImage, isVideo, getVideoThumbnail, isExternalVideoUrl } from '../../utils/utils.js';
 import { getStyles } from '../../utils/get-styles.js';
 import getSvg from '../../utils/get-svg.js';
 import gridStyles from './grid.css?inline';
 
-class MediaGrid extends LocalizableElement {
+class MediaGrid extends LitElement {
   static properties = {
     mediaData: { type: Array },
     searchQuery: { type: String },
-    locale: { type: String },
     isProcessing: { type: Boolean },
   };
 
@@ -23,7 +21,6 @@ class MediaGrid extends LocalizableElement {
     super();
     this.mediaData = [];
     this.searchQuery = '';
-    this.locale = 'en';
     this.isProcessing = false;
   }
 
@@ -56,8 +53,8 @@ class MediaGrid extends LocalizableElement {
           <svg class="empty-icon">
             <use href="#photo"></use>
           </svg>
-          <h3>${this.t('mediaLibrary.noResults')}</h3>
-          <p>${this.t('mediaLibrary.loadingMedia')}</p>
+          <h3>No media found</h3>
+          <p>Loading media...</p>
         </div>
       `;
     }
@@ -102,7 +99,7 @@ class MediaGrid extends LocalizableElement {
               <button 
                 class="share-button"
                 @click=${(e) => this.handleAction(e, 'copy', media)}
-                title=${this.t('media.copyUrl')}
+                title="Copy URL"
               >
                 <svg>
                   <use href="#share"></use>
