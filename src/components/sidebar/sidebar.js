@@ -1,16 +1,13 @@
-import { html } from 'lit';
-import LocalizableElement from '../base-localizable.js';
+import { html, LitElement } from 'lit';
 import { getStyles } from '../../utils/get-styles.js';
-import { getCategoryFilters } from '../../utils/filters.js';
 import logger from '../../utils/logger.js';
 import getSvg from '../../utils/get-svg.js';
 import sidebarStyles from './sidebar.css?inline';
 
-class MediaSidebar extends LocalizableElement {
+class MediaSidebar extends LitElement {
   static properties = {
     activeFilter: { type: String },
     filterCounts: { type: Object },
-    locale: { type: String },
     isScanning: { type: Boolean },
     scanProgress: { type: Object },
     isExpanded: { type: Boolean, state: true },
@@ -23,7 +20,6 @@ class MediaSidebar extends LocalizableElement {
     super();
     this.activeFilter = 'all';
     this.filterCounts = {};
-    this.locale = 'en';
     this.isScanning = false;
     this.scanProgress = { pages: 0, media: 0, duration: null, hasChanges: null };
     this.isExpanded = false;
@@ -156,7 +152,7 @@ class MediaSidebar extends LocalizableElement {
     return html`
       <aside class="media-sidebar ${this.isExpanded || this.isIndexExpanded ? 'expanded' : 'collapsed'}">
         <div class="sidebar-icons">
-          ${this.renderIconButton('filter', this.t('common.filter'), this.isExpanded)}
+          ${this.renderIconButton('filter', 'Filter', this.isExpanded)}
         </div>
 
         ${this.isExpanded ? html`
@@ -195,8 +191,6 @@ class MediaSidebar extends LocalizableElement {
                 </ul>
               </div>
             ` : ''}
-
-            ${this.renderCategorySection(counts)}
           </div>
         ` : ''}
 
@@ -209,8 +203,51 @@ class MediaSidebar extends LocalizableElement {
     `;
   }
 
+  formatNumber(num) {
+    if (typeof num !== 'number') return '0';
+    return num.toLocaleString('en-US');
+  }
+
+  getFilterLabel(filterType) {
+    const labels = {
+      'all': 'All Media',
+      'images': 'Images',
+      'videos': 'Videos',
+      'documents': 'Documents',
+      'links': 'Links',
+      'icons': 'SVGs',
+      'empty': 'Empty',
+      'decorative': 'Decorative',
+      'filled': 'Filled',
+      'unused': 'Unused',
+      'landscape': 'Landscape',
+      'portrait': 'Portrait',
+      'square': 'Square',
+      'lcpCandidate': 'LCP Candidates',
+      'aboveFold': 'Above Fold',
+      'belowFold': 'Below Fold',
+      'needsOptimization': 'Needs Optimization',
+      'fullyOptimized': 'Fully Optimized',
+      'noSrcset': 'No Srcset',
+      'hasSrcset': 'Has Srcset',
+      'legacyFormat': 'Legacy Format',
+      'modernFormat': 'Modern Format',
+      'noLazyLoading': 'No Lazy Loading',
+      'lazyLoading': 'Lazy Loading',
+      'socialImage': 'Social Images',
+      'ogImage': 'OG Images',
+      'performanceIssue': 'Performance Issues',
+      'screenshots': 'Graphics & UI',
+      'logos': 'Logos',
+      'people-photos': 'People',
+      'products': 'Products',
+      '404-media': '404 Media',
+    };
+    return labels[filterType] || filterType;
+  }
+
   renderFilterItem(filterType, count, customLabel = null) {
-    const label = customLabel || this.t(`filters.${filterType}`);
+    const label = customLabel || this.getFilterLabel(filterType);
 
     logger.debug(`renderFilterItem - ${filterType}: count=${count}, isScanning=${this.isScanning}`);
 
@@ -246,23 +283,6 @@ class MediaSidebar extends LocalizableElement {
           <span class="count">${this.formatNumber(count)}</span>
         </button>
       </li>
-    `;
-  }
-
-  renderCategorySection(counts) {
-    const categoryFilters = getCategoryFilters();
-    const hasCategoryItems = categoryFilters.some((category) => counts[category] > 0);
-
-    // During scanning, show category section even if no counts
-    if (!this.isScanning && !hasCategoryItems) return '';
-
-    return html`
-      <div class="filter-section">
-        <h3>${this.t('categories.title')}</h3>
-        <ul class="filter-list">
-          ${categoryFilters.map((category) => this.renderFilterItem(category, counts[category]))}
-        </ul>
-      </div>
     `;
   }
 

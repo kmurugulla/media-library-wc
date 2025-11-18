@@ -5,8 +5,6 @@ let mediaLibrary;
 
 function setupControls() {
   const dataSourceSelect = document.getElementById('data-source');
-  const storageSelect = document.getElementById('storage-type');
-  const localeSelect = document.getElementById('locale');
   const siteSelector = document.getElementById('site-selector');
   const scanBtn = document.getElementById('scan-btn');
   const clearBtn = document.getElementById('clear-btn');
@@ -19,33 +17,6 @@ function setupControls() {
   dataSourceSelect.addEventListener('change', (e) => {
     // eslint-disable-next-line no-use-before-define
     updateDataSourceOptions(e.target.value);
-  });
-
-  storageSelect.addEventListener('change', async (e) => {
-    const previousStorage = mediaLibrary.storage;
-    const newStorage = e.target.value;
-
-    mediaLibrary.storage = newStorage;
-
-    // Recreate storage manager with new storage type
-    mediaLibrary.storageManager = createStorage(newStorage);
-
-    await mediaLibrary.clearData();
-
-    if (previousStorage !== 'indexeddb' && newStorage === 'indexeddb') {
-      // eslint-disable-next-line no-use-before-define
-      showNotification('Switched to IndexDB storage - future scans will be saved', 'info');
-    } else if (previousStorage !== 'r2' && newStorage === 'r2') {
-      // eslint-disable-next-line no-use-before-define
-      showNotification('Switched to R2 storage - future scans will be saved to cloud', 'info');
-    }
-
-    // eslint-disable-next-line no-use-before-define
-    loadAvailableSites();
-  });
-
-  localeSelect.addEventListener('change', (e) => {
-    mediaLibrary.locale = e.target.value;
   });
 
   siteSelector.addEventListener('change', async (e) => {
@@ -79,8 +50,7 @@ function setupControls() {
       const confirmed = confirm(`Are you sure you want to delete all data for "${selectedSite}"? This action cannot be undone.`);
       if (confirmed) {
         try {
-          const storageType = document.getElementById('storage-type').value || 'indexeddb';
-          const storage = createStorage(storageType);
+          const storage = createStorage('indexeddb');
           await storage.deleteSite(selectedSite);
 
           // Close the storage connection to prevent database locks
@@ -460,24 +430,6 @@ function applyURLParameters() {
       const adobeRepoInput = document.getElementById('adobe-repo');
       if (adobeRepoInput) {
         adobeRepoInput.value = params.repo;
-      }
-    }
-
-    if (params.storage) {
-      const storageSelect = document.getElementById('storage-type');
-      if (storageSelect) {
-        storageSelect.value = params.storage;
-
-        storageSelect.dispatchEvent(new Event('change'));
-      }
-    }
-
-    if (params.locale) {
-      const localeSelect = document.getElementById('locale');
-      if (localeSelect) {
-        localeSelect.value = params.locale;
-
-        localeSelect.dispatchEvent(new Event('change'));
       }
     }
 

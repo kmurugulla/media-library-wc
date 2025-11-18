@@ -380,3 +380,29 @@ export function isPdf(url) {
   const ext = extractFileExtension(url);
   return ext === 'pdf';
 }
+
+/**
+ * Filter URLs that have changed based on lastmod timestamps
+ * @param {Array} urls - Array of URL objects with loc and lastmod properties
+ * @param {Object} previousMetadata - Object containing pageLastModified map
+ * @returns {Array} Filtered array of changed URLs
+ */
+export function filterChangedUrls(urls, previousMetadata) {
+  if (!previousMetadata || !previousMetadata.pageLastModified) {
+    return urls;
+  }
+
+  const changedUrls = [];
+  const { pageLastModified } = previousMetadata;
+
+  for (const url of urls) {
+    const urlKey = url.loc;
+    const previousLastMod = pageLastModified[urlKey];
+
+    if (!previousLastMod || !url.lastmod || url.lastmod !== previousLastMod) {
+      changedUrls.push(url);
+    }
+  }
+
+  return changedUrls;
+}

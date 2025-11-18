@@ -1,4 +1,3 @@
-import { getAvailableCategories } from './category-detector.js';
 // import { normalizeUrl, urlsMatch } from './utils.js'; // Unused imports
 
 function extractFileExtension(filePath) {
@@ -50,16 +49,6 @@ function isSvgFile(media) {
   return type === 'img > svg' || type === 'link > svg';
 }
 
-function hasPerformanceTag(item, tag) {
-  if (!item.ctx) return false;
-
-  const perfMatch = item.ctx.match(/perf:([^>]+)/);
-  if (!perfMatch) return false;
-
-  const perfTags = perfMatch[1].split(',').map((t) => t.trim().toLowerCase());
-  return perfTags.includes(tag.toLowerCase());
-}
-
 export const FILTER_CONFIG = {
   images: (item) => getMediaType(item) === 'image' && !isSvgFile(item),
   videos: (item) => getMediaType(item) === 'video',
@@ -81,65 +70,7 @@ export const FILTER_CONFIG = {
     && item.orientation === 'portrait',
   square: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
     && item.orientation === 'square',
-  lcpCandidate: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'lcp-candidate'),
-  aboveFold: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'above-fold'),
-  belowFold: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'below-fold'),
-  needsOptimization: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'needs-optimization'),
-  fullyOptimized: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'fully-optimized'),
-  noSrcset: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'no-srcset'),
-  hasSrcset: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'has-srcset'),
-  legacyFormat: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'legacy-format'),
-  modernFormat: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'modern-format'),
-  noLazyLoading: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'no-loading-strategy'),
-  lazyLoading: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'lazy-loading'),
-  socialImage: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'social-image'),
-  ogImage: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'og-image'),
-  performanceIssue: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && hasPerformanceTag(item, 'performance-issue'),
 
-  screenshots: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && item.category === 'screenshots',
-  logos: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && item.category === 'logos',
-  'people-photos': (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && item.category === 'people-photos',
-  products: (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && item.category === 'products',
-  '404-media': (item) => getMediaType(item) === 'image' && !isSvgFile(item)
-    && item.category === '404-media',
-
-  documentImages: (item, selectedDocument) => FILTER_CONFIG.images(item)
-    && item.doc === selectedDocument,
-  documentIcons: (item, selectedDocument) => FILTER_CONFIG.icons(item)
-    && item.doc === selectedDocument,
-  documentVideos: (item, selectedDocument) => FILTER_CONFIG.videos(item)
-    && item.doc === selectedDocument,
-  documentDocuments: (item, selectedDocument) => FILTER_CONFIG.documents(item)
-    && item.doc === selectedDocument,
-  documentLinks: (item, selectedDocument) => FILTER_CONFIG.links(item)
-    && item.doc === selectedDocument,
-  documentEmpty: (item, selectedDocument) => item.type?.startsWith('img >')
-    && !item.type?.includes('svg') && item.alt === null && item.doc === selectedDocument,
-  documentDecorative: (item, selectedDocument) => item.type?.startsWith('img >')
-    && !item.type?.includes('svg') && item.alt === '' && item.doc === selectedDocument,
-  documentFilled: (item, selectedDocument) => item.doc === selectedDocument
-    && item.type?.startsWith('img >') && !item.type?.includes('svg')
-    && item.alt !== null && item.alt !== '',
-
-  documentTotal: () => true,
   all: (item) => !isSvgFile(item),
 };
 
@@ -158,11 +89,6 @@ export function applyFilter(data, filterName, selectedDocument) {
 
 export function getAvailableFilters() {
   return Object.keys(FILTER_CONFIG);
-}
-
-export function getCategoryFilters() {
-  const categories = getAvailableCategories();
-  return categories.filter((category) => category !== 'other');
 }
 
 export function parseColonSyntax(query) {

@@ -4,8 +4,6 @@ const SELECTORS = {
   SCAN_BUTTON: '#scan-btn',
   CLEAR_BUTTON: '#clear-btn',
   DELETE_SITE_BUTTON: '#delete-site-btn',
-  STORAGE_SELECT: '#storage-type',
-  LOCALE_SELECT: '#locale',
   SITE_SELECTOR: '#site-selector',
   INCLUDE_POSTS: '#include-posts',
   INCLUDE_PAGES: '#include-pages',
@@ -20,8 +18,6 @@ const domCache = {
   scanButton: null,
   clearButton: null,
   deleteSiteButton: null,
-  storageSelect: null,
-  localeSelect: null,
   siteSelector: null,
   includePosts: null,
   includePages: null,
@@ -35,8 +31,6 @@ const domCache = {
     this.scanButton = document.querySelector(SELECTORS.SCAN_BUTTON);
     this.clearButton = document.querySelector(SELECTORS.CLEAR_BUTTON);
     this.deleteSiteButton = document.querySelector(SELECTORS.DELETE_SITE_BUTTON);
-    this.storageSelect = document.querySelector(SELECTORS.STORAGE_SELECT);
-    this.localeSelect = document.querySelector(SELECTORS.LOCALE_SELECT);
     this.siteSelector = document.querySelector(SELECTORS.SITE_SELECTOR);
     this.includePosts = document.querySelector(SELECTORS.INCLUDE_POSTS);
     this.includePages = document.querySelector(SELECTORS.INCLUDE_PAGES);

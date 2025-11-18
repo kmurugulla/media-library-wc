@@ -4,8 +4,6 @@ import CONFIG from './constants.js';
 export function getFormData() {
   return {
     websiteUrl: domCache.websiteUrl?.value?.trim() || '',
-    storageType: domCache.storageSelect?.value || CONFIG.DEFAULT_STORAGE,
-    locale: domCache.localeSelect?.value || CONFIG.DEFAULT_LOCALE,
     includePosts: domCache.includePosts?.checked || false,
     includePages: domCache.includePages?.checked || false,
     includeMedia: domCache.includeMedia?.checked || false,
@@ -27,14 +25,6 @@ export function validateFormData(data) {
 export function setFormData(data) {
   if (data.websiteUrl && domCache.websiteUrl) {
     domCache.websiteUrl.value = data.websiteUrl;
-  }
-
-  if (data.storageType && domCache.storageSelect) {
-    domCache.storageSelect.value = data.storageType;
-  }
-
-  if (data.locale && domCache.localeSelect) {
-    domCache.localeSelect.value = data.locale;
   }
 
   if (data.includePosts !== undefined && domCache.includePosts) {

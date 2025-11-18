@@ -2,8 +2,8 @@
 import { defineConfig } from 'vite';
 // eslint-disable-next-line import/no-extraneous-dependencies
 import litCss from 'vite-plugin-lit-css';
-import { mkdirSync, existsSync } from 'fs';
-import { resolve } from 'path';
+import { mkdirSync, existsSync, readFileSync } from 'fs';
+import { resolve, join, extname } from 'path';
 
 export default defineConfig(({ mode }) => {
   const isSelfContained = mode === 'self-contained';
@@ -20,39 +20,48 @@ export default defineConfig(({ mode }) => {
         hmr: true,
       }),
       {
-        name: 'copy-data-sources',
+        name: 'serve-dist-files',
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            // Serve dist files as-is without transformation
+            if (req.url && req.url.startsWith('/dist/')) {
+              const filePath = join(process.cwd(), req.url);
+              
+              if (existsSync(filePath)) {
+                const content = readFileSync(filePath);
+                const ext = extname(filePath);
+                
+                if (ext === '.js') {
+                  res.setHeader('Content-Type', 'application/javascript');
+                } else if (ext === '.json') {
+                  res.setHeader('Content-Type', 'application/json');
+                }
+                
+                res.end(content);
+                return;
+              }
+            }
+            
+            // Auto-serve index.html for directory requests
+            if (req.url && !extname(req.url)) {
+              const indexPath = join(process.cwd(), req.url, 'index.html');
+              if (existsSync(indexPath)) {
+                const content = readFileSync(indexPath, 'utf8');
+                res.setHeader('Content-Type', 'text/html');
+                res.end(content);
+                return;
+              }
+            }
+            
+            next();
+          });
+        },
+      },
+      // Empty plugin - directories created as needed by build-dist.js
+      {
+        name: 'placeholder',
         writeBundle() {
-          const distDir = resolve(__dirname, 'dist');
-
-          const sourcesDir = resolve(distDir, 'sources');
-          if (!existsSync(sourcesDir)) {
-            mkdirSync(sourcesDir, { recursive: true });
-          }
-
-          const examplesDir = resolve(distDir, 'examples');
-          if (!existsSync(examplesDir)) {
-            mkdirSync(examplesDir, { recursive: true });
-          }
-
-          const docsDir = resolve(distDir, 'docs');
-          if (!existsSync(docsDir)) {
-            mkdirSync(docsDir, { recursive: true });
-          }
-
-          const assetsDir = resolve(distDir, 'assets');
-          if (!existsSync(assetsDir)) {
-            mkdirSync(assetsDir, { recursive: true });
-          }
-
-          const localesDir = resolve(distDir, 'locales');
-          if (!existsSync(localesDir)) {
-            mkdirSync(localesDir, { recursive: true });
-          }
-
-          const dataDir = resolve(distDir, 'data');
-          if (!existsSync(dataDir)) {
-            mkdirSync(dataDir, { recursive: true });
-          }
+          // No-op - build-dist.js handles all file copying
         },
       },
     ],
@@ -128,6 +137,10 @@ export default defineConfig(({ mode }) => {
       strictPort: false,
       open: '/examples/sitemap/index.html',
       hmr: { overlay: true },
+      fs: {
+        strict: false,
+      },
     },
+    publicDir: false,
   };
 });

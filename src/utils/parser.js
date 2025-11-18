@@ -4,7 +4,7 @@ import {
   getAnalysisConfig,
   clearAnalysisCache,
 } from './image-analysis.js';
-import { detectCategory } from './category-detector.js';
+import { filterChangedUrls } from './utils.js';
 
 class ContentParser {
   constructor(options = {}) {
@@ -12,9 +12,7 @@ class ContentParser {
     this.maxConcurrency = 20;
     this.corsProxy = options.corsProxy || 'https://media-library-cors-proxy.aem-poc-lab.workers.dev/';
     this.enableImageAnalysis = options.enableImageAnalysis || false;
-    this.enableCategorization = options.enableCategorization !== false;
     this.analysisConfig = options.analysisConfig || {};
-    this.categorizationConfig = options.categorizationConfig || {};
     this.latestMediaItems = [];
     this.occurrenceCounters = new Map();
 
@@ -54,7 +52,7 @@ class ContentParser {
     const errors = [];
     this.latestMediaItems = []; // Reset latest items for this scan
 
-    const urlsToScan = previousMetadata ? this.filterChangedUrls(urls, previousMetadata) : urls;
+    const urlsToScan = previousMetadata ? filterChangedUrls(urls, previousMetadata) : urls;
 
     for (const url of urlsToScan) {
       try {
@@ -175,29 +173,6 @@ class ContentParser {
           domHeight,
         };
 
-        if (this.enableCategorization) {
-          try {
-            const categoryResult = detectCategory(
-              fixedUrl,
-              mediaItem.ctx,
-              mediaItem.alt,
-              '',
-              domWidth,
-              domHeight,
-            );
-
-            mediaItem.category = categoryResult.category;
-            mediaItem.categoryConfidence = categoryResult.confidence;
-            mediaItem.categoryScore = categoryResult.score;
-            mediaItem.categorySource = categoryResult.source;
-          } catch (error) {
-            mediaItem.category = 'other';
-            mediaItem.categoryConfidence = 'none';
-            mediaItem.categoryScore = 0;
-            mediaItem.categorySource = 'fallback';
-          }
-        }
-
         if (this.enableImageAnalysis) {
           try {
             const analysis = await analyzeImage(fixedUrl, null, mediaItem.ctx);
@@ -209,22 +184,11 @@ class ContentParser {
             mediaItem.exifDate = analysis.exifDate;
             mediaItem.analysisConfidence = analysis.confidence;
 
-            if (analysis.category) {
-              mediaItem.category = analysis.category;
-              mediaItem.categoryConfidence = analysis.categoryConfidence;
-              mediaItem.categoryScore = analysis.categoryScore;
-              mediaItem.categorySource = analysis.categorySource;
-            }
-
             if (analysis.exifError) {
               mediaItem.hasError = true;
               mediaItem.errorType = analysis.exifError.errorType;
               mediaItem.errorMessage = analysis.exifError.errorMessage;
               mediaItem.statusCode = analysis.exifError.statusCode;
-
-              if (analysis.exifError.errorType === '404') {
-                mediaItem.category = '404-media';
-              }
             }
           } catch (error) {
             // Image analysis failed, continue without analysis
@@ -591,26 +555,6 @@ class ContentParser {
 
     const base36 = Math.abs(hash).toString(36);
     return base36.padStart(10, '0');
-  }
-
-  filterChangedUrls(urls, previousMetadata) {
-    if (!previousMetadata || !previousMetadata.pageLastModified) {
-      return urls;
-    }
-
-    const changedUrls = [];
-    const { pageLastModified } = previousMetadata;
-
-    for (const url of urls) {
-      const urlKey = url.loc;
-      const previousLastMod = pageLastModified[urlKey];
-
-      if (!previousLastMod || !url.lastmod || url.lastmod !== previousLastMod) {
-        changedUrls.push(url);
-      }
-    }
-
-    return changedUrls;
   }
 
   testHtmlParsing(htmlString) {
