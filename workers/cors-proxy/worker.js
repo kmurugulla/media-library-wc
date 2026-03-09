@@ -10,11 +10,12 @@ async function handleRequest(request) {
   }
 
   try {
-    // Fetch the target URL
+    // Fetch the target URL (follow redirects so we return final content; otherwise
+    // a 3xx with relative Location makes the browser request the proxy path without ?url= and get 400)
     const response = await fetch(targetUrl, {
       method: request.method,
       headers: request.headers,
-      redirect: 'manual', // Handle redirects manually
+      redirect: 'follow',
     });
 
     // Create new headers with CORS support
