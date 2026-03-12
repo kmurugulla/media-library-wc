@@ -22,11 +22,14 @@ async function handleRequest(request) {
   }
 
   try {
-    // Fetch the target URL (follow redirects so we return final content; otherwise
-    // a 3xx with relative Location makes the browser request the proxy path without ?url= and get 400)
+    const forwardHeaders = new Headers();
+    request.headers.forEach((value, key) => {
+      forwardHeaders.set(key, value);
+    });
+
     const response = await fetch(targetUrl, {
       method: request.method,
-      headers: request.headers,
+      headers: forwardHeaders,
       redirect: 'follow',
     });
 
