@@ -9,6 +9,18 @@ async function handleRequest(request) {
     return new Response('Missing url parameter', { status: 400 });
   }
 
+  if (request.method === 'OPTIONS') {
+    return new Response(null, {
+      status: 204,
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
+        'Access-Control-Allow-Headers': '*',
+        'Access-Control-Max-Age': '86400',
+      },
+    });
+  }
+
   try {
     // Fetch the target URL (follow redirects so we return final content; otherwise
     // a 3xx with relative Location makes the browser request the proxy path without ?url= and get 400)
